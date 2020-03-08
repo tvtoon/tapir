@@ -1,0 +1,6 @@
+# en.UTF-8
+
+0.1.1
+^Took the printing madness from release and put it inside "__DEBUG__", it is useless as we can read the scripts and there will be a better way.
+^Reworked headers to clean most stuff.
+^Took COPYRIGHT notice from ruby packages, as it is not the case in this repository.

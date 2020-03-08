@@ -1,0 +1,6 @@
+# en.UTF-8
+
+The global rb_cTilemap is the only "rb_*" used in both "BitmapArray.*" and "Tilemap.*".
+Create an associative array to remove key_config from "Input.c".
+
+Reduce the project to 2 (ruby181 and ruby192), then eventually 1 program holding everything but correctly setting the standard for each version. Perhaps going on and setting it up for modern ruby, just like "mkxp-z"...
