@@ -1,6 +1,6 @@
 PROJECT = tapir
 MAJVER = 0.1
-MINVER = 0
+MINVER = 2
 LIBS = ${PROJECT}
 PROGS = tapir-x
 
@@ -23,7 +23,8 @@ INCLUDES +=
 MANS = 
 SRC = Audio.c Bitmap.c BitmapArray.c  Color.c Font.c Graphics.c Input.c Plane.c
 SRC += RGSSError.c RGSSReset.c Rect.c Sprite.c Table.c Tilemap.c Tone.c
-SRC += Viewport.c Win32APIFake.c Window.c archive.c font_lookup.c gl_misc.c
+# archive.c
+SRC += Viewport.c Win32APIFake.c Window.c font_lookup.c gl_misc.c
 SRC += ini.c main_rb.c misc.c openres.c sdl_misc.c surface_misc.c tapir_config.c
 
 LIBSRC := ${SRC}

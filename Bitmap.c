@@ -84,45 +84,66 @@ static VALUE rb_bitmap_m_rect(VALUE self) {
  * In the first form, loads an image from the path.
  * In the second form, creates an empty image with the given size.
  */
-static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  switch(argc) {
-    case 1:
-      StringValue(argv[0]);
-      Check_Type(argv[0], T_STRING);
+static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ SDL_Surface *img = 0;
+ char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
+ const char extensions[4][5] = { ".png", ".jpg", ".bmp", "\0" };
+ size_t filens = 0;
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
 
-      const char * const extensions[] = {"", ".png", ".jpg", ".bmp", NULL};
-      VALUE filename = rb_str_new(RSTRING_PTR(argv[0]), RSTRING_LEN(argv[0]));
-      SDL_RWops *file = openres_ext(filename, true, extensions);
-      if(!file) {
-        /* TODO: check error handling */
-        rb_raise(rb_eRGSSError, "Error loading %s: %s",
-            StringValueCStr(argv[0]),
-            SDL_GetError());
-      }
-      /* TODO: limit file type */
-      SDL_Surface *img = IMG_Load_RW(file, true);
-      if(!img) {
-        /* TODO: check error handling */
-        rb_raise(rb_eRGSSError, "Error loading %s: %s",
-            StringValueCStr(argv[0]),
-            IMG_GetError());
-      }
-      ptr->surface = create_rgba_surface_from(img);
-      break;
-    case 2:
-      ptr->surface = create_rgba_surface(NUM2INT(argv[0]), NUM2INT(argv[1]));
-      if(!ptr->surface) {
-        /* TODO: check error handling */
-        rb_raise(rb_eRGSSError, "Could not create surface: %s", SDL_GetError());
-      }
-      break;
-    default:
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 1..2)", argc);
-      break;
-  }
-  return Qnil;
+ switch(argc)
+{
+  case 1:
+   filens = RSTRING_LEN(argv[0]);
+/* Windows PATH_MAX less extension. */
+   if ( filens > 251 )
+{
+    rb_raise(rb_eRGSSError, "File %s size is too large.", StringValueCStr(argv[0]) );
+    break;
+}
+
+   strncpy( filen, RSTRING_PTR(argv[0]), filens );
+   filens = loadfile_withrtp( pato, filen, extensions, filens, 3, 2 );
+
+   if ( filens != 0 )
+{
+    img = IMG_Load(pato);
+
+    if( img == 0 )
+{
+ /* TODO: check error handling */
+     rb_raise(rb_eRGSSError, "Error loading %s: %s", StringValueCStr(argv[0]), IMG_GetError());
+}
+    else
+{
+     ptr->surface = create_rgba_surface_from(img);
+}
+
+}
+   else
+{
+// TODO: check error handling
+    rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
+}
+   break;
+
+  case 2:
+   ptr->surface = create_rgba_surface(NUM2INT(argv[0]), NUM2INT(argv[1]));
+
+   if(!ptr->surface)
+{
+/* TODO: check error handling */
+    rb_raise(rb_eRGSSError, "Could not create surface: %s", SDL_GetError());
+}
+   break;
+
+  default:
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..2)", argc);
+   break;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig) {

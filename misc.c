@@ -81,10 +81,3 @@ void write_int16(char *ptr, int16_t val) {
   ptr[0] = ((uint16_t)val);
   ptr[1] = ((uint16_t)val)>>8;
 }
-
-
-void tryChdir(const char *path) {
-  if(chdir(path)) {
-    fprintf(stderr, "cannot chdir: %s\n", strerror(errno));
-  }
-}

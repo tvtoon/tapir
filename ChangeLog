@@ -1,5 +1,11 @@
 # en.UTF-8
 
+0.1.2
+^The "archive.*" stuff was replaced by external archive extractor "rgssad.c".
+^Stuff inside "openres.*" was almost completely remade.
+^The atexit and exit functions call were replaced by common exception raise, avoiding the ruby "clash".
+^DOCUMENTATION!
+
 0.1.1
 ^Took the printing madness from release and put it inside "__DEBUG__", it is useless as we can read the scripts and there will be a better way.
 ^Reworked headers to clean most stuff.

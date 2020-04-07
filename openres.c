@@ -1,11 +1,14 @@
-// Copyright 2017 Masaki Hara. See the COPYRIGHT
-// file at the top-level directory of this distribution.
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
+/*
+ Copyright 2017 Masaki Hara;
+           2020 Tibério Vítor
+ See the COPYRIGHT file at the top-level directory of this distribution.
+
+ Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ option. This file may not be copied, modified, or distributed
+ except according to those terms.
+*/
 
 #include <dirent.h>
 #include <unistd.h>
@@ -18,236 +21,403 @@
 
 #include "rubyfill.h"
 #include "RGSSError.h"
-#include "archive.h"
 #include "ini.h"
 #include "openres.h"
 #include "tapir_config.h"
 
-#if RGSS == 3
-#define RTP_BASE_DETECTOR "/RGSS3/RPGVXAce/Graphics/Titles1/Castle.png"
-#define RTP_RGSS_VERSION "RGSS3"
-#elif RGSS == 2
-#define RTP_BASE_DETECTOR "/RGSS2/RPGVX/Graphics/System/Title.png"
-#define RTP_RGSS_VERSION "RGSS2"
-#else
-#define RTP_BASE_DETECTOR "/RGSS/Standard/Graphics/Titles/001-Title01.jpg"
-#define RTP_RGSS_VERSION "RGSS"
-#endif
+static char rtp_paths[3][PATH_MAX + 1] = { "\0", "\0", "\0" };
+static size_t rtp_pathsiza[3] = { 0,0,0 };
+static unsigned char rtp_slotc = 0;
 
-static char *rtp_paths[NUM_RTP_SLOTS];
 static bool script_loading_flag = false;
 
-static void modify_case(char *path) {
-  // TODO: This routine only considers [a-zA-Z].
-  // Actual Windows implementation compares case according to
-  // lowercase/uppercase mapping from UnicodeData.txt.
-  // TODO: path is assumed to be UTF-8 encoded, but opendir doesn't necessarily
-  // use UTF-8.
-  char *slash = strrchr(path, '/');
-  char *basename;
-  DIR *dir = NULL;
-  if(slash == NULL) {
-    basename = path;
-    dir = opendir(".");
-  } else if(slash == path) {
-    basename = slash + 1;
-    dir = opendir("/");
-  } else {
-    basename = slash + 1;
-    *slash = '\0';
-    dir = opendir(path);
-    if(dir == NULL) {
-      modify_case(path);
-      dir = opendir(path);
-    }
-  }
-  if(!dir) {
-    if(slash) *slash = '/';
-    return;
-  }
-  struct dirent *ent;
-  while((ent = readdir(dir)) != NULL) {
-    bool equal = true;
-    for(int i = 0;; ++i) {
-      char c1 = basename[i], c2 = ent->d_name[i];
-      if('A' <= c1 && c1 <= 'Z') c1 |= 0x20;
-      if('A' <= c2 && c2 <= 'Z') c2 |= 0x20;
-      if(c1 != c2) {
-        equal = false;
-        break;
-      }
-      if(basename[i] == '\0') break;
-    }
-    if(equal) {
-      strcpy(basename, ent->d_name);
-      break;
-    }
-  }
-  if(slash) *slash = '/';
-  closedir(dir);
+static size_t rtp_loadinistandard( char *rtp_fullp, const char *rtp_name, const size_t rtp_paths )
+{
+//const char rtp_snamea[3][9] = { "Standard", "RPGVX", "RPGVXAce" };
+ const char rtp_fullna[3][16] = { "RGSS/Standard/", "RGSS3/RPGVXAce/", "RGSS2/RPGVX/" };
+ const size_t rtp_fullnsa[3] = { 14, 15, 12 };
+ const size_t rtp_fullsnpa[3] = { 5, 6, 6 };
+ const size_t rtp_fullsnsa[3] = { 8, 8, 5 };
+ const size_t pathlim = PATH_MAX - 3;
+ int i = 0, testi = 0;
+ size_t inis = 0, rets = rtp_paths;
+
+/* Check for standard matching version. */
+ for ( i = 0; i < 3; i++ )
+{
+  testi = strncmp( rtp_name, &rtp_fullna[i][rtp_fullsnpa[i]], rtp_fullsnsa[i] );
+
+  if ( testi == 0 ) break;
 }
 
-static SDL_RWops *caseless_open(char *path, const char *mode) {
-  SDL_RWops *file = SDL_RWFromFile(path, mode);
-  if(file) return file;
-  VALUE path2 = rb_str_new2(path);
-  modify_case(RSTRING_PTR(path2));
-  return SDL_RWFromFile(RSTRING_PTR(path2), mode);
+ if ( i != 3 )
+{
+  rtp_name = rtp_fullna[i];
+  inis = rtp_fullnsa[i];
+}
+ else
+{
+  inis = strlen(rtp_name) + 1;
+}
+
+ inis += rtp_paths;
+
+ if ( inis > pathlim )
+{
+#ifdef __DEBUG__
+  fprintf( stderr, "RTP path is too large!" );
+#endif
+}
+ else
+{
+  rets = inis;
+  strncpy( &rtp_fullp[rtp_paths], rtp_name, rets );
+  rtp_fullp[rets] = '\0';
+//  rtp_slotc++;
+}
+
+ return(rets);
+}
+
+static unsigned char rtp_pathloop_adjust( char (* pathn)[PATH_MAX + 1], const char *opath, const size_t paths )
+{
+ char *carn = '\0';
+ int testi = 0;
+ size_t carpp = 0, carps = 0, ui = 0;
+ unsigned char loopc = 1;
+
+ strncpy( pathn[0], opath, paths );
+ pathn[0][paths] = '\0';
+
+ carn = strrchr( pathn[0], '/' );
+
+ if ( carn != 0 )
+{
+  carn = &carn[1];
+  carps = strlen(carn);
+
+  for ( ui = 0; ui < carps; ui++ )
+{
+   testi = isalpha(carn[ui]);
+
+   if ( testi == 1 )
+{
+    break;
+}
+
+}
+/* Only count them if alphabet is there. */
+  if ( ui != carps )
+{
+   strncpy( pathn[1], opath, paths );
+   strncpy( pathn[2], opath, paths );
+   pathn[1][paths] = pathn[2][paths] = '\0';
+   carn[ui] = toupper(carn[ui]);
+   carpp = paths - ( carps - ui );
+   loopc = 3;
+
+   for ( ui = carpp; ui < paths; ui++ )
+{
+    pathn[2][ui] = toupper(pathn[2][ui]);
+}
+
+}
+
+}
+
+#ifdef __DEBUG__
+ printf( "Pointer: \"%s\".\nOriginal: \"%s\".\n1 up: \"%s\".\nAll up: \"%s\".\nPosition %lu proof: \"%s\".\n", carn, pathn[0], pathn[1], pathn[2], carpp, &pathn[0][carpp] );
+#endif
+ return(loopc);
 }
 
 /* static END */
 
-SDL_RWops *openres(VALUE path, bool use_archive) {
-  SDL_RWops *file;
-  if(use_archive) {
-    file = openFromArchive(StringValueCStr(path));
-    if(file) return file;
-  }
-  for(ssize_t i = 0; i < RSTRING_LEN(path); ++i) {
-    if(RSTRING_PTR(path)[i] == '\\') {
-      RSTRING_PTR(path)[i] = '/';
-    }
-  }
-  // TODO: support case-insensitive paths
-  file = caseless_open(StringValueCStr(path), "rb");
-  if(file) return file;
-  for(int rtp_slot = 0; rtp_slot < NUM_RTP_SLOTS; ++rtp_slot) {
-    const char *rtp_path = get_rtp_path(rtp_slot);
-    if(!rtp_path) continue;
-    VALUE path2 = rb_str_new2(rtp_path);
-    rb_str_cat2(path2, "/");
-    rb_str_concat(path2, path);
-    rb_str_update(path, 0, RSTRING_LEN(path), path2);
-    file = caseless_open(StringValueCStr(path), "rb");
-    if(file) return file;
-  }
-  return NULL;
+VALUE rb_load_data(VALUE self, VALUE path)
+{
+ FILE *file = 0;
+ VALUE rb_mMarshal = 0, str = 0;
+ char buf[BUFSIZ + 1] = "\0";
+ int script_loading = script_loading_flag;
+ size_t numread = BUFSIZ;
+
+ (void) self;
+ script_loading_flag = 0;
+
+ if ( script_loading == 0 )
+{
+  file = fopen( StringValueCStr(path), "rb" );
 }
 
-SDL_RWops *openres_ext(VALUE path, bool use_archive,
-    const char * const exts[]) {
-  for(; *exts; ++exts) {
-    VALUE path2 = rb_str_new(RSTRING_PTR(path), RSTRING_LEN(path));
-    rb_str_cat2(path2, *exts);
-    SDL_RWops *file = openres(path2, use_archive);
-    if(file) {
-      rb_str_update(path, 0, RSTRING_LEN(path), path2);
-      return file;
-    }
-  }
-  return NULL;
+ if ( file == 0 )
+{
+  errno = ENOENT;
+  rb_sys_fail(StringValueCStr(path));
+  return(Qnil);
+}
+ else
+{
+  str = rb_str_new(0, 0);
+
+  while ( numread == BUFSIZ )
+{
+   numread = fread( buf, 1, BUFSIZ, file );
+   rb_str_cat(str, buf, numread);
 }
 
-VALUE rb_load_data(VALUE self, VALUE path) {
-  (void) self;
-
-  bool script_loading = script_loading_flag;
-  script_loading_flag = false;
-
-  SDL_RWops *file = NULL;
-  if(archiveExists()) {
-    file = openFromArchive(StringValueCStr(path));
-  }
-  if(!file && (!archiveExists() || !script_loading)) {
-    file = caseless_open(StringValueCStr(path), "rb");
-  }
-  if(!file) {
-    errno = ENOENT;
-    rb_sys_fail(StringValueCStr(path));
-  }
-  VALUE str = rb_str_new(0, 0);
-  while(true) {
-    char buf[1024];
-    size_t numread = SDL_RWread(file, buf, 1, sizeof(buf));
-    if(numread == 0) break;
-    rb_str_cat(str, buf, numread);
-  }
-  SDL_RWclose(file);
-
-  VALUE rb_mMarshal = rb_const_get_at(rb_cObject, rb_intern("Marshal"));
-  return rb_funcall(rb_mMarshal, rb_intern("load"), 1, str);
+  fclose(file);
+  rb_mMarshal = rb_const_get_at(rb_cObject, rb_intern("Marshal"));
 }
 
-const char *get_rtp_path(int rtp_slot) {
-  return rtp_paths[rtp_slot];
+ return rb_funcall(rb_mMarshal, rb_intern("load"), 1, str);
 }
 
-void configure_rtp_path(struct ini_section *game_section) {
-  const char *rtp_base_path = get_rtp_base_config();
-  if(!rtp_base_path) {
-    static const char *rtp_base_candidates[] = {
-      // "/opt/Enterbrain",
-      "/usr/local/share/Enterbrain",
-      "/usr/share/Enterbrain",
-      NULL
-    };
-    for(int i = 0; rtp_base_candidates[i]; ++i) {
-      const char *rtp_base_candidate = rtp_base_candidates[i];
-      char *detect_path = malloc(
-          strlen(rtp_base_candidate) +
-          strlen(RTP_BASE_DETECTOR) + 1);
-      strcpy(detect_path, rtp_base_candidate);
-      strcat(detect_path, RTP_BASE_DETECTOR);
-      struct stat buf;
-      int result = stat(detect_path, &buf);
-      free(detect_path);
-      if(result == 0) {
-        rtp_base_path = rtp_base_candidate;
-        break;
-      }
-    }
-  }
+int configure_rtp_path(struct ini_section *game_section)
+{
+ char testpath[PATH_MAX + 1] = "\0";
+ const char *rtp_base_path = get_rtp_base_config(), *rtp_name = 0;
+ const char rtp_inia[3][5] = { "RTP1", "RTP2", "RTP3" }, rtp_base_candidates[4][29] = { "/opt/Enterbrain/", "/usr/local/share/Enterbrain/", "/usr/share/Enterbrain/", "" };
+ const size_t rtp_basesa[4] = { 16, 28, 22, 0 };
+ int i = 0, reti = 0, testi = 0;
+ size_t paths = 0, pathlim = PATH_MAX - 3;
+ struct stat dirsta;
+ unsigned char rtpbi = 3;
+/* What to copy pasta. */
+ if ( rtp_base_path != 0 )
+{
+  paths = strlen(rtp_base_path);
+/* Reduce and fix this bullshit later. */
+  if ( paths > pathlim )
+{
+   paths = 0;
+}
+  else
+{
 
-#if RGSS > 1
-  const char *rtp_names[NUM_RTP_SLOTS] = {NULL};
-#else
-  const char *rtp_names[NUM_RTP_SLOTS] = {NULL, NULL, NULL};
+   if ( ( paths > 0 ) && ( rtp_base_path[paths - 1] != '/' ) )
+{
+    if ( ( paths + 1 ) > pathlim )
+{
+     paths = 0;
+}
+    else
+{
+     strncpy( testpath, rtp_base_path, paths );
+     testpath[paths] = '/';
+     paths++;
+     testpath[paths] = '\0';
+}
+
+}
+   else
+{
+    strncpy( testpath, rtp_base_path, paths );
+    testpath[paths] = '\0';
+}
+
+}
+
+  rtp_base_path = testpath;
+}
+ else
+{
+
+  for ( i = 0; i < 3; i++ )
+{
+   testi = stat( rtp_base_candidates[i], &dirsta );
+
+   if ( testi == 0 )
+{
+    testi = S_ISDIR( dirsta.st_mode );
+
+    if ( testi != 0 ) break;
+}
+
+}
+
+  rtpbi = i;
+  rtp_base_path = rtp_base_candidates[rtpbi];
+  paths = rtp_basesa[rtpbi];
+}
+
+ for ( i = 0; i < 3; i++ )
+{
+  strncpy( rtp_paths[i], rtp_base_path, paths );
+  rtp_paths[i][paths] = '\0';
+  rtp_pathsiza[i] += paths;
+#ifdef __DEBUG__
+  printf( "RTP half %i: \"%s\" (%lu).\n", i, rtp_paths[i], rtp_pathsiza[i] );
 #endif
-  if(game_section) {
-#if RGSS > 1
-    rtp_names[0] = find_ini_entry(game_section, "RTP");
-#else
-    rtp_names[0] = find_ini_entry(game_section, "RTP1");
-    rtp_names[1] = find_ini_entry(game_section, "RTP2");
-    rtp_names[2] = find_ini_entry(game_section, "RTP3");
-#endif
-  }
-  for(int i = 0; i < NUM_RTP_SLOTS; ++i) {
-    rtp_paths[i] = NULL;
-
-    if(!rtp_names[i]) {
-      rtp_names[i] = "";
-    }
-    if(!strcmp(rtp_names[i], "")) continue;
-    const char *rtp_path_from_config = get_rtp_config(rtp_names[i]);
-    if(rtp_path_from_config) {
-      rtp_paths[i] = strdup(rtp_path_from_config);
-      continue;
-    }
-
-    // RTP default fallback
-    if(!rtp_base_path) {
-      fprintf(stderr, "warning: could not find RTP %s\n", rtp_names[i]);
-      continue;
-    }
-
-    size_t rtp_path_len =
-        strlen(rtp_base_path) +
-        1 + strlen(RTP_RGSS_VERSION) +
-        1 + strlen(rtp_names[i]);
-    rtp_paths[i] = malloc(rtp_path_len + 1);
-    snprintf(rtp_paths[i], rtp_path_len + 1, "%s/%s/%s",
-        rtp_base_path, RTP_RGSS_VERSION, rtp_names[i]);
-  }
 }
 
-void deconfigure_rtp_path() {
-  for(int i = 0; i < NUM_RTP_SLOTS; ++i) {
-    if(rtp_paths[i]) {
-      free(rtp_paths[i]);
-      rtp_paths[i] = NULL;
-    }
-  }
+/* INI */
+ rtp_name = find_ini_entry(game_section, "RTP");
+
+ if ( rtp_name == 0 )
+{
+
+  for ( i = 0; i < 3; i++ )
+{
+   rtp_name = find_ini_entry(game_section, rtp_inia[i] );
+   pathlim = strlen(rtp_name);
+
+   if ( pathlim != 0 )
+{
+#ifdef __DEBUG__
+    printf( "Entering loop checkup with \"%s\" (%lu).\n", rtp_name, pathlim );
+#endif
+    paths = rtp_loadinistandard( rtp_paths[rtp_slotc], rtp_name, rtp_pathsiza[rtp_slotc] );
+
+    if ( paths != rtp_pathsiza[rtp_slotc] )
+{
+     rtp_pathsiza[rtp_slotc] = paths;
+     rtp_slotc++;
+}
+    else
+{
+#ifdef __DEBUG__
+     fprintf( stderr, "RTP path is too large!" );
+#endif
+     reti = 1;
+}
+
+}
+
+}
+
+}
+ else
+{
+/* Check for standard matching version. */
+  paths = rtp_loadinistandard( rtp_paths[rtp_slotc], rtp_name, rtp_pathsiza[rtp_slotc] );
+
+  if ( paths != rtp_pathsiza[rtp_slotc] )
+{
+   rtp_pathsiza[rtp_slotc] = paths;
+   rtp_slotc++;
+}
+  else
+{
+#ifdef __DEBUG__
+   fprintf( stderr, "RTP path is too large!" );
+#endif
+   reti = 1;
+}
+
+}
+
+#ifdef __DEBUG__
+ for ( i = 0; i < rtp_slotc; i++ )
+{
+  printf( "RTP %i: \"%s\" (%lu).\n", i, rtp_paths[i], rtp_pathsiza[i] );
+}
+#endif
+
+ return(reti);
+}
+
+size_t loadfile_withrtp( char *pato, const char *filen, const char (*extsa)[5], const size_t filens, const size_t extotal, const size_t extrtp )
+{
+ FILE *arq = 0;
+ char cart[3][PATH_MAX + 1] = { "\0", "\0", "\0" };
+ const size_t pathlim = PATH_MAX + 1;
+ size_t ui = 0, uj = 0, uk = 0;
+ size_t pathps = 0, paths = filens + 4, patrs = 0;
+ unsigned char caseloop = 1;
+
+ strncpy( pato, filen, filens );
+
+ for ( ; ui < extotal; ui++ )
+{
+  strncpy( &pato[filens], extsa[ui], 4 );
+  pato[paths] = '\0';
+  arq = fopen( pato, "rb" );
+
+  if (arq != 0)
+{
+   patrs = paths;
+   fclose(arq);
+   break;
+}
+
+}
+
+ if ( ui == extotal )
+{
+
+  for ( ui = 0; ui < rtp_slotc; ui++ )
+{
+   pathps = rtp_pathsiza[ui] + filens;
+   paths = pathps + 4;
+
+   if ( paths < pathlim )
+{
+    strncpy( pato, rtp_paths[ui], rtp_pathsiza[ui] );
+    caseloop = rtp_pathloop_adjust( cart, filen, filens );
+
+    for ( ; uk < caseloop; uk++ )
+{
+     strncpy( &pato[rtp_pathsiza[ui]], cart[uk], filens );
+/* Limit to stuff like OGG or MIDI only */
+     for ( uj = 0; uj < extrtp; uj++ )
+{
+      strncpy( &pato[pathps], extsa[uj], 4 );
+      pato[paths] = '\0';
+//printf( "TLRTP %lu: \"%s\".\n", uj, pato );
+      arq = fopen( pato, "rb" );
+
+      if (arq != 0)
+{
+       patrs = paths;
+       ui = rtp_slotc - 1;
+       uk = caseloop - 1;
+       fclose(arq);
+       break;
+}
+
+}
+
+}
+
+}
+#ifdef __DEBUG__
+   else
+{
+    fprintf( stderr, "Larger than PATH_MAX fail for \"%s\"!\n", pato );
+}
+#endif
+
+}
+
+}
+
+ return(patrs);
+}
+
+unsigned char build_rtppath( /*char ** */char (*patob)[PATH_MAX + 1], const char *newdir, const size_t newdirs )
+{
+ size_t paths = 0;
+ unsigned char ui = 0;
+
+ for ( ; ui < rtp_slotc; ui++ )
+{
+  paths = newdirs + rtp_pathsiza[ui];
+
+  if ( paths > PATH_MAX )
+{
+   ui = 0;
+   break;
+}
+  else
+{
+   strncpy( patob[ui], rtp_paths[ui], rtp_pathsiza[ui] );
+   strncpy( &patob[ui][rtp_pathsiza[ui]], newdir, newdirs );
+   patob[ui][paths] = '\0';
+}
+
+}
+
+ return(ui);
 }
 
 void flag_script_loading(void) {

@@ -380,47 +380,58 @@ void defreeze_screen(void) {
   SDL_FreeSurface(frozen);
 }
 
-void load_transition_image(const char *filename, int vagueness) {
-  if(!filename || !strcmp(filename, "")) {
-    SDL_Surface *img = create_rgba_surface(window_width, window_height);
-    SDL_FillRect(img, NULL, SDL_MapRGBA(img->format, 255, 255, 255, 255));
-    glBindTexture(GL_TEXTURE_2D, transition_texture2);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img->w, img->h,
-        0, GL_RGBA, GL_UNSIGNED_BYTE, img->pixels);
-    SDL_FreeSurface(img);
-
-    transition_vagueness = 255;
-    return;
-  }
-
-  SDL_Surface *transition_image = NULL;
-
-  {
-    const char * const extensions[] = {"", ".png", NULL};
-    VALUE filename2 = rb_str_new2(filename);
-    SDL_RWops *file = openres_ext(filename2, true, extensions);
-    if(!file) {
-      /* TODO: check error handling */
-      rb_raise(rb_eRGSSError, "Error loading %s: %s",
-          filename, SDL_GetError());
-    }
-    /* TODO: limit file type */
-    SDL_Surface *img = IMG_Load_RW(file, true);
-    if(!img) {
-      /* TODO: check error handling */
-      rb_raise(rb_eRGSSError, "Error loading %s: %s",
-          filename, IMG_GetError());
-    }
-    transition_image = create_rgba_surface_from(img);
-  }
-
+void load_transition_image(const char *filename, int vagueness)
+{
+ SDL_Surface *img = 0;
+ SDL_Surface *transition_image = 0;
+ char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
+ const char extensions[2][5] = { ".png", "\0" };
+ size_t filens = 0;
+ 
+ if(!filename || !strcmp(filename, ""))
+{
+  img = create_rgba_surface(window_width, window_height);
+  SDL_FillRect(img, NULL, SDL_MapRGBA(img->format, 255, 255, 255, 255));
   glBindTexture(GL_TEXTURE_2D, transition_texture2);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-      transition_image->w, transition_image->h,
-      0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
-  SDL_FreeSurface(transition_image);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img->w, img->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img->pixels);
+  SDL_FreeSurface(img);
+  transition_vagueness = 255;
+  return;
+}
 
-  transition_vagueness = vagueness;
+ filens = strlen(filename);
+/* Windows PATH_MAX less extension. */
+ if ( filens > 251 )
+{
+  rb_raise(rb_eRGSSError, "File %s size is too large.", filename );
+  return;
+}
+
+ strncpy( filen, filename, filens );
+ filens = loadfile_withrtp( pato, filen, extensions, filens, 1, 1 );
+
+ if ( filens == 0 )
+{
+// TODO: check error handling
+  rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
+  return;
+}
+
+ img = IMG_Load(pato);
+
+ if(!img)
+{
+/* TODO: check error handling */
+  rb_raise(rb_eRGSSError, "Error loading %s: %s", filename, IMG_GetError());
+  return;
+}
+
+ transition_image = create_rgba_surface_from(img);
+
+ glBindTexture(GL_TEXTURE_2D, transition_texture2);
+ glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, transition_image->w, transition_image->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
+ SDL_FreeSurface(transition_image);
+ transition_vagueness = vagueness;
 }
 
 static void initTransition(void) {
@@ -468,6 +479,7 @@ static void initTransition(void) {
   defreeze_screen();
   load_transition_image(NULL, 255);
 }
+
 static void deinitTransition(void) {
   if(transition_texture2) glDeleteTextures(1, &transition_texture2);
   if(transition_texture) glDeleteTextures(1, &transition_texture);

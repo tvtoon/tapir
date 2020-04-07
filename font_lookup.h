@@ -14,5 +14,5 @@
 
 TTF_Font *loadFont(const char *name, int size, bool bold, bool italic);
 bool fontExistence(const char *name);
-void initFontLookup(void);
+int initFontLookup(void);
 void uninitFontLookup(void);

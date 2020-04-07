@@ -44,6 +44,7 @@ GLuint compileShaders(const char *vsh_source, const char *fsh_source) {
   }
 
   GLuint shader = glCreateProgram();
+// 0 => glDeleteProgram();
   glAttachShader(shader, vsh);
   glAttachShader(shader, fsh);
   glLinkProgram(shader);

@@ -18,7 +18,6 @@ double read_double(const char *ptr);
 int16_t read_int16(const char *ptr);
 int32_t clamp_int32(int32_t val, int32_t minval, int32_t maxval);
 int32_t read_int32(const char *ptr);
-void tryChdir(const char *path);
 void write_double(char *ptr, double val);
 void write_int16(char *ptr, int16_t val);
 void write_int32(char *ptr, int32_t val);

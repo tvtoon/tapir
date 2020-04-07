@@ -28,7 +28,7 @@
 #endif
 
 struct chunk_cache_entry {
-  char *name;
+  char name[PATH_MAX + 1];
   Mix_Chunk *chunk;
 };
 
@@ -39,7 +39,7 @@ static VALUE rb_mAudio;
 static size_t chunk_cache_size, chunk_cache_capacity;
 static struct chunk_cache_entry *chunk_cache;
 
-static  const char * const extensions[] = { "", ".ogg", ".wma", ".mp3", ".wav", ".mid", NULL};
+static const char extensions[6][5] = { ".ogg", ".mid", ".wma", ".mp3", ".wav", "\0" };
 /*
 #if RGSS == 3
 static VALUE rb_audio_s_setup_midi(VALUE klass);
@@ -67,90 +67,75 @@ static VALUE rb_audio_s_setup_midi(VALUE klass) {
 }
 #endif
 
-static Mix_Chunk *load_chunk_cached(VALUE filename) {
-  const char *filename_c = StringValueCStr(filename);
-  for(size_t i = 0; i < chunk_cache_size; ++i) {
-    if(!strcmp(chunk_cache[i].name, filename_c)) {
-      return chunk_cache[i].chunk;
-    }
-  }
+static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
+{
+// VALUE filename = 0;
+ char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
+ int pitch = 0, pos = 0, volume = 0;
+ size_t filens = 0;
 
-  filename = rb_str_new(RSTRING_PTR(filename), RSTRING_LEN(filename));
+ (void) klass;
 
-  SDL_RWops *file = openres_ext(filename, false, extensions);
-
-  if(!file) {
-    /* TODO: check error handling */
-    rb_raise(rb_eRGSSError, "Error loading %s: %s",
-        StringValueCStr(filename),
-        SDL_GetError());
-  }
-
-  Mix_Chunk *chunk = Mix_LoadWAV_RW(file, 1);
-
-  if(!chunk) return NULL;
-
-  if(chunk_cache_size <= chunk_cache_capacity) {
-    chunk_cache_capacity += chunk_cache_capacity / 2;
-    chunk_cache = realloc(chunk_cache,
-        sizeof(*chunk_cache) * chunk_cache_capacity);
-  }
-
-  chunk_cache[chunk_cache_size].chunk = chunk;
-  chunk_cache[chunk_cache_size].name = strdup(filename_c);
-  chunk_cache_size++;
-
-  return chunk;
+ if(argc <= 0 || argc > ARGCMAX)
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, ARGCMAX );
+  return(Qnil);
 }
 
-static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass) {
-  (void) klass;
+ filens = RSTRING_LEN(argv[0]);
+/* Windows PATH_MAX less extension. */
+ if ( filens > 251 )
+{
+  rb_raise(rb_eRGSSError, "File \"%s\" size is too large.", StringValueCStr(argv[0]) );
+  return(Qnil);
+}
 
-  if(argc <= 0 || argc > ARGCMAX)
-  {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, ARGCMAX );
-  }
+ strncpy( filen, RSTRING_PTR(argv[0]), filens );
+ volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 100;
+ pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
+ pos = argc > 3 ? NUM2INT(argv[3]) : 0;
 
-  int volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 100;
-  int pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
-  int pos = argc > 3 ? NUM2INT(argv[3]) : 0;
+ if (pitch != 100)
+{
+  WARN_UNIMPLEMENTED("Audio.bgm_play with pitch");
+}
 
-  if(pitch != 100) {
-    WARN_UNIMPLEMENTED("Audio.bgm_play with pitch");
-  }
+ if (pos != 0)
+{
+  WARN_UNIMPLEMENTED("Audio.bgm_play with pos");
+}
 
-  if(pos != 0) {
-    WARN_UNIMPLEMENTED("Audio.bgm_play with pos");
-  }
+ if(bgm)
+{
+  Mix_HaltMusic();
+  Mix_FreeMusic(bgm);
+  bgm = NULL;
+}
 
-  if(bgm) {
-    Mix_HaltMusic();
-    Mix_FreeMusic(bgm);
-    bgm = NULL;
-  }
+ filens = loadfile_withrtp( pato, filen, extensions, filens, 5, 2 );
 
-  VALUE filename = rb_str_new(RSTRING_PTR(argv[0]), RSTRING_LEN(argv[0]));
+ if ( filens != 0 )
+{
+  bgm = Mix_LoadMUS(pato);
 
-  SDL_RWops *file = openres_ext(filename, false, extensions);
+  if ( bgm == 0 )
+{
+// TODO: check error handling
+   rb_raise(rb_eRGSSError, "Error loading %s: %s", pato, Mix_GetError());
+   return(Qnil);
+}
 
-  if(!file) {
-    /* TODO: check error handling */
-    rb_raise(rb_eRGSSError, "Error loading %s: %s",
-        StringValueCStr(argv[0]),
-        SDL_GetError());
-  }
-  SDL_RWclose(file);
-  bgm = Mix_LoadMUS(StringValueCStr(filename));
-  if(!bgm) {
-    /* TODO: check error handling */
-    rb_raise(rb_eRGSSError, "Error loading %s: %s",
-        StringValueCStr(argv[0]),
-        Mix_GetError());
-  }
   Mix_VolumeMusic(volume * MIX_MAX_VOLUME / 100);
   // TODO: LOOPSTART from ogg
   Mix_PlayMusic(bgm, -1);
-  return Qnil;
+}
+ else
+{
+// TODO: check error handling
+  rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
+}
+
+ return Qnil;
 }
 
 static VALUE rb_audio_s_bgm_stop(VALUE klass) {
@@ -224,24 +209,87 @@ static VALUE rb_audio_s_me_fade(VALUE klass, VALUE time) {
 }
 
 static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
-  (void) klass;
-  if(argc <= 0 || argc > 3) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..3)", argc);
-  }
-  int volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 80;
-  int pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
+ Mix_Chunk *chunk = 0;
+ char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
+ int pitch = 0, volume = 0;
+ size_t filens = 0, paths = 0, ui = 0;
 
-  if(pitch != 100) {
-    WARN_UNIMPLEMENTED("Audio.se_play with pitch");
-  }
+ (void) klass;
 
-  Mix_Chunk *chunk = load_chunk_cached(argv[0]);
-  if(!chunk) return Qnil;
+ if(argc <= 0 || argc > 3)
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..3)", argc);
+  return(Qnil);
+}
+
+ filens = RSTRING_LEN(argv[0]);
+/* Windows PATH_MAX less extension. */
+ if ( filens > 251 )
+{
+  rb_raise(rb_eRGSSError, "File %s size is too large.", StringValueCStr(argv[0]) );
+  return(Qnil);
+}
+
+ strncpy( filen, RSTRING_PTR(argv[0]), filens );
+ volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 80;
+ pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
+
+ if (pitch != 100)
+{
+  WARN_UNIMPLEMENTED("Audio.se_play with pitch");
+}
+
+
+ for ( ; ui < chunk_cache_size; ui++)
+{
+
+  if ( strncmp( chunk_cache[ui].name, filen, filens ) == 0 )
+{
+   chunk = chunk_cache[ui].chunk;
+}
+
+}
+
+ if ( ui == chunk_cache_size )
+{
+  paths = loadfile_withrtp( pato, filen, extensions, filens, 5, 2 );
+
+  if ( paths != 0 )
+{
+   chunk = Mix_LoadWAV(pato);
+
+   if ( chunk != 0 )
+{
+
+    if (chunk_cache_size <= chunk_cache_capacity )
+{
+     chunk_cache_capacity += chunk_cache_capacity / 2;
+     chunk_cache = realloc(chunk_cache, sizeof(*chunk_cache) * chunk_cache_capacity);
+}
+
+    chunk_cache[chunk_cache_size].chunk = chunk;
+    strncpy( chunk_cache[chunk_cache_size].name, filen, filens );
+    chunk_cache[chunk_cache_size].name[filens] = '\0';
+    chunk_cache_size++;
+}
+   else
+{
+    rb_raise(rb_eRGSSError, "Error loading %s: %s", pato, Mix_GetError());
+    return(Qnil);
+}
+
+}
+  else
+{
+// TODO: check error handling
+   rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
+   return(Qnil);
+}
+
+}
 
   Mix_VolumeChunk(chunk, volume * MIX_MAX_VOLUME / 100);
   Mix_PlayChannel(-1, chunk, 0);
-
-
   return Qnil;
 }
 
@@ -279,12 +327,17 @@ void initAudioSDL(void) {
   chunk_cache = malloc(sizeof(*chunk_cache) * chunk_cache_capacity);
 }
 
-void deinitAudioSDL(void) {
-  if(bgm) Mix_FreeMusic(bgm);
-  Mix_HaltChannel(-1);
-  for(size_t i = 0; i < chunk_cache_size; ++i) {
-    Mix_FreeChunk(chunk_cache[i].chunk);
-    free(chunk_cache[i].name);
-  }
-  free(chunk_cache);
+void deinitAudioSDL(void)
+{
+ size_t ui = 0;
+
+ if (bgm) Mix_FreeMusic(bgm);
+ Mix_HaltChannel(-1);
+
+ for ( ; ui < chunk_cache_size; ui++ )
+{
+  Mix_FreeChunk(chunk_cache[ui].chunk);
+}
+
+ free(chunk_cache);
 }
