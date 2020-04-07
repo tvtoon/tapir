@@ -615,6 +615,75 @@ struct Sprite *rb_sprite_data_mut(VALUE obj) {
   return (struct Sprite *)rb_sprite_data(obj);
 }
 
+int initSpriteSDL()
+{
+  static const char *vsh_source =
+    "#version 120\n"
+    "\n"
+    "uniform vec2 resolution;\n"
+    "\n"
+    "void main(void) {\n"
+    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
+    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
+    "    gl_Position.zw = vec2(0.0, 1.0);\n"
+    "}\n";
+
+  static const char *fsh_source =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform vec2 resolution;\n"
+    "uniform sampler2D tex;\n"
+    "uniform vec2 dst_translate;\n"
+    "uniform vec2 src_translate;\n"
+    "uniform vec2 src_topleft;\n"
+    "uniform vec2 src_bottomright;\n"
+    "uniform vec2 src_size;\n"
+    "uniform mat2 zoom_angle;\n"
+    "uniform bool mirror;\n"
+    "uniform float opacity;\n"
+    "uniform vec4 sprite_color;\n"
+    "uniform vec4 sprite_tone;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec4 color;\n"
+    "    vec2 coord = gl_TexCoord[0].xy;\n"
+    "    coord = coord - dst_translate;\n"
+    "    coord = zoom_angle * coord;\n"
+    "    coord = coord + src_translate;\n"
+    "    if(src_topleft.x <= coord.x && src_topleft.y <= coord.y && coord.x <= src_bottomright.x && coord.y <= src_bottomright.y) {\n"
+    "      if(mirror) {\n"
+    "        coord.x = src_topleft.x + src_bottomright.x - coord.x;\n"
+    "      }\n"
+    "      color = texture2D(tex, vec2(coord.x / src_size.x, coord.y / src_size.y));\n"
+    "    } else {\n"
+    "      color = vec4(0.0, 0.0, 0.0, 0.0);\n"
+    "    }\n"
+    "    /* Grayscale */\n"
+    "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
+    "    color.rgb *= 1.0 - sprite_tone.a;\n"
+    "    color.rgb += vec3(gray, gray, gray) * sprite_tone.a;\n"
+    "    /* tone blending */\n"
+    "    color.rgb = min(max(color.rgb + sprite_tone.rgb, 0.0), 1.0);\n"
+    "    /* color blending */\n"
+    "    color.rgb *= 1.0 - sprite_color.a;\n"
+    "    color.rgb += sprite_color.rgb * sprite_color.a;\n"
+    "    color.a *= opacity;\n"
+    "    gl_FragColor = color;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
+
+ shader = compileShaders(vsh_source, fsh_source);
+ if (shader == 0) return(1);
+
+ return(0);
+}
+
 void Init_Sprite(void) {
   rb_cSprite = rb_define_class("Sprite", rb_cObject);
   rb_define_alloc_func(rb_cSprite, sprite_alloc);
@@ -678,69 +747,4 @@ void Init_Sprite(void) {
 
 void deinitSpriteSDL() {
   if(shader) glDeleteProgram(shader);
-}
-
-void initSpriteSDL() {
-  static const char *vsh_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
-
-  static const char *fsh_source =
-    "#version 120\n"
-    "#if __VERSION__ >= 130\n"
-    "#define texture2D texture\n"
-    "#define texture2DProj textureProj\n"
-    "#endif\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "uniform sampler2D tex;\n"
-    "uniform vec2 dst_translate;\n"
-    "uniform vec2 src_translate;\n"
-    "uniform vec2 src_topleft;\n"
-    "uniform vec2 src_bottomright;\n"
-    "uniform vec2 src_size;\n"
-    "uniform mat2 zoom_angle;\n"
-    "uniform bool mirror;\n"
-    "uniform float opacity;\n"
-    "uniform vec4 sprite_color;\n"
-    "uniform vec4 sprite_tone;\n"
-    "\n"
-    "void main(void) {\n"
-    "    vec4 color;\n"
-    "    vec2 coord = gl_TexCoord[0].xy;\n"
-    "    coord = coord - dst_translate;\n"
-    "    coord = zoom_angle * coord;\n"
-    "    coord = coord + src_translate;\n"
-    "    if(src_topleft.x <= coord.x && src_topleft.y <= coord.y && coord.x <= src_bottomright.x && coord.y <= src_bottomright.y) {\n"
-    "      if(mirror) {\n"
-    "        coord.x = src_topleft.x + src_bottomright.x - coord.x;\n"
-    "      }\n"
-    "      color = texture2D(tex, vec2(coord.x / src_size.x, coord.y / src_size.y));\n"
-    "    } else {\n"
-    "      color = vec4(0.0, 0.0, 0.0, 0.0);\n"
-    "    }\n"
-    "    /* Grayscale */\n"
-    "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
-    "    color.rgb *= 1.0 - sprite_tone.a;\n"
-    "    color.rgb += vec3(gray, gray, gray) * sprite_tone.a;\n"
-    "    /* tone blending */\n"
-    "    color.rgb = min(max(color.rgb + sprite_tone.rgb, 0.0), 1.0);\n"
-    "    /* color blending */\n"
-    "    color.rgb *= 1.0 - sprite_color.a;\n"
-    "    color.rgb += sprite_color.rgb * sprite_color.a;\n"
-    "    color.a *= opacity;\n"
-    "    gl_FragColor = color;\n"
-    "    /* premultiplication */\n"
-    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
-    "}\n";
-
-  shader = compileShaders(vsh_source, fsh_source);
 }

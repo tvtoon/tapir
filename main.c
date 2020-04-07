@@ -64,14 +64,6 @@ void Init_nkf(void);
 RUBY_GLOBAL_SETUP
 #endif
 
-/*
-static void tapir_atexit(void)
-{
- uninitFontLookup();
- cleanupSDL();
- deinit_tapir_config();
-}
-*/
 static void Init_RGSS(void) {
 #if RGSS >= 2
   rb_gv_set("$TEST", is_test_mode ? Qtrue : Qfalse);
@@ -118,7 +110,6 @@ char *ruby_argv_array[] = {
 /* Ruby does not answer well for this...
  atexit(tapir_atexit);
 */
- fprintf( stderr, "BEFORE TAPIR CONFIG!\n" );
  init_tapir_config();
 
  while(argpos < argc)
@@ -218,34 +209,22 @@ char *ruby_argv_array[] = {
 
  if (game_title == 0) game_title = "tapir";
 
- fprintf( stderr, "BEFORE RTP!\n" );
  i = configure_rtp_path(game_section);
 
  if ( i != 0 )
- /*
 {
-  return(0);
-}
- else
- */
-{
-  fprintf( stderr, "I AM ERROR!\n" );
+  fprintf( stderr, "RTP configuration error!\n" );
   return(1);
 }
-/* Replace with "Scripts" later!
 
- fprintf( stderr, "BEFORE ARCHIVE!\n" );
-  i = initArchive();
+ i = initSDL(game_title);
 
  if ( i != 0 )
 {
-  fprintf(stderr, "Error: RGSS archive is broken.\n");
+  fprintf(stderr, "Error: couldn't init SDL.\n");
   return(1);
 }
-*/
- fprintf( stderr, "BEFORE SDL!\n" );
- initSDL(game_title);
- fprintf( stderr, "BEFORE FONT!\n" );
+
  i = initFontLookup();
 
  if ( i != 0 )
@@ -254,42 +233,36 @@ char *ruby_argv_array[] = {
   return(1);
 }
 
- fprintf( stderr, "BEFORE RUBY!\n" );
+ printf( "Begin RGSS...\n" );
 #ifdef RUBY_INIT_STACK
 //  ruby_sysinit(&ruby_argc, &ruby_argv);
-//  {
-    RUBY_INIT_STACK;
-    ruby_init();
+ RUBY_INIT_STACK;
  fprintf( stderr, "RUBY INIT STACK!\n" );
-    Init_zlib();
-#if RGSS == 3
-    Init_single_byte();
-    Init_utf_16_32();
-    Init_japanese_sjis();
-#endif
-    Init_RGSS();
-    rb_protect(main_rb, Qnil, &state);
-    //  }
 #else
-/* {
+/*
     (void) ruby_argc;
     (void) ruby_argv;
 */
-    ruby_init();
  fprintf( stderr, "RUBY WITHOUT STACK!\n" );
-    Init_zlib();
+#endif
+ ruby_init();
+ Init_zlib();
+#if RGSS == 3
+ Init_single_byte();
+ Init_utf_16_32();
+ Init_japanese_sjis();
+#endif
 #if RGSS == 2
-    Init_nkf();
+ Init_nkf();
 #endif
-    Init_RGSS();
-    //    {
-      extern void Init_stack(void *addr);
-      Init_stack(__builtin_frame_address(0));
-      rb_protect(main_rb, Qnil, &state);
-      //    }
-    //  }
-#endif
+ Init_RGSS();
 
+#ifndef RUBY_INIT_STACK
+ extern void Init_stack(void *addr);
+ Init_stack(__builtin_frame_address(0));
+#endif
+ rb_protect(main_rb, Qnil, &state);
+/* THE END */
  uninitFontLookup();
  cleanupSDL();
  deinit_tapir_config();

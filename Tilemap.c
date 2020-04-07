@@ -615,6 +615,42 @@ const struct Tilemap *rb_tilemap_data(VALUE obj) {
   return ret;
 }
 
+int initTilemapSDL()
+{
+  static const char *vsh_source =
+    "#version 120\n"
+    "\n"
+    "uniform vec2 resolution;\n"
+    "\n"
+    "void main(void) {\n"
+    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
+    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
+    "    gl_Position.zw = vec2(0.0, 1.0);\n"
+    "}\n";
+
+  static const char *fsh_source =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform sampler2D windowskin;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec4 color = texture2D(windowskin, vec2(gl_TexCoord[0].x, gl_TexCoord[0].y));\n"
+    "    gl_FragColor = color;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
+
+ shader = compileShaders(vsh_source, fsh_source);
+ if (shader == 0) return(1);
+
+ return(0);
+}
+
 struct Tilemap *rb_tilemap_data_mut(VALUE obj) {
   // Note: original RGSS doesn't check frozen.
   if(OBJ_FROZEN(obj)) rb_error_frozen("Tilemap");
@@ -663,36 +699,4 @@ void Init_Tilemap(void) {
 
 void deinitTilemapSDL() {
   if(shader) glDeleteProgram(shader);
-}
-
-void initTilemapSDL() {
-  static const char *vsh_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
-
-  static const char *fsh_source =
-    "#version 120\n"
-    "#if __VERSION__ >= 130\n"
-    "#define texture2D texture\n"
-    "#define texture2DProj textureProj\n"
-    "#endif\n"
-    "\n"
-    "uniform sampler2D windowskin;\n"
-    "\n"
-    "void main(void) {\n"
-    "    vec4 color = texture2D(windowskin, vec2(gl_TexCoord[0].x, gl_TexCoord[0].y));\n"
-    "    gl_FragColor = color;\n"
-    "    /* premultiplication */\n"
-    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
-    "}\n";
-
-  shader = compileShaders(vsh_source, fsh_source);
 }

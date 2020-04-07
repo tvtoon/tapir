@@ -1,5 +1,10 @@
 # en.UTF-8
 
+0.1.3
+^Fixed segfault by insane reallocating memory like mad at "Audio.c", fixed cache size now and will only change after implementing hierarchy.
+^Daily cleanup and testing at "Bitmap.c" and friends, right or not...
+^Conclusion of "exit" stuff, there shouldn't be memory or "exitdoers" trouble anymore.
+
 0.1.2
 ^The "archive.*" stuff was replaced by external archive extractor "rgssad.c".
 ^Stuff inside "openres.*" was almost completely remade.

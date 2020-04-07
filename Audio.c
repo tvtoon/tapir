@@ -35,9 +35,10 @@ struct chunk_cache_entry {
 // TODO: properly close these
 static Mix_Music *bgm;
 static VALUE rb_mAudio;
-
-static size_t chunk_cache_size, chunk_cache_capacity;
-static struct chunk_cache_entry *chunk_cache;
+/* REALLOC YOUR MOM! */
+static const size_t cachesize = 64;
+static size_t chunki = 0;
+static struct chunk_cache_entry *chunk_cache = 0;
 
 static const char extensions[6][5] = { ".ogg", ".mid", ".wma", ".mp3", ".wav", "\0" };
 /*
@@ -69,7 +70,9 @@ static VALUE rb_audio_s_setup_midi(VALUE klass) {
 
 static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
 {
-// VALUE filename = 0;
+/* Should be exported to ruby!
+ VALUE filename = 0;
+*/
  char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
  int pitch = 0, pos = 0, volume = 0;
  size_t filens = 0;
@@ -91,6 +94,7 @@ static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
 }
 
  strncpy( filen, RSTRING_PTR(argv[0]), filens );
+// filename = rb_str_new( filen, filens );
  volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 100;
  pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
  pos = argc > 3 ? NUM2INT(argv[3]) : 0;
@@ -209,6 +213,9 @@ static VALUE rb_audio_s_me_fade(VALUE klass, VALUE time) {
 }
 
 static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
+/* Should be exported to ruby?
+ VALUE filename = 0;
+*/
  Mix_Chunk *chunk = 0;
  char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
  int pitch = 0, volume = 0;
@@ -231,6 +238,7 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 }
 
  strncpy( filen, RSTRING_PTR(argv[0]), filens );
+// filename = rb_str_new( filen, filens );
  volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 80;
  pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
 
@@ -240,7 +248,7 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 }
 
 
- for ( ; ui < chunk_cache_size; ui++)
+ for ( ; ui < cachesize; ui++)
 {
 
   if ( strncmp( chunk_cache[ui].name, filen, filens ) == 0 )
@@ -250,7 +258,7 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 
 }
 
- if ( ui == chunk_cache_size )
+ if ( ui == cachesize )
 {
   paths = loadfile_withrtp( pato, filen, extensions, filens, 5, 2 );
 
@@ -260,17 +268,19 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 
    if ( chunk != 0 )
 {
+    chunki++;
 
-    if (chunk_cache_size <= chunk_cache_capacity )
+    if ( chunki == cachesize )
 {
-     chunk_cache_capacity += chunk_cache_capacity / 2;
-     chunk_cache = realloc(chunk_cache, sizeof(*chunk_cache) * chunk_cache_capacity);
+#ifdef __DEBUG__
+     printf( "REALOC INDEX: %lu!\n", chunki );
+#endif
+     chunki = 0;
 }
 
-    chunk_cache[chunk_cache_size].chunk = chunk;
-    strncpy( chunk_cache[chunk_cache_size].name, filen, filens );
-    chunk_cache[chunk_cache_size].name[filens] = '\0';
-    chunk_cache_size++;
+    chunk_cache[chunki].chunk = chunk;
+    strncpy( chunk_cache[chunki].name, filen, filens );
+    chunk_cache[chunki].name[filens] = '\0';
 }
    else
 {
@@ -322,9 +332,9 @@ void Init_Audio() {
 }
 
 void initAudioSDL(void) {
-  chunk_cache_size = 0;
-  chunk_cache_capacity = 10;
-  chunk_cache = malloc(sizeof(*chunk_cache) * chunk_cache_capacity);
+//  chunk_cache_size = 0;
+//  chunk_cache_capacity = 10;
+  chunk_cache = malloc(sizeof(*chunk_cache) * cachesize );
 }
 
 void deinitAudioSDL(void)
@@ -334,7 +344,7 @@ void deinitAudioSDL(void)
  if (bgm) Mix_FreeMusic(bgm);
  Mix_HaltChannel(-1);
 
- for ( ; ui < chunk_cache_size; ui++ )
+ for ( ; ui < cachesize; ui++ )
 {
   Mix_FreeChunk(chunk_cache[ui].chunk);
 }

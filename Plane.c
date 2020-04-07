@@ -367,44 +367,8 @@ struct Plane *rb_plane_data_mut(VALUE obj) {
 /*
  * A graphic object containing a bitmap.
  */
-void Init_Plane(void) {
-  rb_cPlane = rb_define_class("Plane", rb_cObject);
-  rb_define_alloc_func(rb_cPlane, plane_alloc);
-  rb_define_private_method(rb_cPlane, "initialize",
-      rb_plane_m_initialize, -1);
-  rb_define_private_method(rb_cPlane, "initialize_copy",
-      rb_plane_m_initialize_copy, 1);
-  rb_define_method(rb_cPlane, "dispose", rb_plane_m_dispose, 0);
-  rb_define_method(rb_cPlane, "disposed?", rb_plane_m_disposed_p, 0);
-  rb_define_method(rb_cPlane, "bitmap", rb_plane_m_bitmap, 0);
-  rb_define_method(rb_cPlane, "bitmap=", rb_plane_m_set_bitmap, 1);
-  rb_define_method(rb_cPlane, "viewport", rb_plane_m_viewport, 0);
-#if RGSS > 1
-  rb_define_method(rb_cPlane, "viewport=", rb_plane_m_set_viewport, 1);
-#endif
-  rb_define_method(rb_cPlane, "visible", rb_plane_m_visible, 0);
-  rb_define_method(rb_cPlane, "visible=", rb_plane_m_set_visible, 1);
-  rb_define_method(rb_cPlane, "z", rb_plane_m_z, 0);
-  rb_define_method(rb_cPlane, "z=", rb_plane_m_set_z, 1);
-  rb_define_method(rb_cPlane, "ox", rb_plane_m_ox, 0);
-  rb_define_method(rb_cPlane, "ox=", rb_plane_m_set_ox, 1);
-  rb_define_method(rb_cPlane, "oy", rb_plane_m_oy, 0);
-  rb_define_method(rb_cPlane, "oy=", rb_plane_m_set_oy, 1);
-  rb_define_method(rb_cPlane, "zoom_x", rb_plane_m_zoom_x, 0);
-  rb_define_method(rb_cPlane, "zoom_x=", rb_plane_m_set_zoom_x, 1);
-  rb_define_method(rb_cPlane, "zoom_y", rb_plane_m_zoom_y, 0);
-  rb_define_method(rb_cPlane, "zoom_y=", rb_plane_m_set_zoom_y, 1);
-  rb_define_method(rb_cPlane, "opacity", rb_plane_m_opacity, 0);
-  rb_define_method(rb_cPlane, "opacity=", rb_plane_m_set_opacity, 1);
-  rb_define_method(rb_cPlane, "blend_type", rb_plane_m_blend_type, 0);
-  rb_define_method(rb_cPlane, "blend_type=", rb_plane_m_set_blend_type, 1);
-  rb_define_method(rb_cPlane, "color", rb_plane_m_color, 0);
-  rb_define_method(rb_cPlane, "color=", rb_plane_m_set_color, 1);
-  rb_define_method(rb_cPlane, "tone", rb_plane_m_tone, 0);
-  rb_define_method(rb_cPlane, "tone=", rb_plane_m_set_tone, 1);
-}
-
-void initPlaneSDL() {
+int initPlaneSDL()
+{
   static const char *vsh_source =
     "#version 120\n"
     "\n"
@@ -444,7 +408,47 @@ void initPlaneSDL() {
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  shader = compileShaders(vsh_source, fsh_source);
+ shader = compileShaders(vsh_source, fsh_source);
+ if (shader == 0) return(1);
+
+ return(0);
+}
+
+void Init_Plane(void) {
+  rb_cPlane = rb_define_class("Plane", rb_cObject);
+  rb_define_alloc_func(rb_cPlane, plane_alloc);
+  rb_define_private_method(rb_cPlane, "initialize",
+      rb_plane_m_initialize, -1);
+  rb_define_private_method(rb_cPlane, "initialize_copy",
+      rb_plane_m_initialize_copy, 1);
+  rb_define_method(rb_cPlane, "dispose", rb_plane_m_dispose, 0);
+  rb_define_method(rb_cPlane, "disposed?", rb_plane_m_disposed_p, 0);
+  rb_define_method(rb_cPlane, "bitmap", rb_plane_m_bitmap, 0);
+  rb_define_method(rb_cPlane, "bitmap=", rb_plane_m_set_bitmap, 1);
+  rb_define_method(rb_cPlane, "viewport", rb_plane_m_viewport, 0);
+#if RGSS > 1
+  rb_define_method(rb_cPlane, "viewport=", rb_plane_m_set_viewport, 1);
+#endif
+  rb_define_method(rb_cPlane, "visible", rb_plane_m_visible, 0);
+  rb_define_method(rb_cPlane, "visible=", rb_plane_m_set_visible, 1);
+  rb_define_method(rb_cPlane, "z", rb_plane_m_z, 0);
+  rb_define_method(rb_cPlane, "z=", rb_plane_m_set_z, 1);
+  rb_define_method(rb_cPlane, "ox", rb_plane_m_ox, 0);
+  rb_define_method(rb_cPlane, "ox=", rb_plane_m_set_ox, 1);
+  rb_define_method(rb_cPlane, "oy", rb_plane_m_oy, 0);
+  rb_define_method(rb_cPlane, "oy=", rb_plane_m_set_oy, 1);
+  rb_define_method(rb_cPlane, "zoom_x", rb_plane_m_zoom_x, 0);
+  rb_define_method(rb_cPlane, "zoom_x=", rb_plane_m_set_zoom_x, 1);
+  rb_define_method(rb_cPlane, "zoom_y", rb_plane_m_zoom_y, 0);
+  rb_define_method(rb_cPlane, "zoom_y=", rb_plane_m_set_zoom_y, 1);
+  rb_define_method(rb_cPlane, "opacity", rb_plane_m_opacity, 0);
+  rb_define_method(rb_cPlane, "opacity=", rb_plane_m_set_opacity, 1);
+  rb_define_method(rb_cPlane, "blend_type", rb_plane_m_blend_type, 0);
+  rb_define_method(rb_cPlane, "blend_type=", rb_plane_m_set_blend_type, 1);
+  rb_define_method(rb_cPlane, "color", rb_plane_m_color, 0);
+  rb_define_method(rb_cPlane, "color=", rb_plane_m_set_color, 1);
+  rb_define_method(rb_cPlane, "tone", rb_plane_m_tone, 0);
+  rb_define_method(rb_cPlane, "tone=", rb_plane_m_set_tone, 1);
 }
 
 void deinitPlaneSDL() {

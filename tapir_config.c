@@ -141,7 +141,9 @@ void init_tapir_config(void) {
 
   config_init(&tapir_config);
 
+#ifdef __DEBUG__
  fprintf( stderr, "BEFORE ETC!\n" );
+#endif
 
  if(stat("/etc/tapir.cfg", &dummy_buf) == 0 &&
       !config_read_file(&tapir_config, "/etc/tapir.cfg")) {
@@ -152,8 +154,9 @@ void init_tapir_config(void) {
         config_error_text(&tapir_config));
   }
 
+#ifdef __DEBUG__
   fprintf( stderr, "BEFORE HOME!\n" );
-
+#endif
   const char *homedir = getenv("HOME");
 
   if(homedir) {
@@ -171,7 +174,9 @@ void init_tapir_config(void) {
     }
   }
 
+#ifdef __DEBUG__
  fprintf( stderr, "BEFORE LOOKUP!\n" );
+#endif
   config_setting_t *setting = config_lookup(&tapir_config, "rgss");
   if(setting) {
     process_setting(setting);

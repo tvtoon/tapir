@@ -30,6 +30,6 @@ struct Sprite {
 bool rb_sprite_data_p(VALUE obj);
 const struct Sprite *rb_sprite_data(VALUE obj);
 struct Sprite *rb_sprite_data_mut(VALUE obj);
+int initSpriteSDL(void);
 void Init_Sprite(void);
 void deinitSpriteSDL(void);
-void initSpriteSDL(void);

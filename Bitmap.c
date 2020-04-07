@@ -185,64 +185,77 @@ static VALUE rb_bitmap_m_clear(VALUE self) {
   return Qnil;
 }
 
-static void blt(
-    SDL_Surface *dst, SDL_Surface *src,
-    int dst_x, int dst_y, int dst_w, int dst_h,
-    int src_x, int src_y, int src_w, int src_h, int opacity) {
-  Uint32 *src_pixels = src->pixels;
-  int src_pitch = src->pitch / 4;
-  Uint32 *dst_pixels = dst->pixels;
-  int dst_pitch = dst->pitch / 4;
+static void blt( SDL_Surface *dst, SDL_Surface *src, int dst_x, int dst_y, int dst_w, int dst_h, int src_x, int src_y, int src_w, int src_h, int opacity)
+{
+ int src_pitch = src->pitch / 4;
+ int dst_pitch = dst->pitch / 4;
+ int ratio_x = 256 * src_w / dst_w;
+ int ratio_y = 256 * src_h / dst_h;
+ int yi = 0;
+ int xi = 0;
+ unsigned int *src_pixels = src->pixels, *dst_pixels = dst->pixels;
+ unsigned int src_o = 0;
 
-  if(dst_w == 0 || dst_h == 0) return;
+ if(dst_w == 0 || dst_h == 0) return;
 
-  int ratio_x = 256 * src_w / dst_w;
-  int ratio_y = 256 * src_h / dst_h;
-  if(ratio_x < 0) --src_x;
-  if(ratio_y < 0) --src_y;
+ if(ratio_x < 0) --src_x;
+ if(ratio_y < 0) --src_y;
 
-  for(int yi = 0; yi < dst_h; ++yi) {
-    for(int xi = 0; xi < dst_w; ++xi) {
-      int sx = src_x + xi * ratio_x / 256;
-      int sy = src_y + yi * ratio_y / 256;
-      int dx = dst_x + xi;
-      int dy = dst_y + yi;
-      if(!(0 <= sx && sx < src->w && 0 <= sy && sy < src->h)) {
-        continue;
-      }
-      if(!(0 <= dx && dx < dst->w && 0 <= dy && dy < dst->h)) {
-        continue;
-      }
-      Uint32 src_rgba = src_pixels[sy * src_pitch + sx];
-      Uint32 dst_rgba = dst_pixels[dy * dst_pitch + dx];
-      Uint32 src_r = RGBA32_R(src_rgba);
-      Uint32 src_g = RGBA32_G(src_rgba);
-      Uint32 src_b = RGBA32_B(src_rgba);
-      Uint32 src_a = RGBA32_A(src_rgba);
-      Uint32 dst_r = RGBA32_R(dst_rgba);
-      Uint32 dst_g = RGBA32_G(dst_rgba);
-      Uint32 dst_b = RGBA32_B(dst_rgba);
-      Uint32 dst_a = RGBA32_A(dst_rgba);
+ for ( ; yi < dst_h; yi++)
+{
 
-      src_a = (src_a * opacity * 2 + 255) / (255 * 2);
-      Uint32 denom = 255 * src_a + (255 - src_a) * dst_a;
-      Uint32 new_a = denom / 255;
-      Uint32 src_o;
-      if(denom == 0) {
-        src_o = 256;
-      } else {
-        src_o = src_a * 255 * 255 / denom;
-        if(src_o > 0) ++src_o;
-      }
-      Uint32 dst_o = 256 - src_o;
+  for ( xi = 0; xi < dst_w; xi++ )
+{
+   int sx = src_x + xi * ratio_x / 256;
+   int sy = src_y + yi * ratio_y / 256;
+   int dx = dst_x + xi;
+   int dy = dst_y + yi;
 
-      Uint32 new_r = (dst_r * dst_o + src_r * src_o) / 256;
-      Uint32 new_g = (dst_g * dst_o + src_g * src_o) / 256;
-      Uint32 new_b = (dst_b * dst_o + src_b * src_o) / 256;
-      Uint32 new_rgba = RGBA32(new_r, new_g, new_b, new_a);
-      dst_pixels[dy * dst_pitch + dx] = new_rgba;
-    }
-  }
+   if (!( (/* 0 <=*/ sx > -1 ) && ( sx < src->w ) && (/* 0 <=*/ sy > -1 ) && ( sy < src->h ) ) )
+{
+    continue;
+}
+
+   if (!( (/* 0 <=*/ dx > -1 ) && ( dx < dst->w ) && (/* 0 <=*/ dy > -1 ) && ( dy < dst->h ) ) )
+{
+    continue;
+}
+
+   unsigned int src_rgba = src_pixels[sy * src_pitch + sx];
+   unsigned int dst_rgba = dst_pixels[dy * dst_pitch + dx];
+   unsigned int src_r = RGBA32_R(src_rgba);
+   unsigned int src_g = RGBA32_G(src_rgba);
+   unsigned int src_b = RGBA32_B(src_rgba);
+   unsigned int src_a = RGBA32_A(src_rgba);
+   unsigned int dst_r = RGBA32_R(dst_rgba);
+   unsigned int dst_g = RGBA32_G(dst_rgba);
+   unsigned int dst_b = RGBA32_B(dst_rgba);
+   unsigned int dst_a = RGBA32_A(dst_rgba);
+
+   src_a = (src_a * opacity * 2 + 255) / (255 * 2);
+   unsigned int denom = 255 * src_a + (255 - src_a) * dst_a;
+   unsigned int new_a = denom / 255;
+
+   if (denom == 0)
+{
+    src_o = 256;
+}
+   else
+{
+    src_o = src_a * 255 * 255 / denom;
+    if(src_o > 0) ++src_o;
+}
+
+   unsigned int dst_o = 256 - src_o;
+   unsigned int new_r = (dst_r * dst_o + src_r * src_o) / 256;
+   unsigned int new_g = (dst_g * dst_o + src_g * src_o) / 256;
+   unsigned int new_b = (dst_b * dst_o + src_b * src_o) / 256;
+   unsigned int new_rgba = RGBA32(new_r, new_g, new_b, new_a);
+   dst_pixels[dy * dst_pitch + dx] = new_rgba;
+}
+
+}
+
 }
 
 static VALUE rb_bitmap_m_blt(int argc, VALUE *argv, VALUE self) {
@@ -647,14 +660,20 @@ static VALUE rb_bitmap_m_radial_blur(VALUE self, VALUE angle, VALUE division) {
 #endif
 
 static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  ptr->texture_invalidated = true;
+ SDL_Rect rect;
+ TTF_Font *sdl_font = 0;
+ VALUE str;
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ const char *cstr = 0;
+ const struct Font *font_ptr = 0;
+ int align = 0;
 
-  VALUE str;
-  SDL_Rect rect;
-  int align = 0;
-  if(argc == 2 || argc == 3) {
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+
+ ptr->texture_invalidated = true;
+
+ if (argc == 2 || argc == 3)
+{
     const struct Rect *rect_ptr = rb_rect_data(argv[0]);
     rect.x = rect_ptr->x;
     rect.y = rect_ptr->y;
@@ -662,54 +681,67 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
     rect.h = rect_ptr->height;
     str = argv[1];
     if(argc == 3) align = NUM2INT(argv[2]);
-  } else if(argc == 5 || argc == 6) {
+}
+ else if (argc == 5 || argc == 6)
+{
     rect.x = NUM2INT(argv[0]);
     rect.y = NUM2INT(argv[1]);
     rect.w = NUM2INT(argv[2]);
     rect.h = NUM2INT(argv[3]);
     str = argv[4];
     if(argc == 6) align = NUM2INT(argv[5]);
-  } else {
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 2..3 or 5..6)", argc);
-  }
+}
+ else
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 2..3 or 5..6)", argc);
+}
 
 #if RGSS > 1
-  if(TYPE(str) != T_STRING) {
-    str = rb_funcall(str, rb_intern("to_s"), 0);
-  }
+ if (TYPE(str) != T_STRING)
+{
+  str = rb_funcall(str, rb_intern("to_s"), 0);
+}
 #endif
-  const char *cstr = StringValueCStr(str);
+ cstr = StringValueCStr(str);
 
-  if(cstr[0] == '\0') {
-    // cstr == "": return early to avoid SDL error.
-    return Qnil;
-  }
+ if (cstr[0] == '\0')
+{
+// cstr == "": return early to avoid SDL error.
+  return Qnil;
+}
 
-  const struct Font *font_ptr = rb_font_data(ptr->font);
-  TTF_Font *sdl_font = rb_font_to_sdl(ptr->font);
+ font_ptr = rb_font_data(ptr->font);
+ sdl_font = rb_font_to_sdl(ptr->font);
 
-  const struct Color *font_color_ptr = rb_color_data(font_ptr->color);
-  SDL_Color fg_color = {
+ if ( sdl_font == 0 )
+{
+  return Qnil;
+}
+
+ const struct Color *font_color_ptr = rb_color_data(font_ptr->color);
+
+ SDL_Color fg_color = {
     font_color_ptr->red,
     font_color_ptr->green,
     font_color_ptr->blue,
     font_color_ptr->alpha
   };
-  SDL_Surface *fg_rendered = TTF_RenderUTF8_Blended(sdl_font, cstr, fg_color);
-  if(!fg_rendered) {
+
+ SDL_Surface *fg_rendered = TTF_RenderUTF8_Blended(sdl_font, cstr, fg_color);
+
+ if(!fg_rendered) {
     fprintf(stderr, "Error rendering text: %s\n", SDL_GetError());
     fprintf(stderr, "cstr = %s\n", cstr);
     return Qnil;
   }
 
-  fg_rendered = create_rgba_surface_from(fg_rendered);
+ fg_rendered = create_rgba_surface_from(fg_rendered);
 
-  int fg_width = fg_rendered->w;
-  int fg_height = fg_rendered->h;
+ int fg_width = fg_rendered->w;
+ int fg_height = fg_rendered->h;
+ int fg_stretch_width;
 
-  int fg_stretch_width;
-  if(rect.w < fg_width * 3 / 5) {
+ if(rect.w < fg_width * 3 / 5) {
     fg_stretch_width = fg_width * 3 / 5;
   } else if(rect.w < fg_width) {
     fg_stretch_width = rect.w;
@@ -792,20 +824,26 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
   return Qnil;
 }
 
-static VALUE rb_bitmap_m_text_size(VALUE self, VALUE str) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+static VALUE rb_bitmap_m_text_size(VALUE self, VALUE str)
+{
+ TTF_Font *font = 0;
+ const char *cstr = 0;
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ int width = 0, height = 0;
+
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
 #if RGSS >= 2
   if(TYPE(str) != T_STRING) {
     str = rb_funcall(str, rb_intern("to_s"), 0);
   }
 #endif
-  const char *cstr = StringValueCStr(str);
+ cstr = StringValueCStr(str);
+ font = rb_font_to_sdl(ptr->font);
 
-  TTF_Font *font = rb_font_to_sdl(ptr->font);
-  int width, height;
-  TTF_SizeUTF8(font, cstr, &width, &height);
-  return rb_rect_new(0, 0, width, height);
+ if ( font == 0 ) return(Qnil);
+
+ TTF_SizeUTF8(font, cstr, &width, &height);
+ return rb_rect_new(0, 0, width, height);
 }
 
 static VALUE rb_bitmap_m_font(VALUE self) {

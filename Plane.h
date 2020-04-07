@@ -24,6 +24,6 @@ struct Plane {
 bool rb_plane_data_p(VALUE obj);
 const struct Plane *rb_plane_data(VALUE obj);
 struct Plane *rb_plane_data_mut(VALUE obj);
+int initPlaneSDL(void);
 void Init_Plane(void);
 void deinitPlaneSDL(void);
-void initPlaneSDL(void);

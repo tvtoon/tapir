@@ -7,11 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-#include <stdbool.h>
-#include <ruby.h>
-#include <SDL.h>
-*/
 struct RenderViewport {
   int width, height;
   int ox, oy;
@@ -47,8 +42,8 @@ extern SDL_Renderer *renderer;
 extern SDL_GLContext glcontext;
 */
 
+int initSDL(const char *window_title);
 void initRenderQueue(struct RenderQueue *queue);
-void initSDL(const char *window_title);
 void capturedRenderSDL(SDL_Surface *surface);
 void cleanupSDL(void);
 void clearRenderQueue(struct RenderQueue *queue);
