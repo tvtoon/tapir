@@ -1,5 +1,9 @@
 # en.UTF-8
 
+0.1.4
+^The executable is correctly taken from the INI file, plus some path and case conversions were made.
+^Reduced the loop madness from "main_rb" stuff, still far from target of administering exceptions, one function only, but it is way better than it was, except that the reporting is broken. *FIGHT AGAINST RUBY!*
+
 0.1.3
 ^Fixed segfault by insane reallocating memory like mad at "Audio.c", fixed cache size now and will only change after implementing hierarchy.
 ^Daily cleanup and testing at "Bitmap.c" and friends, right or not...

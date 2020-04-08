@@ -7,6 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -323,4 +324,95 @@ struct ini_section *find_ini_section_or_insert(
   section = new_ini_section(name);
   add_ini_section(data, section);
   return section;
+}
+
+
+void unix_inifix_forGJ( struct ini *data )
+{
+ int testi = 0;
+ size_t gamei = (size_t)-1, keyns = 0, scripti = (size_t)-1, ui = 0, uj = 0, uk = 0;
+
+ for ( ; ui < data->size; ui++ )
+{
+#ifdef __DEBUG__
+  printf( "Section before: \"%s\". ", data->sections[ui]->name );
+#endif
+  data->sections[ui]->name[0] = toupper( data->sections[ui]->name[0] );
+  keyns = strlen( data->sections[ui]->name );
+
+  for ( uk = 1; uk < keyns; uk++ )
+{
+   data->sections[ui]->name[uk] = tolower( data->sections[ui]->name[uk] );
+}
+
+  testi = strncmp( data->sections[ui]->name, "Game", keyns );
+
+  if ( testi == 0 )
+{
+   gamei = ui;
+}
+
+#ifdef __DEBUG__
+  printf( "Section after: \"%s\".\n", data->sections[ui]->name );
+#endif
+
+  for ( uj = 0; uj < data->sections[ui]->size; uj++ )
+{
+#ifdef __DEBUG__
+   printf( "Key before: \"%s\". ", data->sections[ui]->entries[uj].key );
+#endif
+   keyns = strlen( data->sections[ui]->entries[uj].key );
+   data->sections[ui]->entries[uj].key[0] = toupper( data->sections[ui]->entries[uj].key[0] );
+/* RTP, everything else lower case... */
+   if ( data->sections[ui]->entries[uj].key[0] == 'R' )
+{
+
+    for ( uk = 1; uk < keyns; uk++ )
+{
+     data->sections[ui]->entries[uj].key[uk] = toupper( data->sections[ui]->entries[uj].key[uk] );
+}
+
+}
+   else
+{
+
+    for ( uk = 1; uk < keyns; uk++ )
+{
+     data->sections[ui]->entries[uj].key[uk] = tolower( data->sections[ui]->entries[uj].key[uk] );
+}
+
+}
+
+#ifdef __DEBUG__
+   printf( "Key after: \"%s\".\n", data->sections[ui]->entries[uj].key );
+#endif
+   testi = strncmp( data->sections[ui]->entries[uj].key, "Scripts", keyns );
+
+   if ( testi == 0 )
+{
+    scripti = uj;
+}
+
+}
+
+}
+
+ if ( ( gamei != (size_t)-1 ) && ( scripti != (size_t)-1 ) )
+{
+/* PATH FIX! */
+  keyns = strlen(data->sections[gamei]->entries[scripti].value);
+
+  for ( ui = 0; ui < keyns; ui++ )
+{
+   if ( data->sections[gamei]->entries[scripti].value[ui] == '\\' ) data->sections[gamei]->entries[scripti].value[ui] = '/';
+}
+
+}
+#ifdef __DEBUG__
+ else
+{
+  printf( "Invalid shit, fail before it is too late!\n" );
+}
+#endif
+
 }

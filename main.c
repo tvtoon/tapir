@@ -101,8 +101,8 @@ char *ruby_argv_array[] = {
     NULL
   };
   char **ruby_argv = ruby_argv_array;
-  */
- const char *game_title = 0;
+*/
+ const char *game_title = 0, *game_script = 0;
  int argpos = 1, i = 0/*, ruby_argc = 2*/, state = 0;
  struct ini *ini_data = 0;
  struct ini_section *game_section = 0;
@@ -197,11 +197,20 @@ char *ruby_argv_array[] = {
   return(1);
 }
 
+ unix_inifix_forGJ( ini_data );
  game_section = find_ini_section(ini_data, "Game");
 
  if ( game_section == 0 )
 {
   fprintf( stderr, "GAME section not inside INI!\n" );
+  return(1);
+}
+
+ game_script = find_ini_entry(game_section, "Scripts");
+
+ if ( game_script == 0 )
+{
+  fprintf( stderr, "\"Scripts\" key not inside INI!\n" );
   return(1);
 }
 
@@ -261,7 +270,7 @@ char *ruby_argv_array[] = {
  extern void Init_stack(void *addr);
  Init_stack(__builtin_frame_address(0));
 #endif
- rb_protect(main_rb, Qnil, &state);
+ rb_protect(main_rb, /*Qnil*/rb_str_new2(game_script ), &state);
 /* THE END */
  uninitFontLookup();
  cleanupSDL();

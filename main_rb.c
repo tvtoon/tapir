@@ -16,31 +16,43 @@
 #include "RGSSReset.h"
 #include "main_rb.h"
 
+/* 323 + 256 (Script name) + 17 */
+static char execscript[596 + 1] = "scripts_fname = \"";
+/* 253 + ifdef */
 #if RGSS == 3
-#define SCRIPT_PATH "\"Data/Scripts.rvdata2\""
-#elif RGSS == 2
-#define SCRIPT_PATH "\"Data/Scripts.rvdata\""
+static const char scriptends[323 + 1] =
 #else
-#define SCRIPT_PATH "\"Data/Scripts.rxdata\""
+static const char scriptends[295 + 1] =
 #endif
-
-static VALUE rescue_any(VALUE data, VALUE e);
-static VALUE main_rb2(VALUE data);
-static void load_libs(void);
-static void load_scripts(void);
-static VALUE rescue_reset(VALUE data, VALUE e);
-static VALUE load_scripts2(VALUE data);
-
+"\"\n$RGSS_SCRIPTS = load_data(scripts_fname)\n"
+"$RGSS_SCRIPTS.each do|section|\n"
+"  section.insert(3, Zlib::Inflate::inflate(section[2]))\n"
+"end\n"
+"$RGSS_SCRIPTS.each_with_index do|section, idx|\n"
+"  script = section[3].dup\n"
 #if RGSS == 3
-static VALUE rb_rgss_main(VALUE self);
-static VALUE rb_rgss_main2(VALUE data);
+"  script.force_encoding(\"utf-8\")\n"
+"  filename = sprintf(\"{%04d}\", idx)\n"
+#else
+"  filename = sprintf(\"Section%03d\", idx)\n"
+#endif
+"  eval(script, TOPLEVEL_BINDING, filename)\n"
+"end\n";
+
+static size_t scriptsize = 17;
+#if RGSS == 3
+static const size_t scriptsufs = 323;
+#else
+static const size_t scriptsufs = 295;
 #endif
 
-VALUE main_rb(VALUE data) {
-#if RGSS == 3
-  rb_define_global_function("rgss_main", rb_rgss_main, 0);
-#endif
-  return rb_rescue2(main_rb2, data, rescue_any, Qnil, rb_eException, NULL);
+static VALUE rescue_reset(VALUE data, VALUE e)
+{
+  (void) e;
+  disposeAll();
+  rb_gc_start();
+  *(bool*)data = true;
+  return Qnil;
 }
 
 static VALUE rescue_any(VALUE data, VALUE e) {
@@ -55,12 +67,27 @@ static VALUE rescue_any(VALUE data, VALUE e) {
   return Qnil;
 }
 
-static VALUE main_rb2(VALUE data) {
-  (void) data;
-  load_libs();
-  load_scripts();
-  return Qnil;
+#if RGSS == 3
+static VALUE rb_rgss_main2(VALUE data)
+{
+ (void) data;
+ return rb_yield(Qnil);
 }
+
+static VALUE rb_rgss_main(VALUE self)
+{
+ (void) self;
+ bool retry = true;
+
+ while(retry)
+{
+  retry = false;
+  rb_rescue2( rb_rgss_main2, Qnil, rescue_reset, (VALUE)&retry, rb_eRGSSReset, NULL);
+}
+
+ return Qnil;
+}
+#endif
 
 static void load_libs() {
   rb_eval_string(
@@ -1869,65 +1896,41 @@ static void load_libs() {
   );
 }
 
-static void load_scripts() {
-  bool retry = true;
-  while(retry) {
-    retry = false;
-    rb_rescue2(
-        load_scripts2, Qnil,
-        rescue_reset, (VALUE)&retry,
-        rb_eRGSSReset, NULL);
-  }
+static VALUE uselesswrapper(VALUE data)
+{
+ (void) data;
+ load_libs();
+ rb_eval_string( execscript );
+ return Qnil;
 }
 
-static VALUE rescue_reset(VALUE data, VALUE e) {
-  (void) e;
-  disposeAll();
-  rb_gc_start();
-  *(bool*)data = true;
-  return Qnil;
-}
+VALUE main_rb(VALUE data)
+{
+ bool retry = true;
+ const char *scriptn = RSTRING_PTR(data);
+ size_t argsize = RSTRING_LEN(data);
 
-static VALUE load_scripts2(VALUE data) {
-  (void) data;
-  rb_eval_string(
-      /* TODO: determine script path from Game.ini */
-      "scripts_fname = "SCRIPT_PATH"\n"
-      "$RGSS_SCRIPTS = load_data(scripts_fname)\n"
-      "$RGSS_SCRIPTS.each do|section|\n"
-      "  section.insert(3, Zlib::Inflate::inflate(section[2]))\n"
-      "end\n"
-      "$RGSS_SCRIPTS.each_with_index do|section, idx|\n"
-      "  script = section[3].dup\n"
-#if RGSS == 3
-      "  script.force_encoding(\"utf-8\")\n"
+#ifdef __DEBUG__
+ printf( "Using script \"%s\" (%lu characters).\n", scriptn, argsize );
 #endif
-#if RGSS == 3
-      "  filename = sprintf(\"{%04d}\", idx)\n"
-#else
-      "  filename = sprintf(\"Section%03d\", idx)\n"
+ strncpy( &execscript[scriptsize], scriptn, argsize );
+ scriptsize += argsize;
+ strncpy( &execscript[scriptsize], scriptends, scriptsufs );
+ scriptsize += scriptsufs;
+ execscript[scriptsize] = '\0';
+#ifdef __DEBUG__
+ printf( "%s", execscript );
 #endif
-      "  eval(script, TOPLEVEL_BINDING, filename)\n"
-      "end\n"
-  );
-  return Qnil;
-}
 
 #if RGSS == 3
-static VALUE rb_rgss_main(VALUE self) {
-  (void) self;
-  bool retry = true;
-  while(retry) {
-    retry = false;
-    rb_rescue2(
-        rb_rgss_main2, Qnil,
-        rescue_reset, (VALUE)&retry,
-        rb_eRGSSReset, NULL);
-  }
-  return Qnil;
-}
-static VALUE rb_rgss_main2(VALUE data) {
-  (void) data;
-  return rb_yield(Qnil);
-}
+ rb_define_global_function("rgss_main", rb_rgss_main, 0);
 #endif
+ while(retry)
+{
+  retry = false;
+  rb_rescue2( uselesswrapper, Qnil, rescue_reset, (VALUE)&retry, rb_eRGSSReset, NULL, rescue_any, Qnil, rb_eException, NULL );
+//rb_rescue2( , load_scripts, Qnil, );
+}
+
+ return(Qnil);
+}

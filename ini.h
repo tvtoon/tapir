@@ -39,3 +39,4 @@ void add_ini_section(struct ini *data, struct ini_section *section);
 void free_ini(struct ini *data);
 void free_ini_section(struct ini_section *section);
 void set_ini_entry( struct ini_section *section, const char *key, const char *value);
+void unix_inifix_forGJ( struct ini *data );
