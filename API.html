@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
+<head>
+<meta content="application/xhtml+xml; charset=utf-8" http-equiv="content-type"/>
+<meta content="en" http-equiv="content-language"/>
+<meta content="Tibério Vítor" name="author"/>
+<meta content="Tapir and Ruby Game Scripting System API documentation." name="description"/>
+<title>Tapir and RGSS Application Programming Interface.</title>
+</head>
+
+<body>
+
+<h1>Tapir and RGSS Application Programming Interface.</h1>
+
+<h2>1 - Index.</h2>
+
+<ul>
+
+<!--
+<li>
+<a href="#h2.0">2 - Macros.</a>
+
+<ul>
+<li><a href="#h2.1">2.1 - x</a></li>
+</ul>
+
+</li>
+
+<li>
+<a href="#h3.0">3 - Data Types.</a>
+
+<ul>
+<li><a href="#h3.1">3.1 - fhs.h</a></li>
+</ul>
+
+</li>
+
+<li>
+<a href="#h4.0">4 - C Functions.</a>
+
+<ul>
+
+<li>
+<a href="#h4.1.0">4.1 - fhs.*</a>
+
+<ul>
+<li><a href="#h4.1.1">4.1.1 - dir_hierarchy</a></li>
+</ul>
+
+</li>
+
+<li>
+<a href="#h4.2.0">4.2 - fileop.*</a>
+
+<ul>
+<li><a href="#h4.2.1">4.2.1 - bsplitm</a></li>
+</ul>
+
+</li>
+
+</ul>
+
+</li>
+
+<li>
+<a href="#h5.0">5 - Shell Script.</a>
+
+<ul>
+<li><a href="#h5.1">5.1 - remove.</a></li>
+</ul>
+
+</li>
+-->
+
+<li>
+<a href="#hx.0">x - Ruby Referral.</a>
+
+<ul>
+<li><a href="#hx.1">x.1 - xxx.</a></li>
+</ul>
+
+</li>
+
+</ul>
+
+<h2 id="h2.0">2 - Macros.</h2>
+
+<!--
+<pre>
+#define X Y
+</pre>
+
+<p>
+None.
+</p>
+-->
+
+<h2 id="h3.0">3 - Data Types.</h2>
+
+<h2 id="h3.1">3.1 - x.h</h2>
+
+<pre>
+typedef struct
+{
+} x;
+</pre>
+
+<p>
+Members description: x; y; z...
+</p>
+
+<p>
+Individual summary...
+</p>
+
+<p>
+Relationship...
+</p>
+
+<h2 id="h4.0">4 - C Functions.</h2>
+
+<h2 id="h4.1.0">4.1 - x.*</h2>
+
+<p>
+General stuff...
+</p>
+
+<h2 id="h4.1.1">4.1.1 - function_x</h2>
+
+<pre>
+x function_x( x *xxx, y *yyy );
+</pre>
+
+<p>
+General view of arguments and use...
+</p>
+
+<p>
+Function explained in details if interesting enough...
+</p>
+
+<p>
+Functions used inside...
+</p>
+
+<p>
+Returns 0 for success, or...
+</p>
+
+<h2 id="h5.0">5 - Ruby Script.</h2>
+
+<h2 id="h5.1">5.1 - ruby.</h2>
+
+<p>
+Blah blah blah...
+</p>
+
+<h2 id="hx0.0">x0 - Ruby Referral.</h2>
+
+<h2 id="hx0.1">x0.1 - xxx.</h2>
+
+<p>
+To understand, inside rb_load_data (openres.c): rb_const_get_at, rb_funcall, and rb_intern.
+</p>
+
+<p>
+Everything inside bindings is a "VALUE", so to define anything imported from the interpreter, like "VALUE x;", you must convert them for use in C when the data is called from inside.
+</p>
+
+<p>
+RSTRING_PTR(x): accesses the character string, from an object with existing data.
+</p>
+
+<p>
+RSTRING_LEN(x): grabs the character string length, from an existing object.
+</p>
+
+<p>
+StringValue(x) and variants: allocates object using "#to_str", from the data inside the variable, returning the character string pointer. Every one of them work by creating objects with "#to_str". For StringValueCStr, the null character is appended to the end of the string (\0).
+</p>
+
+<p>
+Module is the library of functions, to be used inside classes (methods). Inside the bindings, class is the variable that receives VALUE from "rb_define_method" and variants.
+
+rb_define_singleton_method
+^rb_define_singleton_method(rb_mAudio, "bgs_play", rb_audio_s_bgs_play, -1);
+
+rb_define_method(VALUE klass, const char *name, VALUE (*func)(ANYARGS), int argc) 
+
+Defines a method for the class. func is the function pointer. argc is the number of arguments. if argc is -1, the function will receive 3 arguments: argc, argv, and self. if argc is -2, the function will receive 2 arguments, self and args, where args is a Ruby array of the method arguments.
+
+VALUE rb_define_module(const char *name) 
+
+Defines a new Ruby module
+</p>
+
+<h2 id="hx1.0">x1 - Formats.</h2>
+
+<p>
+The only standard files known are "Game.ini", the archive file (Game.rgssad, Game.rgss2a, and Game.rgss3a) when it exists, and the RTP files.
+</p>
+
+<h2 id="hx1.1">x1.1 - INI.</h2>
+
+<p>
+The only relevant section that should exist is "Game". The keys available: "RTP#", "Library", "Scripts", and "Title".
+</p>
+
+<p>
+The "RTP" key is the RGSS2 and RGSS3 version, the indexed (RTP#) versions are for RGSS1 only, they are the standard directory from where RTP files are installed (C:\Program Files\Enterbrain), however they are actually a subdirectory of the distribution, as weird as it can get: for "RPGVXAce" value, it is actually "RGSS3\RPGVXAce\". There is only one RTP released for RGSS1, despite the indexes.
+</p>
+
+<p>
+The "Library" key is the DLL used for loading the data (includes ruby interpreter and main script file), up to the "RGSS102#.dll", the details inside remain uncompressed. The path goes locally then fallback to RTP directory.
+</p>
+
+<p>
+The "Scripts" key is where the ruby executable is, loaded trough priority order: archive, local directory. It is not known if it can access the RTP directory.
+</p>
+
+<p>
+The "Title" key is the window title for the game, it can be any encoding but the RPG Maker tool uses Shift-JIS.
+</p>
+
+<h2 id="hx1.2">x1.2 - RGSS Archive D.</h2>
+
+<p>
+The RGSS Archive (Data?) format is composed of one main header and many subheader entries. The main header: magic string (always "RGSSAD" with a null string, 7 bytes), and the version (one byte, only 1 and 3 are used). When version is 3, there is also the main key (4 bytes) to translate subheader entries, version 1 key is always 0xDEADCAFE (hexadecimal).
+</p>
+
+<p>
+The main header key must be recalculated for version 3, before it is used for each entry. In version 1, there is only one key value for everything, or else, it must be continuously calculated after every entry to decrypt data, but there is the weird story... The keys don't work "logically", as one would expect from all this stuff, trough integer alignment but in a mix of byte, when processing file name, and integer from where it began to read data, for everything else. It is important to notice this because most engines are using some sort of custom seek function that makes no sense, trough offset alignment.
+</p>
+
+<p>
+The subheader data is different even where the data is packed. Version 1 works like a "tar" file, with the order: filename size, filename, and file size; then comes the file data. Version 3 is better packed, with only subheader together: absolute offset, file size, data key, filename size, and filename. The version 1 has only one way to decrypt stuff, and recalculate the key, the version 3 does not need to recalculate the key, but has to realign the key by offset in the filename (the only place where this happens).
+</p>
+
+<p>
+The data is decrypted the same way in both versions, with the key obtained from headers, after recalculating from the previous subheader entry (except data) in version 1, or just by getting the data key in version 3.
+</p>
+
+<p>
+Some facts that should be true about the archive: version 1 always end at EOF (end of file macro); version 3 has the first offset as the end of header, and the position plus the size of last entry points to EOF, but you can only find the last subheader by going trough everything.
+</p>
+
+<h2 id="hx1.3">x1.3 - Run Time Package.</h2>
+
+<p>
+Standard subdirectories from "Graphics" tree, used by the main script: "Animations", "Autotiles", "Battlebacks", "Battlers", "Characters", "Faces", "Fogs", "Gameovers", "Icons", "Panoramas", "Parallaxes", "Pictures", "System", "Tilesets", "Titles", "Transitions", and "Windowskins". The RPG Maker XP package does not use the directories "Faces", "Parallaxes", and "System". The RPG Maker VX Ace have indexed entries "Battlebacks1" and "Battlebacks2" instead of "Battlebacks", and "Titles1" and "Titles2" instead of "Titles". These are considered "standard" directories, but archives can load from different paths.
+</p>
+
+<p>
+Standard subdirectories from "Audio" tree, used by the main script: "BGM", "BGS" (background sound), "ME" (music effect), "SE". Thankfully, these are REALLY standard among versions and scripts, audio files cannot be loaded from different paths. Other trees that can be used as "standard paths" are "Fonts" and "System".
+</p>
+
+<p>
+So, thanks to the archive madness, it is not a good idea to standardize file loading for graphics. The biggest path from RTPs is "/usr/local/share/Enterbrain/RGSS3/RPGVXAce/Graphics/Battlebacks1/DecorativeTile.png" or "C:\Program Files\Enterbrain\RGSS3\RPGVXAce\Graphics\Battlebacks1\DecorativeTile.png" (84 characters). There is also another point of concern, regarding file loading: you can't use indexes (before alphabetic characters) to avoid text case problems, because they are only available in RPG Maker XP.
+</p>
+
+<p>
+The RTPs only have four standard extensions used: ".png" for most "Graphics", ".jpg" for a few "Graphics", ".midi" for "Audio\BGM" and "Audio\ME", ".ogg" for "Audio\BGS" and "Audio\SE". The ".jpg" are found exactly in: "RGSS\Standard\Graphics\Battlebacks\", "RGSS\Standard\Graphics\Gameovers\", "RGSS\Standard\Graphics\Panoramas\", "RGSS\Standard\Graphics\Titles\", and "RGSS2\RPGVX\Graphics\Parallaxes\". There is neither ".jpg" nor ".midi" files in RPG Maker VXAce RTP.
+</p>
+
+<h2 id="hx2.0">x2 - How stuff works.</h2>
+
+<p>
+Memory reallocation is only done inside "ini.c" and "sdl_misc.c". Originally, "Audio.c" also had reallocation routine that was removed.
+</p>
+
+<p>
+The "openres.*" is used to find the file inside archive or RTP (it didn't work well with RTP), but it also fixes the path given given as an argument. Its sole use was because of the path, in rb_audio_s_bgm_play. Only the functions rb_load_data and flag_script_loading remain from the original version.
+</p>
+
+<p>
+The use of functions from "read_*" and "write_*", in "misc.c", are always algorithms with fixed address not variable!
+</p>
+
+<p>
+It used the "SDL_RWops", SDL stupid and useless file operation structure, openFromArchive generated one passing it to "openres*", where only "openres_ext" was called by: "Audio.c" (twice), "Bitmap.c", and "sdl_misc.c".
+</p>
+
+<p>
+It had problems falling back to the RTP, when opening files locally.
+</p>
+
+<p>
+The exit function was used in: "font_lookup.c", "gl_misc.c", "sdl_misc.c", and "main.c". In "font_lookup.c", there was a chain beginning and ending in "Bitmap.c": loadFont > rb_font_to_sdl > rb_bitmap_m_draw_text | rb_bitmap_m_text_size; fortunately it was a "single node". In "gl_misc.c", the function type had to be changed because of the checkup, and some didn't even happen correctly.
+</p>
+
+</body>
+
+</html>

@@ -4,3 +4,38 @@ The global rb_cTilemap is the only "rb_*" used in both "BitmapArray.*" and "Tile
 Create an associative array to remove key_config from "Input.c".
 
 Reduce the project to 2 (ruby181 and ruby192), then eventually 1 program holding everything but correctly setting the standard for each version. Perhaps going on and setting it up for modern ruby, just like "mkxp-z"...
+
+Think in some way to discard the functions inside "misc.c", used in: "Color.c", "Rect.c", "Table.c", and "Tone.c".
+
+Fix the initial part, about taking paths from configuration file, inside configure_rtp_path. It is not even tested, to make it short...
+
+Develop the alternative archive data file, after extracting the package, with stuff like maximum file size.
+Perhaps an alternative archiver, with everything needed packed inside, to ease the memory load.
+
+Reduce main_rb even further, as a matter of taste, administering each exception without calling functions like crazy...
+
+"Bitmap.c" adventures!
+
+## File reading.
+
+Inside main, there will be a testing routine to check the files available, based on the extraction process from archives. With the information given by the extractor, extension checkup won't be necessary anymore as we will compare only to the "basename" given, within the proper directory range for the system function (Audio only searches for "Audio/*"). This will only be complete with a hierarchy system, because games come both with archive and local files.
+
+Load and cache everything inside "Data" and "Fonts" at once, avoiding expensive calls. This will come to "Audio" and "Graphics" later, they are not critical or useful without the previously mentioned system.
+
+## Hierarchy System.
+
+Begin with a 3x3 path for everything?
+
+Index everything inside archive and RTP files, to use the information when loading files locally after extraction. The directories used are also split from their path, to build the hierarchy.
+
+## INI.
+
+The conversion is not 100%, it is needed to check string lengths, when searching keys, but it has been scheduled for the rewrite.
+
+First limit to only 64KB, reading to get the real size, then use the tunalib reading trough lines. Then think in something like the Glib version, where keys can go trough lines, if needed...
+It is possible to detect the version trough the INI, reading the "RTP" or "Library" keys.
+
+## Doubts.
+
+The linebreak stuff looks like real issue, it must convert line feed to blank spaces, like mkxp?
+* Kisekae RPG Misaki
