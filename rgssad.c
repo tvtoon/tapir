@@ -11,6 +11,8 @@
 #include <tunalib/caractere.h>
 #include <tunalib/matsimples.h>
 
+#include "rgssad.h"
+
 #define RGSS_MAINHDR    12
 #define RGSS1_MINISHDR   8
 #define RGSS1_VALIDPACK 20
@@ -33,13 +35,6 @@ typedef struct
  unsigned int key;
  rgssa_subhdr *suba;
 } rgssa_hdr;
-
-size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc );
-size_t rgssad_difseqst( size_t *availi, const size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
-size_t rgssad_dirpos( size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
-size_t rgssad1_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
-size_t rgssad3_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
-void rgssad_decriptestem3( unsigned char *bufmod, const unsigned char *buforg, const unsigned int files, unsigned int datakey );
 
 int copyofmy_mkpath( char *path, const size_t pathl, const mode_t defperm )
 {

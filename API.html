@@ -19,7 +19,6 @@
 
 <ul>
 
-<!--
 <li>
 <a href="#h2.0">2 - Macros.</a>
 
@@ -33,7 +32,7 @@
 <a href="#h3.0">3 - Data Types.</a>
 
 <ul>
-<li><a href="#h3.1">3.1 - fhs.h</a></li>
+<li><a href="#h3.1">3.1 - x.h</a></li>
 </ul>
 
 </li>
@@ -44,19 +43,41 @@
 <ul>
 
 <li>
-<a href="#h4.1.0">4.1 - fhs.*</a>
+<a href="#h4.x1.0">4.x1 - openres.*</a>
 
 <ul>
-<li><a href="#h4.1.1">4.1.1 - dir_hierarchy</a></li>
+<li><a href="#h4.x1.1">4.x1.1 - rb_load_data</a></li>
+<li><a href="#h4.x1.2">4.x1.2 - configure_rtp_path</a></li>
+<li><a href="#h4.x1.3">4.x1.3 - loadfile_withrtp</a></li>
+<li><a href="#h4.x1.4">4.x1.4 - build_rtppath</a></li>
 </ul>
 
 </li>
 
 <li>
-<a href="#h4.2.0">4.2 - fileop.*</a>
+<a href="#h4.x2.0">4.x2 - rgssad.*</a>
 
 <ul>
-<li><a href="#h4.2.1">4.2.1 - bsplitm</a></li>
+<li><a href="#h4.x2.1">4.x2.1 - copyofmy_mkpath</a></li>
+<li><a href="#h4.x2.2">4.x2.2 - rgssad_createhierarchy</a></li>
+<li><a href="#h4.x2.3">4.x2.3 - rgssad_extractf</a></li>
+<li><a href="#h4.x2.4">4.x2.4 - rgssad_difpara</a></li>
+<li><a href="#h4.x2.5">4.x2.5 - rgssad_difseqst</a></li>
+<li><a href="#h4.x2.6">4.x2.6 - rgssad_dirpos</a></li>
+<li><a href="#h4.x2.7">4.x2.7 - rgssad_getheadf</a></li>
+<li><a href="#h4.x2.8">4.x2.8 - rgssad1_countsubheadf</a></li>
+<li><a href="#h4.x2.9">4.x2.9 - rgssad1_getsubheadf</a></li>
+<li><a href="#h4.x2.10">4.x2.10 - rgssad1_getsubheadfv</a></li>
+<li><a href="#h4.x2.11">4.x2.11 - rgssad3_countsubheadf</a></li>
+<li><a href="#h4.x2.12">4.x2.12 - rgssad3_getsubheadf</a></li>
+<li><a href="#h4.x2.13">4.x2.13 - rgssad3_getsubheadfv</a></li>
+<li><a href="#h4.x2.14">4.x2.14 - rgssad_decriptestem2</a></li>
+<li><a href="#h4.x2.15">4.x2.15 - rgssad_decriptestem3</a></li>
+<li><a href="#h4.x2.16">4.x2.16 - rgssad_decryptrealm</a></li>
+<li><a href="#h4.x2.17">4.x2.17 - rgssad_fixpath</a></li>
+<li><a href="#h4.x2.18">4.x2.18 - rgssad_inihead</a></li>
+<li><a href="#h4.x2.19">4.x2.19 - rgssad_inisubhead</a></li>
+<li><a href="#h4.x2.20">4.x2.20 - rgssad_print</a></li>
 </ul>
 
 </li>
@@ -66,29 +87,47 @@
 </li>
 
 <li>
-<a href="#h5.0">5 - Shell Script.</a>
+<a href="#h5.0">5 - Ruby Script.</a>
 
 <ul>
-<li><a href="#h5.1">5.1 - remove.</a></li>
+<li><a href="#h5.1">5.1 - ruby.</a></li>
 </ul>
 
 </li>
+
+<li>
+<a href="#hx0.0">x0 - Ruby Referral.</a>
+
+<ul>
+<li><a href="#hx0.1">x0.1 - xxx.</a></li>
+</ul>
+
+</li>
+
+<li>
+<a href="#hx1.0">x1 - Formats.</a>
+
+<ul>
+<li><a href="#hx1.1">x1.1 - INI.</a></li>
+<li><a href="#hx1.2">x1.2 - RGSS Archive D.</a></li>
+<li><a href="#hx1.3">x1.3 - Run Time Package.</a></li>
+</ul>
+
+</li>
+
+<li>
+<a href="#hx2.0">x2 - How stuff works.</a>
+<!--
+<ul>
+<li><a href="#hx0.1">x0.1 -.</a></li>
+</ul>
 -->
-
-<li>
-<a href="#hx.0">x - Ruby Referral.</a>
-
-<ul>
-<li><a href="#hx.1">x.1 - xxx.</a></li>
-</ul>
-
 </li>
 
 </ul>
 
 <h2 id="h2.0">2 - Macros.</h2>
 
-<!--
 <pre>
 #define X Y
 </pre>
@@ -96,7 +135,6 @@
 <p>
 None.
 </p>
--->
 
 <h2 id="h3.0">3 - Data Types.</h2>
 
@@ -122,33 +160,201 @@ Relationship...
 
 <h2 id="h4.0">4 - C Functions.</h2>
 
-<h2 id="h4.1.0">4.1 - x.*</h2>
+<h2 id="h4.x1.0">4.x1 - openres.*</h2>
 
 <p>
-General stuff...
+There are two static functions that workaround the needs of "standard" practices: rtp_loadinistandard will replace the key found in the INI with the actual location installed; rtp_pathloop_adjust will workaround the case issue checking for letters in the filename, if any is found there will be 3 loops with different cases.
 </p>
 
-<h2 id="h4.1.1">4.1.1 - function_x</h2>
+<h2 id="h4.x1.1">4.x1.1 - rb_load_data</h2>
 
 <pre>
-x function_x( x *xxx, y *yyy );
+VALUE rb_load_data(VALUE self, VALUE path);
 </pre>
 
 <p>
-General view of arguments and use...
+This is used as a binding to the method "load_data", its purpose is to load the scripts from the "Data" directory. The use of "self" is unknown (void), but path is exactly the filename, pending conversion from ruby.
 </p>
 
 <p>
-Function explained in details if interesting enough...
+If the file is found, the data will be read to a ruby string (rb_str_new), trough loops of rb_str_cat. There isn't a reason to return anything, but here is the catch: after calling rb_const_get_at (used for???), the method is called trough the last argument of rb_funcall, using the method ID of "load", and that is the return value.
+</p>
+
+<h2 id="h4.x1.2">4.x1.2 - configure_rtp_path</h2>
+
+<pre>
+int configure_rtp_path(struct ini_section *game_section);
+</pre>
+
+<p>
+Configures the RTP path by looking at the keys inside "game_section", and the configuration file. The configuration file theoretically has priority over the INI.
 </p>
 
 <p>
-Functions used inside...
+The configuration reading is a mess but only a checking to ensure PATH_MAX limit is done, if this file can't be read, the function uses stat to check for available paths. After setting the base path correctly, the first key to check is "RTP", for RGSS2 and RGSS3, if the key is not there then the indexed loop is done. For both cases, the same procedure: rtp_loadinistandard is called to check the standard paths, or just let it be.
 </p>
 
 <p>
-Returns 0 for success, or...
+Returns 1 for crossing PATH_MAX boundaries, or 0 for success. Note: not having a standard directory IS NOT an error, RTP should support local path!
 </p>
+
+<h2 id="h4.x1.3">4.x1.3 - loadfile_withrtp</h2>
+
+<pre>
+size_t loadfile_withrtp( char *pato, const char *filen, const char (*extsa)[5], const size_t filens, const size_t extotal, const size_t extrtp );
+</pre>
+
+<p>
+It loads the filename "filen", with size "filens", appending extensions for checking from array "extsa" (4 letters limit), with a maximum loop cycle of "extotal" for local paths, and a maximum loop cycle of "extrtp" for RTP paths. When the file is found, the full path string to reload it is pasted in "pato".
+</p>
+
+<p>
+First, for local paths it is a simple matter of opening the files after adding each extension. If the file is not found locally, then the most complex RTP cycle is done checking the PATH_MAX boundaries, getting the number of "case" cycles with rtp_pathloop_adjust and hopefully finding the file.
+</p>
+
+<p>
+Returns 0 if the file is not found, or the path size otherwise.
+</p>
+
+<h2 id="h4.x1.4">4.x1.4 - build_rtppath</h2>
+
+<pre>
+unsigned char build_rtppath( char (*patob)[PATH_MAX + 1], const char *newdir, const size_t newdirs );
+</pre>
+
+<p>
+Using the paths inside "patob", append them the string "newdir", with size "newdirs".
+</p>
+
+<p>
+This is mostly a wrapper for getting RTP filename outside this source file, its sole use is to concatenate the fonts directory in initFontLookup.
+</p>
+
+<p>
+Returns 0 for crossing PATH_MAX boundaries, or the number of slots.
+</p>
+
+<h2 id="h4.x2.0">4.x2 - rgssad.*</h2>
+
+<h2 id="h4.x2.1">4.x2.1 - copyofmy_mkpath</h2>
+
+<pre>
+int copyofmy_mkpath( char *path, const size_t pathl, const mode_t defperm );
+</pre>
+
+<h2 id="h4.x2.2">4.x2.2 - rgssad_createhierarchy</h2>
+
+<pre>
+int rgssad_createhierarchy( const rgssa_subhdr *rgsssh, const size_t filec );
+</pre>
+
+<h2 id="h4.x2.3">4.x2.3 - rgssad_extractf</h2>
+
+<pre>
+int rgssad_extractf( FILE *rgssarc, const rgssa_subhdr *rgsssh, long int curpos, const size_t maxbsize, const size_t filec );
+</pre>
+
+<h2 id="h4.x2.4">4.x2.4 - rgssad_difpara</h2>
+
+<pre>
+size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc );
+</pre>
+
+<h2 id="h4.x2.5">4.x2.5 - rgssad_difseqst</h2>
+
+<pre>
+size_t rgssad_difseqst( size_t *availi, const size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
+</pre>
+
+<h2 id="h4.x2.6">4.x2.6 - rgssad_dirpos</h2>
+
+<pre>
+size_t rgssad_dirpos( size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
+</pre>
+
+<h2 id="h4.x2.7">4.x2.7 - rgssad_getheadf</h2>
+
+<pre>
+size_t rgssad_getheadf( FILE *rgssf, rgssa_hdr *rgssh );
+</pre>
+
+<h2 id="h4.x2.8">4.x2.8 - rgssad1_countsubheadf</h2>
+
+<pre>
+size_t rgssad1_countsubheadf( FILE *rgssf, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.9">4.x2.9 - rgssad1_getsubheadf</h2>
+
+<pre>
+size_t rgssad1_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.10">4.x2.10 - rgssad1_getsubheadfv</h2>
+
+<pre>
+size_t rgssad1_getsubheadfv( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.11">4.x2.11 - rgssad3_countsubheadf</h2>
+
+<pre>
+size_t rgssad3_countsubheadf( FILE *rgssf, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.12">4.x2.12 - rgssad3_getsubheadf</h2>
+
+<pre>
+size_t rgssad3_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.13">4.x2.13 - rgssad3_getsubheadfv</h2>
+
+<pre>
+size_t rgssad3_getsubheadfv( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
+</pre>
+
+<h2 id="h4.x2.14">4.x2.14 - rgssad_decriptestem2</h2>
+
+<pre>
+void rgssad_decriptestem2( unsigned char *bufmod, const unsigned char *buforg, const unsigned int files, unsigned int curpos, unsigned int datakey );
+</pre>
+
+<h2 id="h4.x2.15">4.x2.15 - rgssad_decriptestem3</h2>
+
+<pre>
+void rgssad_decriptestem3( unsigned char *bufmod, const unsigned char *buforg, const unsigned int files, unsigned int datakey );
+</pre>
+
+<h2 id="h4.x2.16">4.x2.16 - rgssad_decryptrealm</h2>
+
+<pre>
+void rgssad_decryptrealm( unsigned char *bufmod, const unsigned char *buforg, const unsigned int curpos, const unsigned int files, unsigned int datakey );
+</pre>
+
+<h2 id="h4.x2.17">4.x2.17 - rgssad_fixpath</h2>
+
+<pre>
+void rgssad_fixpath( char *filen, const size_t filens );
+</pre>
+
+<h2 id="h4.x2.18">4.x2.18 - rgssad_inihead</h2>
+
+<pre>
+void rgssad_inihead( rgssa_hdr *rgssh );
+</pre>
+
+<h2 id="h4.x2.19">4.x2.19 - rgssad_inisubhead</h2>
+
+<pre>
+void rgssad_inisubhead( rgssa_subhdr *rgsssh );
+</pre>
+
+<h2 id="h4.x2.20">4.x2.20 - rgssad_print</h2>
+
+<pre>
+void rgssad_print( const rgssa_subhdr rgsssh );
+</pre>
 
 <h2 id="h5.0">5 - Ruby Script.</h2>
 
