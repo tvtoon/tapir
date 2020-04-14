@@ -23,7 +23,7 @@
 <a href="#h2.0">2 - Macros.</a>
 
 <ul>
-<li><a href="#h2.1">2.1 - x</a></li>
+<li><a href="#h2.1">2.1 - rgssad.h</a></li>
 </ul>
 
 </li>
@@ -128,13 +128,31 @@
 
 <h2 id="h2.0">2 - Macros.</h2>
 
-<pre>
-#define X Y
-</pre>
+<h2 id="h2.1">2.1 - rgssad.h</h2>
 
-<p>
-None.
-</p>
+<ul>
+
+<li>
+RGSS_MAINHDR: the main header size, only considers version 3.
+</li>
+
+<li>
+RGSS1_MINISHDR: minimum subheader size for version 1.
+</li>
+
+<li>
+RGSS1_VALIDPACK: valid archive size for version 1.
+</li>
+
+<li>
+RGSS3_MINISHDR: minimum subheader size for version 3.
+</li>
+
+<li>
+RGSS3_VALIDPACK: valid archive size for version 3.
+</li>
+
+</ul>
 
 <h2 id="h3.0">3 - Data Types.</h2>
 
@@ -391,11 +409,19 @@ The same as rgssad1_getsubheadf, except no checking is done so it should be used
 size_t rgssad3_countsubheadf( FILE *rgssf, const unsigned int key );
 </pre>
 
+<p>
+The same as rgssad1_countsubheadf for version 3, where there is no seeking in the main loop with it only working trough RGSS3_MINISHDR, and the function used to get subheader is rgssad3_getsubheadf.
+</p>
+
 <h2 id="h4.x2.12">4.x2.12 - rgssad3_getsubheadf</h2>
 
 <pre>
 size_t rgssad3_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
 </pre>
+
+<p>
+The same as rgssad1_getsubheadf for version 3, where the key remains constant. Some members are not calculated with a XOR here, only the needed!
+</p>
 
 <h2 id="h4.x2.13">4.x2.13 - rgssad3_getsubheadfv</h2>
 
@@ -403,11 +429,23 @@ size_t rgssad3_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned in
 size_t rgssad3_getsubheadfv( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
 </pre>
 
+<p>
+The same as rgssad1_getsubheadfv for version 3. Every subheader member is decrypted here!
+</p>
+
 <h2 id="h4.x2.14">4.x2.14 - rgssad_decriptestem2</h2>
 
 <pre>
 void rgssad_decriptestem2( unsigned char *bufmod, const unsigned char *buforg, const unsigned int files, unsigned int curpos, unsigned int datakey );
 </pre>
+
+<p>
+This is a decryption algorithm for "buforg" data, with a size of "files", beginning from position "curpos", with the given "datakey". The decrypted data, the with same size of the encrypted data, is written to "bufmod".
+</p>
+
+<p>
+This could work with some fixes, but it is just for alignment theory like rgssad_decryptrealm, except it work trough bytes.
+</p>
 
 <h2 id="h4.x2.15">4.x2.15 - rgssad_decriptestem3</h2>
 
@@ -415,11 +453,27 @@ void rgssad_decriptestem2( unsigned char *bufmod, const unsigned char *buforg, c
 void rgssad_decriptestem3( unsigned char *bufmod, const unsigned char *buforg, const unsigned int files, unsigned int datakey );
 </pre>
 
+<p>
+This is THE decryption algorithm for "buforg" data, with a size of "files" and the given "datakey". The decrypted data, the with same size of the encrypted data, is written to "bufmod".
+</p>
+
+<p>
+This is pretty much rgssad_decryptrealm without the alignment bullshit: entire loops plus missing bytes.
+</p>
+
 <h2 id="h4.x2.16">4.x2.16 - rgssad_decryptrealm</h2>
 
 <pre>
 void rgssad_decryptrealm( unsigned char *bufmod, const unsigned char *buforg, const unsigned int curpos, const unsigned int files, unsigned int datakey );
 </pre>
+
+<p>
+This is a decryption algorithm for "buforg" data, with a size of "files", beginning from position "curpos", with the given "datakey". The decrypted data, the with same size of the encrypted data, is written to "bufmod".
+</p>
+
+<p>
+The theory beyond this function is as if the decryption worked trough integer alignment, inside memory, so it has three possible reading: bytes before the first possible alignment, loops for aligned reads, remaining bytes after aligned reads. The format DOES NOT work this way!
+</p>
 
 <h2 id="h4.x2.17">4.x2.17 - rgssad_fixpath</h2>
 
@@ -427,11 +481,19 @@ void rgssad_decryptrealm( unsigned char *bufmod, const unsigned char *buforg, co
 void rgssad_fixpath( char *filen, const size_t filens );
 </pre>
 
+<p>
+Fixes the path in "filen", with a size of "filens", converting them from DOS to Unix ('\' to '/').
+</p>
+
 <h2 id="h4.x2.18">4.x2.18 - rgssad_inihead</h2>
 
 <pre>
 void rgssad_inihead( rgssa_hdr *rgssh );
 </pre>
+
+<p>
+Initializes the members from header "rgssh".
+</p>
 
 <h2 id="h4.x2.19">4.x2.19 - rgssad_inisubhead</h2>
 
@@ -439,11 +501,19 @@ void rgssad_inihead( rgssa_hdr *rgssh );
 void rgssad_inisubhead( rgssa_subhdr *rgsssh );
 </pre>
 
+<p>
+Initializes the members from subheader "rgsssh".
+</p>
+
 <h2 id="h4.x2.20">4.x2.20 - rgssad_print</h2>
 
 <pre>
 void rgssad_print( const rgssa_subhdr rgsssh );
 </pre>
+
+<p>
+Prints information about the members from subheader "rgsssh".
+</p>
 
 <h2 id="h5.0">5 - Ruby Script.</h2>
 
@@ -478,18 +548,32 @@ StringValue(x) and variants: allocates object using "#to_str", from the data ins
 </p>
 
 <p>
+VALUE rb_define_module(const char *name);
+</p>
+
+<p>
 Module is the library of functions, to be used inside classes (methods). Inside the bindings, class is the variable that receives VALUE from "rb_define_method" and variants.
+</p>
 
-rb_define_singleton_method
-^rb_define_singleton_method(rb_mAudio, "bgs_play", rb_audio_s_bgs_play, -1);
+<p>
+VALUE rb_define_method(VALUE klass, const char *name, VALUE (*func)(ANYARGS), int argc);
+</p>
 
-rb_define_method(VALUE klass, const char *name, VALUE (*func)(ANYARGS), int argc) 
+<p>
+x = rb_define_singleton_method(rb_mAudio, "bgs_play", rb_audio_s_bgs_play, -1);
+</p>
 
-Defines a method for the class. func is the function pointer. argc is the number of arguments. if argc is -1, the function will receive 3 arguments: argc, argv, and self. if argc is -2, the function will receive 2 arguments, self and args, where args is a Ruby array of the method arguments.
+<p>
+The following is direct from ruby documentation...
+Defines a method for the class. func is the function pointer. argc is the number of arguments. if argc is -1, the function will receive 3 arguments: argc, argv, and self. if argc is -2, the function will receive 2 arguments, self and args, where args is a Ruby array of the method arguments. Also the maximum number of arguments is 16.
+</p>
 
-VALUE rb_define_module(const char *name) 
+<p>
+VALUE rb_define_class(const char *name, VALUE super);
+</p>
 
-Defines a new Ruby module
+<p>
+Class given by this function is just a reference inside ruby, without even holding the structure. The real creation only happens when using ALLOC like in "struct Bitmap *ptr = ALLOC(struct Bitmap)", then you should pass it to ruby stuff using Data_Wrap_Struct. You can also do both by using "TypedData_Make_Struct(klass, type, data_type, sval)".
 </p>
 
 <h2 id="hx1.0">x1 - Formats.</h2>
