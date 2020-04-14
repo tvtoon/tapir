@@ -341,7 +341,9 @@ size_t rgssad_difseqst( size_t *availi, const size_t *pathsa, const rgssa_subhdr
 
 size_t rgssad_dirpos( size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec )
 {
+#ifdef __DEBUG__
  char patati[PATH_MAX + 1] = "\0";
+#endif
  size_t ui = 0;
 
  for ( ui = 0; ui < filec; ui++ )
