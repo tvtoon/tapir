@@ -2,6 +2,7 @@
  RGSSAD extractor.
 */
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,29 +13,6 @@
 #include <tunalib/matsimples.h>
 
 #include "rgssad.h"
-
-#define RGSS_MAINHDR    12
-#define RGSS1_MINISHDR   8
-#define RGSS1_VALIDPACK 20
-#define RGSS3_MINISHDR  16
-#define RGSS3_VALIDPACK 38
-
-typedef struct
-{
- unsigned int pos;
- unsigned int files;
- unsigned int datakey;
- unsigned int filens;
- char filen[PATH_MAX + 1];
-} rgssa_subhdr;
-
-typedef struct
-{
- char magic[7 + 1];
- unsigned char version;
- unsigned int key;
- rgssa_subhdr *suba;
-} rgssa_hdr;
 
 int copyofmy_mkpath( char *path, const size_t pathl, const mode_t defperm )
 {
@@ -287,9 +265,9 @@ int rgssad_extractf( FILE *rgssarc, const rgssa_subhdr *rgsssh, long int curpos,
 
 size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc )
 {
- size_t *maska = 0;
- size_t difac = arrayc, diffin = 0, difpar = 0, ui = 0, valnow = (size_t)-1;
-
+/* size_t *maska = 0;*/
+ size_t difac = arrayc, diffin = 0, difpar = 0, maska = 0, ui = 0, valnow = (size_t)-1;
+/*
  maska = (size_t *)malloc( sizeof(size_t) * arrayc );
 
  if ( maska == 0 )
@@ -297,21 +275,24 @@ size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc )
   fprintf( stderr, "Cannot allocate replace index array!\n" );
   return(0);
 }
-
+*/
  for ( ; difac > 0; difac = difpar, difpar = 0 )
 {
-
+/*
   for ( ui = 0; ui < difac; ui++ )
 {
    maska[ui] = availi[ui];
 }
-
+*/
   for ( ui = 0; ui < difac; ui++ )
 {
+   maska = availi[ui];
 
-   if ( valnow != maska[ui] )
+/*   if ( valnow != maska[ui] ) */
+   if ( valnow != maska )
 {
-    availi[difpar] = maska[ui];
+/*    availi[difpar] = maska[ui];*/
+    availi[difpar] = maska;
     difpar++;
 }
 
@@ -328,7 +309,7 @@ size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc )
 
 }
 
- free(maska);
+/* free(maska);*/
  return(diffin);
 }
 
@@ -350,6 +331,7 @@ size_t rgssad_difseqst( size_t *availi, const size_t *pathsa, const rgssa_subhdr
 #endif
    difseq++;
    strncpy( patati, rgsssh[ui].filen, pathsa[ui] );
+   patati[pathsa[ui]] = '\0';
 }
 
 }

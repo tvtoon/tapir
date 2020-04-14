@@ -1,3 +1,26 @@
+#define RGSS_MAINHDR    12
+#define RGSS1_MINISHDR   8
+#define RGSS1_VALIDPACK 20
+#define RGSS3_MINISHDR  16
+#define RGSS3_VALIDPACK 38
+
+typedef struct
+{
+ unsigned int pos;
+ unsigned int files;
+ unsigned int datakey;
+ unsigned int filens;
+ char filen[PATH_MAX + 1];
+} rgssa_subhdr;
+
+typedef struct
+{
+ char magic[7 + 1];
+ unsigned char version;
+ unsigned int key;
+ rgssa_subhdr *suba;
+} rgssa_hdr;
+
 int copyofmy_mkpath( char *path, const size_t pathl, const mode_t defperm );
 int rgssad_createhierarchy( const rgssa_subhdr *rgsssh, const size_t filec );
 int rgssad_extractf( FILE *rgssarc, const rgssa_subhdr *rgsssh, long int curpos, const size_t maxbsize, const size_t filec );

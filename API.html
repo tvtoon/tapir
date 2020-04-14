@@ -242,11 +242,36 @@ Returns 0 for crossing PATH_MAX boundaries, or the number of slots.
 int copyofmy_mkpath( char *path, const size_t pathl, const mode_t defperm );
 </pre>
 
+<p>
+This description and function are copies of my mkpath function, from base utilities project.
+Makes directories trough the path, with size of "pathl", using default permission "defperm" for each directory.
+</p>
+
+<p>
+The main loop goes up to the "null" character, with the position updated by the strcspn function, searching for the "/" directory divider, plus 1 for next loops. The error condition is checked against stat result, to make inform correctly about existing directories, when reading "errno".
+</p>
+
+<p>
+Returns 1 for operational error, or 0 for success.
+</p>
+
 <h2 id="h4.x2.2">4.x2.2 - rgssad_createhierarchy</h2>
 
 <pre>
 int rgssad_createhierarchy( const rgssa_subhdr *rgsssh, const size_t filec );
 </pre>
+
+<p>
+It creates a directory hierarchy based on "rgsssh" subheader array, with "filec" members.
+</p>
+
+<p>
+It allocates one index and position array, to get preliminary path differences and base directories position, get the later first with rgssad_dirpos to use when processing sequential differences with rgssad_difseqst; allocates the exclusive index array with the previous differences to get the final count, with rgssad_difpara; finally, with the correct number of differences, allocates the final string array to copy and paste exclusive paths for copyofmy_mkpath. This last allocation is not really needed but it is done to make the logic read to reuse.
+</p>
+
+<p>
+Returns 1 for first memory allocation and directory creation error, 2 to second row allocation and memory errors, or 0 for success.
+</p>
 
 <h2 id="h4.x2.3">4.x2.3 - rgssad_extractf</h2>
 
@@ -254,11 +279,35 @@ int rgssad_createhierarchy( const rgssa_subhdr *rgsssh, const size_t filec );
 int rgssad_extractf( FILE *rgssarc, const rgssa_subhdr *rgsssh, long int curpos, const size_t maxbsize, const size_t filec );
 </pre>
 
+<p>
+It extracts "filec" members from "rgsssh", from "rgssarc", starting from current position "curpos" with a maximum file size of "maxbsize". The members filename should have a valid path.
+</p>
+
+<p>
+The maxbsize is used to allocate two buffers, the original (encrypted) file buffer and the buffer to hold the decrypted data. The main loop simply seeks, reads, decrypts using rgssad_decriptestem3, and writes data, checking for errors when at each fseek, fopen and fread.
+</p>
+
+<p>
+Returns 1 for memory allocation errors, 2 for main loop errors, or 0 for success.
+</p>
+
 <h2 id="h4.x2.4">4.x2.4 - rgssad_difpara</h2>
 
 <pre>
 size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc );
 </pre>
+
+<p>
+This will find "exclusive differences" among the same array "availi", with size "arrayc", and writes the values to the "finali".
+</p>
+
+<p>
+Both availi and finali must hold the same size of arrayc, the main loop cycles while differences are found, being the initial value arrayc; the inner loop searches for the differences inside availi, and keeps updating the array and the partial difference counter when the difference is found, comparing them to the oldest entry; the oldest entry is actually the first difference put inside availi, and if differences are found, the difference counter is updated; at the end, the partial differences becomes the number of differences for the next loop.
+</p>
+
+<p>
+Returns the difference counter (final array size).
+</p>
 
 <h2 id="h4.x2.5">4.x2.5 - rgssad_difseqst</h2>
 
@@ -266,11 +315,27 @@ size_t rgssad_difpara( size_t *finali, size_t *availi, const size_t arrayc );
 size_t rgssad_difseqst( size_t *availi, const size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
 </pre>
 
+<p>
+It searches for sequential differences among path strings from "rgsssh", with "filec" members, using path size array "pathsa", and writes the values to the "availi". It will simply compare the oldest path entry to the next entry, replacing the entry and updating the counter if the difference is found.
+</p>
+
+<p>
+Returns the difference counter.
+</p>
+
 <h2 id="h4.x2.6">4.x2.6 - rgssad_dirpos</h2>
 
 <pre>
 size_t rgssad_dirpos( size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t filec );
 </pre>
+
+<p>
+It searches for base directory position of "rgsssh" file names, with "filec" members, writing them to path size array "pathsa". The only break condition is to avoid absolute path names.
+</p>
+
+<p>
+Returns the number of loops rolled (filec maximum) to make sure the break didn't happen.
+</p>
 
 <h2 id="h4.x2.7">4.x2.7 - rgssad_getheadf</h2>
 
@@ -278,11 +343,27 @@ size_t rgssad_dirpos( size_t *pathsa, const rgssa_subhdr *rgsssh, const size_t f
 size_t rgssad_getheadf( FILE *rgssf, rgssa_hdr *rgssh );
 </pre>
 
+<p>
+It reads the main header "rgssh" from "rgssf", returning the number of bytes read.
+</p>
+
 <h2 id="h4.x2.8">4.x2.8 - rgssad1_countsubheadf</h2>
 
 <pre>
 size_t rgssad1_countsubheadf( FILE *rgssf, const unsigned int key );
 </pre>
+
+<p>
+It counts the number of version 1 subheaders in "rgssf", using initial "key".
+</p>
+
+<p>
+It will read the subheader using rgssad1_getsubheadf, then seek to skip the data. The break condition is not only the RGSS1_MINISHDR size but also the seek return, after the main loop, the file initial position is restored and one last conditional will solve missing links.
+</p>
+
+<p>
+Returns the number of subheaders, or 0 for errors.
+</p>
 
 <h2 id="h4.x2.9">4.x2.9 - rgssad1_getsubheadf</h2>
 
@@ -290,11 +371,19 @@ size_t rgssad1_countsubheadf( FILE *rgssf, const unsigned int key );
 size_t rgssad1_getsubheadf( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
 </pre>
 
+<p>
+It reads the version 1 subheader "rgsssh", from file "rgssf", using initial "key". There is a conditional to check for PATH_MAX boundaries, returning the number of bytes read accordingly.
+</p>
+
 <h2 id="h4.x2.10">4.x2.10 - rgssad1_getsubheadfv</h2>
 
 <pre>
 size_t rgssad1_getsubheadfv( FILE *rgssf, rgssa_subhdr *rgsssh, const unsigned int key );
 </pre>
+
+<p>
+The same as rgssad1_getsubheadf, except no checking is done so it should be used on subsequent reads.
+</p>
 
 <h2 id="h4.x2.11">4.x2.11 - rgssad3_countsubheadf</h2>
 
