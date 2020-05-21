@@ -1,0 +1,64 @@
+# en.UTF-8
+
+I have no interest in going trough RPG Maker MV, but since and because it is rather difficulty to find "fully encrypted" stuff, due to the code being open for anyone to try the engine, here are some specific information.
+
+## Header.
+
+The header size for data formats is always 32 bytes...
+TODO
+
+## Decrypt.
+
+The converter must replace the vanilla header with the original one, that is basically what it is about. The replacement headers seem to hold always 16 bytes.
+
+### rpgmvo
+
+OGG(+Vorbis) files, should use the replacement header, assuming array of characters: "OggS\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+
+Now here is the big deal: you must get the first serial number, from the next "OggS" header to "fix" the bytes that are cut from the main header (byte 14). So here is the OGG structure for reference...
+
+typedef struct
+{
+ char magic[4 + 1];
+ unsigned char version;
+ unsigned char typeflag;
+/* variable */
+ unsigned char granpos[8];
+ unsigned int serial;
+ unsigned int pagecount;
+/* poly 0x04c11db7 */
+ unsigned int crc32;
+ unsigned char segcount;
+ unsigned char segtabla[256];
+} ogg_header;
+
+The last array real size is given by the "segcount" member, so the specification gives the formulae: "header_size = number_page_segments + 27 [Byte]". After the header, comes the so called segment (the data this header represents, or Vorbis data), and because of that (OGG+Vorbis!!!), you need to understand the Vorbis header too...
+
+typedef struct
+{
+ unsigned char packtype;
+ char magic[6 + 1];
+ unsigned int version;
+ unsigned char channels;
+ unsigned int sample_rate;
+ int bitrate_max;
+ int bitrate_nom;
+ int bitrate_min;
+/* Split high and lower nibble. */
+ unsigned char blocksize;
+ unsigned char frame_flag;
+} vorbis_header;
+
+Finally, the second OGG header that represents the first segment inside the stream, with the same structure... This is where you get the serial, I don't know if there is a faster way, trough the RPGMV header.
+
+RFC3533 (OGG) and libvorbis reference (without RFC, relevant part lies in chapter "04 - codec").
+
+### rpgmvp
+
+These are PNG (image format) files, should use the replacement header: "\x89PNG\x0D\x0A\x1A\x0A\x00\x00\x00\x0DIHDR".
+
+### Example.
+
+Simple shell command, turn the character string into binary, then use something like UCON64 for...
+
+"for i in *.rpgmvp; do ucon64 --stpn=32 ${i} && cat header ${i} > ${i%%.rpgmvp}.png; done;"
