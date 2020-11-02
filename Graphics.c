@@ -16,6 +16,7 @@
 #include "rubyfill.h"
 #include "Graphics.h"
 #include "Bitmap.h"
+#include "RGSSError.h"
 #include "misc.h"
 #include "sdl_misc.h"
 
@@ -23,9 +24,12 @@ static VALUE rb_mGraphics;
 
 #if RGSS > 1
 static int frame_rate = 60;
+static const int durdefault = 10;
 #else
 static int frame_rate = 40;
+static const int durdefault = 8;
 #endif
+
 static long frame_count = 0;
 static int performance_frame_count = 0;
 static Uint32 performance_last_ticks = 0;
@@ -98,34 +102,62 @@ static VALUE rb_graphics_s_freeze(VALUE klass) {
   return Qnil;
 }
 
-static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass) {
-  if(argc > 3) {
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 0..3)", argc);
-  }
-#if RGSS > 1
-  int duration = argc > 0 ? NUM2INT(argv[0]) : 10;
-#else
-  int duration = argc > 0 ? NUM2INT(argv[0]) : 8;
-#endif
-  const char *filename = argc > 1 ? StringValueCStr(argv[1]) : NULL;
-  int vague = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 0, 255) : 40;
+static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
+{
+ const char *filename = '\0';
+ int duration = durdefault, i = 0, vague = 40;
+ size_t testu = 0;
 
-  load_transition_image(filename, vague);
+ if ( argc > 3 )
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..3)", argc);
+  return(Qnil);
+}
 
-  for(int i = 0; i < duration; ++i) {
-    window_brightness = i * 255 / duration;
-    rb_graphics_s_update(klass);
-  }
-  window_brightness = 255;
-  defreeze_screen();
+ if ( argc > 0 )
+{
+  duration = NUM2INT(argv[0]);
 
-  load_transition_image(NULL, 255);
+  if ( argc > 1 )
+{
+   testu = strlen( StringValueCStr(argv[1]) );
 
-  (void) vague;
-  (void) filename;
+   if ( testu == 0 )
+{
+    rb_raise( rb_eRGSSError, "Null filename for transition!\n" );
+    return(Qnil);
+}
+   else
+{
+    filename = StringValueCStr(argv[1]);
+}
 
-  return Qnil;
+   if ( argc > 2 )
+{
+    vague = clamp_int32(NUM2INT(argv[2]), 0, 255);
+}
+
+}
+
+}
+
+ load_transition_image(filename, vague);
+
+ for ( ; i < duration; i++ )
+{
+  window_brightness = i * 255 / duration;
+  rb_graphics_s_update(klass);
+}
+
+ window_brightness = 255;
+ defreeze_screen();
+ load_transition_image(NULL, 255);
+/*
+ (void) vague;
+ (void) filename;
+*/
+ filename = '\0';
+ return Qnil;
 }
 
 static VALUE rb_graphics_s_frame_reset(VALUE klass) {

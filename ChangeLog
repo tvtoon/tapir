@@ -1,5 +1,10 @@
 # en.UTF-8
 
+0.1.5
+^No more crazy reallocation for queues, only the registry left because it does not reallocate AT ALL!
+^Still reworking the script loading, still clueless about the best way to ruby...
+^Transitions problem fixed, due to null pointers being addressed to the engine.
+
 0.1.4
 ^The executable is correctly taken from the INI file, plus some path and case conversions were made.
 ^Reduced the loop madness from "main_rb" stuff, still far from target of administering exceptions, one function only, but it is way better than it was, except that the reporting is broken. *FIGHT AGAINST RUBY!*

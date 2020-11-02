@@ -46,15 +46,7 @@ static const size_t scriptsufs = 323;
 static const size_t scriptsufs = 295;
 #endif
 
-static VALUE rescue_reset(VALUE data, VALUE e)
-{
-  (void) e;
-  disposeAll();
-  rb_gc_start();
-  *(bool*)data = true;
-  return Qnil;
-}
-
+/*
 static VALUE rescue_any(VALUE data, VALUE e) {
   (void) data;
   (void) e;
@@ -66,12 +58,26 @@ static VALUE rescue_any(VALUE data, VALUE e) {
   );
   return Qnil;
 }
-
+*/
 #if RGSS == 3
+/*
 static VALUE rb_rgss_main2(VALUE data)
 {
  (void) data;
  return rb_yield(Qnil);
+}
+*/
+static VALUE rescue_reset(VALUE data, VALUE e)
+{
+ VALUE algo;
+  algo = rb_errinfo();
+  rb_set_errinfo(Qnil);
+  fprintf( stderr, "%s; %s\n", RSTRING_PTR(e), RSTRING_PTR(algo) );
+
+  disposeAll();
+  rb_gc_start();
+  *(bool*)data = true;
+  return Qnil;
 }
 
 static VALUE rb_rgss_main(VALUE self)
@@ -82,7 +88,8 @@ static VALUE rb_rgss_main(VALUE self)
  while(retry)
 {
   retry = false;
-  rb_rescue2( rb_rgss_main2, Qnil, rescue_reset, (VALUE)&retry, rb_eRGSSReset, NULL);
+//rb_rgss_main2
+  rb_rescue2( rb_yield, Qnil, rescue_reset, (VALUE)&retry, rb_eRGSSReset, NULL);
 }
 
  return Qnil;
@@ -1895,7 +1902,7 @@ static void load_libs() {
       "end\n"
   );
 }
-
+/*
 static VALUE uselesswrapper(VALUE data)
 {
  (void) data;
@@ -1903,11 +1910,12 @@ static VALUE uselesswrapper(VALUE data)
  rb_eval_string( execscript );
  return Qnil;
 }
-
+*/
 VALUE main_rb(VALUE data)
 {
- bool retry = true;
+ VALUE excdata;
  const char *scriptn = RSTRING_PTR(data);
+ int retval = 0;
  size_t argsize = RSTRING_LEN(data);
 
 #ifdef __DEBUG__
@@ -1925,12 +1933,23 @@ VALUE main_rb(VALUE data)
 #if RGSS == 3
  rb_define_global_function("rgss_main", rb_rgss_main, 0);
 #endif
+ load_libs();
+ rb_eval_string_protect( execscript, &retval );
+#if RGSS == 3
+ if ( retval != 0 )
+{
+  excdata = rb_errinfo();
+  rb_set_errinfo(Qnil);
+  fprintf( stderr, "%s", RSTRING_PTR(excdata) );
+}
+#endif
+/*
  while(retry)
 {
   retry = false;
   rb_rescue2( uselesswrapper, Qnil, rescue_reset, (VALUE)&retry, rb_eRGSSReset, NULL, rescue_any, Qnil, rb_eException, NULL );
 //rb_rescue2( , load_scripts, Qnil, );
 }
-
- return(Qnil);
+*/
+ return(retval);
 }

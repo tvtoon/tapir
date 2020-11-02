@@ -1,0 +1,33 @@
+# pt_BR.UTF-8
+
+Carregamentos do RTP: normal; procurar a primeira letra do nome pesquisado, por causa do XP, e aumentar a caixa; aplicar o aumento no resto do nome.
+^O primeiro aumento seria aplicado no nome, o segundo no caminho do RTP para comparar.
+
+# Extrator.
+
+Nos dados, servem para ambos: muda a chave de maneira alinhada, de 4 em 4 bytes...
+Testar com os cálculos do Perl.
+
+Realinhamento com 3 leituras: pré, alinhada e pós.
+Tem que colocar o shift no valor, além da máscara, porque é sempre de acordo com o alinhamento, não de acordo com o valor a ser lido.
+
+Máscara que determina qüais são igüais, se for diferente, soma, senão aciona a máscara. Reorganiza de acordo com essa máscara, com o limite sendo reduzida pelas igüaldades encontradas.
+^Tem que ser todos excluindo os anteriores.
+
+# Informativo.
+
+https://forums.rpgmakerweb.com/index.php
+https://forums.rpgmakerweb.com/index.php?threads/change-where-assets-are-loaded-from.100023/
+
+https://ruby-hacking-guide.github.io/
+https://github.com/tmm1/ruby-hacking-guide
+^Ruby 1.7.2 mas vale...
+
+https://pt.osdn.net/projects/mplus-fonts/releases/62344
+https://pt.osdn.net/projects/vlgothic/releases/
+http://vlgothic.dicey.org/
+^VL Gothic não tem código-fonte!
+
+Kamesoft, autor do TRGSSX, ao que parece: http://ytomy.sakura.ne.jp/index.html
+
+O ruby não converte os caminhos, um bom exemplo é o jogo de demonstração "maou", que invoca scripts diretamente da lingüagem.

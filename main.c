@@ -94,6 +94,7 @@ static void Init_RGSS(void) {
 
 int main(int argc, char **argv)
 {
+// VALUE excdata;
   bool help = false;
 /*
 char *ruby_argv_array[] = {
@@ -271,6 +272,14 @@ char *ruby_argv_array[] = {
  Init_stack(__builtin_frame_address(0));
 #endif
  rb_protect(main_rb, /*Qnil*/rb_str_new2(game_script ), &state);
+/*
+ if ( state != 0 )
+{
+  excdata = rb_errinfo();
+  rb_set_errinfo(Qnil);
+  fprintf( stderr, "%s", RSTRING_PTR(excdata) );
+}
+*/
 /* THE END */
  uninitFontLookup();
  cleanupSDL();

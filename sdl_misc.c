@@ -405,6 +405,7 @@ void registerRenderable(struct Renderable *renderable) {
   if(registry_size >= registry_capacity) {
     registry_capacity = registry_capacity + registry_capacity / 2;
     registry = realloc(registry, sizeof(*registry) * registry_capacity);
+    printf( "Realloc renderable: %u\n", registry_capacity );
   }
   registry[registry_size++] = renderable;
 }
@@ -439,7 +440,7 @@ size_t i = 0;
 }
 
 void initRenderQueue(struct RenderQueue *queue) {
-  queue->capacity = 100;
+  queue->capacity = 64;//100
   queue->queue = malloc(sizeof(*queue->queue) * queue->capacity);
 }
 
@@ -454,12 +455,13 @@ void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewpor
 
  qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
 
- for( ; i < queue->size; ++i)
+ for( ; i < queue->size; i++ )
 {
   job = &queue->queue[i];
   job->renderable->render(job->renderable, job, viewport);
 }
 
+ queue->size = 0;
 }
 
 void deinitRenderQueue(struct RenderQueue *queue)
@@ -469,19 +471,31 @@ void deinitRenderQueue(struct RenderQueue *queue)
 
 void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
-  struct RenderQueue *queue = &main_queue;
+ struct RenderQueue *queue = &main_queue;
 
-  if(viewport != Qnil) {
-    queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
-  }
-
+ if(viewport != Qnil)
+{
+  queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
+}
+/*
   if(queue->size >= queue->capacity) {
     queue->capacity = queue->capacity + queue->capacity / 2;
-    queue->queue = realloc(
-        queue->queue, sizeof(*queue->queue) * queue->capacity);
+    queue->queue = realloc( queue->queue, sizeof(*queue->queue) * queue->capacity);
+    printf( "Realloc queue: %u\n", queue->capacity );
   }
 
   queue->queue[queue->size++] = job;
+*/
+ if ( queue->size == queue->capacity )
+{
+  rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", queue->capacity );
+}
+ else
+{
+  queue->queue[queue->size] = job;
+  queue->size++;
+}
+
 }
 
 void freeze_screen(void)
