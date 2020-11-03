@@ -104,7 +104,7 @@ static VALUE rb_graphics_s_freeze(VALUE klass) {
 
 static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
 {
- const char *filename = '\0';
+ const char *filename = 0;
  int duration = durdefault, i = 0, vague = 40;
  size_t testu = 0;
 
@@ -141,7 +141,8 @@ static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
 
 }
 
- load_transition_image(filename, vague);
+ if ( filename == 0 ) ini_transition();
+ else load_transition_image(filename, testu, vague);
 
  for ( ; i < duration; i++ )
 {
@@ -151,8 +152,9 @@ static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
 
  window_brightness = 255;
  defreeze_screen();
- load_transition_image(NULL, 255);
+ ini_transition();
 /*
+ load_transition_image(NULL, 255);
  (void) vague;
  (void) filename;
 */

@@ -1,4 +1,8 @@
 .gitignore
+*~
+*.o
+*.S
+*.Ss
+*.s
 PLANO
-PLANO~
 lixo.c

@@ -25,6 +25,14 @@
 #include "gl_misc.h"
 #include "misc.h"
 
+struct Plane {
+  struct Renderable renderable;
+  VALUE viewport, bitmap, color, tone;
+  bool visible;
+  int z, ox, oy, opacity, blend_type;
+  double zoom_x, zoom_y;
+};
+
 static VALUE rb_cPlane;
 static GLuint shader;
 
@@ -33,6 +41,25 @@ static void plane_mark(struct Plane *ptr) {
   rb_gc_mark(ptr->bitmap);
   rb_gc_mark(ptr->color);
   rb_gc_mark(ptr->tone);
+}
+
+static const struct Plane *rb_plane_data(VALUE obj) {
+  Check_Type(obj, T_DATA);
+  // Note: original RGSS doesn't check types.
+  if(RDATA(obj)->dmark != (void(*)(void*))plane_mark) {
+    rb_raise(rb_eTypeError,
+        "can't convert %s into Plane",
+        rb_class2name(rb_obj_class(obj)));
+  }
+  struct Plane *ret;
+  Data_Get_Struct(obj, struct Plane, ret);
+  return ret;
+}
+
+static struct Plane *rb_plane_data_mut(VALUE obj) {
+  // Note: original RGSS doesn't check frozen.
+  if(OBJ_FROZEN(obj)) rb_error_frozen("Plane");
+  return (struct Plane *)rb_plane_data(obj);
 }
 
 static void prepareRenderPlane(struct Renderable *renderable, int t) {
@@ -343,25 +370,6 @@ static VALUE rb_plane_m_set_tone(VALUE self, VALUE newval) {
 bool rb_plane_data_p(VALUE obj) {
   if(TYPE(obj) != T_DATA) return false;
   return RDATA(obj)->dmark == (void(*)(void*))plane_mark;
-}
-
-const struct Plane *rb_plane_data(VALUE obj) {
-  Check_Type(obj, T_DATA);
-  // Note: original RGSS doesn't check types.
-  if(RDATA(obj)->dmark != (void(*)(void*))plane_mark) {
-    rb_raise(rb_eTypeError,
-        "can't convert %s into Plane",
-        rb_class2name(rb_obj_class(obj)));
-  }
-  struct Plane *ret;
-  Data_Get_Struct(obj, struct Plane, ret);
-  return ret;
-}
-
-struct Plane *rb_plane_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Plane");
-  return (struct Plane *)rb_plane_data(obj);
 }
 
 /*

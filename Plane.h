@@ -8,22 +8,10 @@
 // except according to those terms.
 
 /*
-#include <stdbool.h>
-#include <ruby.h>
-#include "sdl_misc.h"
-*/
-
-struct Plane {
-  struct Renderable renderable;
-  VALUE viewport, bitmap, color, tone;
-  bool visible;
-  int z, ox, oy, opacity, blend_type;
-  double zoom_x, zoom_y;
-};
-
-bool rb_plane_data_p(VALUE obj);
 const struct Plane *rb_plane_data(VALUE obj);
 struct Plane *rb_plane_data_mut(VALUE obj);
+*/
+bool rb_plane_data_p(VALUE obj);
 int initPlaneSDL(void);
 void Init_Plane(void);
 void deinitPlaneSDL(void);

@@ -50,7 +50,7 @@ SDL_Window *window = NULL;
 
 static SDL_GLContext glcontext = NULL;
 
-static size_t registry_size, registry_capacity;
+static size_t registry_size = 0, registry_capacity = 0;
 static struct Renderable **registry;
 
 static struct RenderQueue main_queue;
@@ -105,7 +105,8 @@ static int initTransition(void) {
  glGenTextures(1, &transition_texture2);
 
  defreeze_screen();
- load_transition_image(NULL, 255);
+/* load_transition_image(NULL, 255);*/
+ ini_transition();
  return(0);
 }
 
@@ -208,7 +209,7 @@ int initSDL(const char *window_title)
   return(1);
 }
 
- registry_capacity = 100;
+ registry_capacity = 64;
  registry = malloc(sizeof(*registry) * registry_capacity);
  initRenderQueue(&main_queue);
 
@@ -299,7 +300,7 @@ static void renderScreen()
 
  clearRenderQueue(&main_queue);
 
- for(; t < registry_size; t++)
+ for (; t < registry_size; t++)
 {
   if (registry[t]->clear) registry[t]->clear(registry[t]);
   registry[t]->prepare(registry[t], t);
@@ -315,6 +316,7 @@ static void renderScreen()
  viewport.ox = 0;
  viewport.oy = 0;
  renderQueue(&main_queue, &viewport);
+// disposeAll();
 }
 
 void renderSDL() {
@@ -401,42 +403,68 @@ void capturedRenderSDL(SDL_Surface *surface)
 
 }
 
-void registerRenderable(struct Renderable *renderable) {
+void registerRenderable(struct Renderable *renderable)
+{
+/*
   if(registry_size >= registry_capacity) {
     registry_capacity = registry_capacity + registry_capacity / 2;
     registry = realloc(registry, sizeof(*registry) * registry_capacity);
     printf( "Realloc renderable: %u\n", registry_capacity );
   }
   registry[registry_size++] = renderable;
+*/
+ if ( registry_size == registry_capacity )
+{
+  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
+  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
+}
+ else
+{
+  registry[registry_size] = renderable;
+  registry_size++;
 }
 
-void disposeRenderable(struct Renderable *renderable) {
-  size_t i = 0;
+}
 
-  if(renderable->disposed) return;
+void disposeRenderable(struct Renderable *renderable)
+{
+ size_t i = 0;
 
-  renderable->disposed = true;
+ if ( renderable->disposed == 0 )
+{
+/* true */
+  renderable->disposed = 1;
 
-  for( ; i < registry_size; ++i) {
-    if(registry[i] == renderable) break;
-  }
+  for ( ; i < registry_size; i++ )
+{
+   if ( registry[i] == renderable ) break;
+}
 
-  if(i == registry_size) return;
+  if ( i != registry_size )
+{
 
-  for(; i + 1 < registry_size; ++i) {
+   for (; i + 1 < registry_size; i++ )
+{
     registry[i] = registry[i + 1];
-  }
-
-  --registry_size;
 }
 
-void disposeAll(void) {
-size_t i = 0;
-  // TODO: dispose all Bitmaps too
-  for( ; i < registry_size; ++i) {
-    registry[i]->disposed = true;
-  }
-  registry_size = 0;
+   registry_size--;
+}
+
+}
+
+}
+
+void disposeAll(void)
+{
+ size_t i = 0;
+// TODO: dispose all Bitmaps too
+ for ( ; i < registry_size; ++i)
+{
+  registry[i]->disposed = true;
+}
+
+ registry_size = 0;
 }
 
 void initRenderQueue(struct RenderQueue *queue) {
@@ -488,6 +516,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
 */
  if ( queue->size == queue->capacity )
 {
+  fprintf( stderr, "Hopeless queue %u!\n", queue->capacity );
   rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", queue->capacity );
 }
  else
@@ -516,57 +545,70 @@ void defreeze_screen(void)
   SDL_FreeSurface(frozen);
 }
 
-void load_transition_image(const char *filename, int vagueness)
+void ini_transition( void )
+{
+ SDL_Surface *img = 0;
+/*
+!strcmp(filename, "")
+ if ( !filename || ( filens == 0 ) )
+{
+*/
+ img = create_rgba_surface(window_width, window_height);
+ SDL_FillRect(img, NULL, SDL_MapRGBA(img->format, 255, 255, 255, 255));
+ glBindTexture(GL_TEXTURE_2D, transition_texture2);
+ glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img->w, img->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img->pixels);
+ SDL_FreeSurface(img);
+ transition_vagueness = 255;
+}
+
+void load_transition_image( const char *filename, const size_t filenso, const int vagueness )
 {
  SDL_Surface *img = 0;
  SDL_Surface *transition_image = 0;
  char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
  const char extensions[2][5] = { ".png", "\0" };
  size_t filens = 0;
- 
- if(!filename || !strcmp(filename, ""))
-{
-  img = create_rgba_surface(window_width, window_height);
-  SDL_FillRect(img, NULL, SDL_MapRGBA(img->format, 255, 255, 255, 255));
-  glBindTexture(GL_TEXTURE_2D, transition_texture2);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img->w, img->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img->pixels);
-  SDL_FreeSurface(img);
-  transition_vagueness = 255;
-  return;
-}
+/*
 
  filens = strlen(filename);
-/* Windows PATH_MAX less extension. */
- if ( filens > 251 )
+ Windows PATH_MAX less extension.
+*/
+ printf( "Loading \"%s\".\n", filename );
+
+ if ( filenso > 251 )
 {
   rb_raise(rb_eRGSSError, "File %s size is too large.", filename );
-  return;
 }
-
- strncpy( filen, filename, filens );
- filens = loadfile_withrtp( pato, filen, extensions, filens, 1, 1 );
-
- if ( filens == 0 )
+ else
 {
+  strncpy( filen, filename, filenso );
+  filens = loadfile_withrtp( pato, filen, extensions, filenso, 1, 1 );
 // TODO: check error handling
-  rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
-  return;
-}
-
- img = IMG_Load(pato);
-
- if(!img)
+  if ( filens == 0 )
 {
+   rb_raise(rb_eRGSSError, "File not found: \"%s\".", filen );
+}
+  else
+{
+   img = IMG_Load(pato);
 /* TODO: check error handling */
-  rb_raise(rb_eRGSSError, "Error loading %s: %s", filename, IMG_GetError());
-  return;
+   if ( img == 0 )
+{
+    rb_raise(rb_eRGSSError, "Error loading %s: %s", filename, IMG_GetError());
+}
+   else
+{
+    transition_image = create_rgba_surface_from(img);
+    printf( "Transition... " );
+    glBindTexture(GL_TEXTURE_2D, transition_texture2);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, transition_image->w, transition_image->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
+    printf( "GL!\n" );
+    SDL_FreeSurface(transition_image);
+    transition_vagueness = vagueness;
 }
 
- transition_image = create_rgba_surface_from(img);
-
- glBindTexture(GL_TEXTURE_2D, transition_texture2);
- glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, transition_image->w, transition_image->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
- SDL_FreeSurface(transition_image);
- transition_vagueness = vagueness;
 }
 
+}
+
+}
