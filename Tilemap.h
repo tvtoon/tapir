@@ -36,3 +36,5 @@ struct Tilemap *rb_tilemap_data_mut(VALUE obj);
 void Init_Tilemap(void);
 void deinitTilemapSDL(void);
 void renderTilemaps(int z_min, int z_max);
+
+unsigned short maxtmapc;

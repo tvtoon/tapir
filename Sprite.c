@@ -30,6 +30,9 @@ static GLuint shader;
 
 static VALUE rb_cSprite;
 
+static unsigned short spritec = 0;
+unsigned short maxspritec = 0;
+
 /*
  * A graphic object containing a bitmap.
  */
@@ -175,11 +178,12 @@ static void sprite_mark(struct Sprite *ptr) {
 static void sprite_free(struct Sprite *ptr) {
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
+ spritec--;
 }
 
 static VALUE sprite_alloc(VALUE klass) {
   struct Sprite *ptr = ALLOC(struct Sprite);
-  ptr->renderable.clear = NULL;
+//  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderSprite;
   ptr->renderable.render = renderSprite;
   ptr->renderable.disposed = false;
@@ -218,6 +222,10 @@ static VALUE sprite_alloc(VALUE klass) {
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
   registerRenderable(&ptr->renderable);
+  spritec++;
+
+  if ( spritec > maxspritec ) maxspritec = spritec;
+
   return ret;
 }
 

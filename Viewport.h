@@ -6,12 +6,8 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-/*
-#include <stdbool.h>
-#include <ruby.h>
-#include "sdl_misc.h"
-*/
-struct Viewport {
+struct Viewport
+{
   struct Renderable renderable;
   struct RenderQueue viewport_queue;
   VALUE rect, color, tone;
@@ -23,3 +19,5 @@ bool rb_viewport_data_p(VALUE obj);
 const struct Viewport *rb_viewport_data(VALUE obj);
 struct Viewport *rb_viewport_data_mut(VALUE obj);
 void Init_Viewport(void);
+
+unsigned short maxvportqc;

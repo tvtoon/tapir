@@ -40,3 +40,5 @@ int initWindowSDL(void);
 struct Window *rb_window_data_mut(VALUE obj);
 void Init_Window(void);
 void deinitWindowSDL(void);
+
+unsigned short maxwindowc;

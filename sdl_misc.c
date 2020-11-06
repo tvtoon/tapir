@@ -209,8 +209,9 @@ int initSDL(const char *window_title)
   return(1);
 }
 
- registry_capacity = 64;
+ registry_capacity = 256;
  registry = malloc(sizeof(*registry) * registry_capacity);
+ main_queue.capacity = 256;
  initRenderQueue(&main_queue);
 
  shaderrc += initTransition();
@@ -302,7 +303,7 @@ static void renderScreen()
 
  for (; t < registry_size; t++)
 {
-  if (registry[t]->clear) registry[t]->clear(registry[t]);
+//  if (registry[t]->clear) registry[t]->clear(registry[t]);
   registry[t]->prepare(registry[t], t);
 }
 /*
@@ -468,7 +469,7 @@ void disposeAll(void)
 }
 
 void initRenderQueue(struct RenderQueue *queue) {
-  queue->capacity = 64;//100
+//  queue->capacity = 256;//100
   queue->queue = malloc(sizeof(*queue->queue) * queue->capacity);
 }
 

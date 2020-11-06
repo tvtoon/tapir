@@ -15,3 +15,5 @@ bool rb_plane_data_p(VALUE obj);
 int initPlaneSDL(void);
 void Init_Plane(void);
 void deinitPlaneSDL(void);
+
+unsigned short maxplanec;

@@ -28,6 +28,9 @@ static GLuint shader;
 
 VALUE rb_cTilemap;
 
+static unsigned short tmapc = 0;
+unsigned short maxtmapc = 0;
+
 #if RGSS > 1
 #define AUTOTILE_HALF_X 4
 
@@ -87,13 +90,17 @@ static void prepareRenderTilemap(struct Renderable *renderable, int t) {
   job.t = t;
 #if RGSS > 1
   job.z = 0;
+/*
   job.y = 0;
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
+*/
   queueRenderJob(ptr->viewport, job);
   job.z = 200;
+/*
   job.y = 0;
+*/
   job.aux[0] = 1;
   queueRenderJob(ptr->viewport, job);
 #else
@@ -129,8 +136,10 @@ static void prepareRenderTilemap(struct Renderable *renderable, int t) {
           z = (1 + priority + yi) * 32 - ptr->oy;
         }
 
+/*
         job.z = z;
         job.y = 0;
+*/
         job.aux[0] = xii;
         job.aux[1] = yii;
         job.aux[2] = zi;
@@ -337,12 +346,14 @@ static void renderTilemap(
         int xii = (xi % xsize + xsize) % xsize;
         int yii = (yi % ysize + ysize) % ysize;
         int tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
-
         int z = 0;
+
         if(zi == 2 && flags_ptr && 0 <= tile_id && tile_id < flags_ptr->size) {
           z = (flags_ptr->data[tile_id] & 0x10) ? 200 : 0;
         }
+
         if(z != job->z) continue;
+
         renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy,
             viewport);
       }
@@ -381,11 +392,12 @@ static void tilemap_mark(struct Tilemap *ptr) {
 static void tilemap_free(struct Tilemap *ptr) {
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
+ tmapc--;
 }
 
 static VALUE tilemap_alloc(VALUE klass) {
   struct Tilemap *ptr = ALLOC(struct Tilemap);
-  ptr->renderable.clear = NULL;
+//  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderTilemap;
   ptr->renderable.render = renderTilemap;
   ptr->renderable.disposed = false;
@@ -411,6 +423,10 @@ static VALUE tilemap_alloc(VALUE klass) {
   ptr->autotiles = rb_bitmaparray_new();
 #endif
   registerRenderable(&ptr->renderable);
+  tmapc++;
+
+  if ( tmapc > maxtmapc ) maxtmapc = tmapc;
+
   return ret;
 }
 

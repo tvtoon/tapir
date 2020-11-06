@@ -36,6 +36,9 @@ struct Plane {
 static VALUE rb_cPlane;
 static GLuint shader;
 
+static unsigned short planec = 0;
+unsigned short maxplanec = 0;
+
 static void plane_mark(struct Plane *ptr) {
   rb_gc_mark(ptr->viewport);
   rb_gc_mark(ptr->bitmap);
@@ -149,11 +152,12 @@ static void renderPlane(
 static void plane_free(struct Plane *ptr) {
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
+  planec--;
 }
 
 static VALUE plane_alloc(VALUE klass) {
   struct Plane *ptr = ALLOC(struct Plane);
-  ptr->renderable.clear = NULL;
+//  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderPlane;
   ptr->renderable.render = renderPlane;
   ptr->renderable.disposed = false;
@@ -173,6 +177,10 @@ static VALUE plane_alloc(VALUE klass) {
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   registerRenderable(&ptr->renderable);
+  planec++;
+
+  if ( planec > maxplanec ) maxplanec = planec;
+
   return ret;
 }
 

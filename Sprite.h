@@ -33,3 +33,5 @@ struct Sprite *rb_sprite_data_mut(VALUE obj);
 int initSpriteSDL(void);
 void Init_Sprite(void);
 void deinitSpriteSDL(void);
+
+unsigned short maxspritec;

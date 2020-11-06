@@ -22,20 +22,26 @@
 
 static VALUE rb_cViewport;
 
+static unsigned short vportqc = 0;
+unsigned short maxvportqc = 0;
+
 /*
  * A graphic object container.
  */
 
+/*
 static void clearViewportQueue(struct Renderable *renderable) {
   struct Viewport *ptr = (struct Viewport *)renderable;
   clearRenderQueue(&ptr->viewport_queue);
 }
-
+*/
 
 static void prepareRenderViewport(struct Renderable *renderable, int t) {
   struct Viewport *ptr = (struct Viewport *)renderable;
   if(!ptr->visible) return;
   struct RenderJob job;
+
+  clearRenderQueue(&ptr->viewport_queue);
   job.renderable = renderable;
   job.z = ptr->z;
   job.y = 0;
@@ -105,14 +111,16 @@ static void viewport_free(struct Viewport *ptr) {
   disposeRenderable(&ptr->renderable);
   deinitRenderQueue(&ptr->viewport_queue);
   xfree(ptr);
+  vportqc--;
 }
 
 static VALUE viewport_alloc(VALUE klass) {
   struct Viewport *ptr = ALLOC(struct Viewport);
-  ptr->renderable.clear = clearViewportQueue;
+//  ptr->renderable.clear = clearViewportQueue;
   ptr->renderable.prepare = prepareRenderViewport;
   ptr->renderable.render = renderViewport;
   ptr->renderable.disposed = false;
+  ptr->viewport_queue.capacity = 64;
   initRenderQueue(&ptr->viewport_queue);
 
   ptr->rect = Qnil;
@@ -127,6 +135,10 @@ static VALUE viewport_alloc(VALUE klass) {
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   registerRenderable(&ptr->renderable);
+  vportqc++;
+
+  if ( vportqc > maxvportqc ) maxvportqc = vportqc;
+
   return ret;
 }
 

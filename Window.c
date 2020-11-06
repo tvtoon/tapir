@@ -72,6 +72,9 @@ static VALUE rb_window_m_set_tone(VALUE self, VALUE newval);
 
 static VALUE rb_cWindow;
 
+static unsigned short windowc = 0;
+unsigned short maxwindowc = 0;
+
 /*
  * A graphic object containing a bitmap.
  */
@@ -84,11 +87,13 @@ static void prepareRenderWindow(struct Renderable *renderable, int t)
 
   struct RenderJob job;
   job.renderable = renderable;
+/*
   job.z = ptr->z;
   job.y = 0;
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
+*/
   job.t = t;
   queueRenderJob(ptr->viewport, job);
 #if RGSS == 1
@@ -102,13 +107,13 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
 {
  struct Window *ptr = (struct Window *)renderable;
 #if RGSS > 1
-  int content_job_no = 0;
-  int openness = ptr->openness;
+ const int content_job_no = 0;
+ const int openness = ptr->openness;
 #else
-  int content_job_no = 1;
-  int openness = 255;
+ const int content_job_no = 1;
+ const int openness = 255;
 #endif
-  if(openness == 0) return;
+ if(openness == 0) return;
 
   int open_height = ptr->height * openness / 255;
   int open_y = ptr->y + (ptr->height - open_height) / 2;
@@ -146,7 +151,11 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
   glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   glBlendEquation(GL_FUNC_ADD);
 
-  if(skin_surface && job->aux[0] == 0) {
+  if(skin_surface
+#if RGSS == 1
+&& job->aux[0] == 0
+#endif
+) {
 #if RGSS == 3
     const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
 #endif
@@ -235,12 +244,10 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
         -viewport->oy + open_y + open_height,
         0.0, 0.0, ptr->width, open_height);
 
-    glUseProgram(shader4);
-    glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
-    glUniform2f(glGetUniformLocation(shader4, "resolution"),
-        viewport->width, viewport->height);
-    glUniform1f(glGetUniformLocation(shader4, "opacity"),
-        ptr->opacity / 255.0);
+ glUseProgram(shader4);
+ glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
+ glUniform2f(glGetUniformLocation(shader4, "resolution"), viewport->width, viewport->height);
+ glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity / 255.0);
 
     if(openness == 255 && contents_bitmap_ptr != NULL && arrows_visible) {
 #if RGSS > 1
@@ -335,9 +342,15 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
 
   const struct Rect *cursor_rect_ptr = rb_rect_data(ptr->cursor_rect);
 
-  if(skin_surface && openness == 255 &&
-      job->aux[0] == content_job_no &&
-      cursor_rect_ptr->width > 0 && cursor_rect_ptr->height > 0) {
+ if ( openness == 255 
+#if RGSS == 1
+&& job->aux[0] == content_job_no
+#endif
+)
+{
+
+  if ( skin_surface && cursor_rect_ptr->width > 0 && cursor_rect_ptr->height > 0)
+{
     glActiveTexture(GL_TEXTURE0);
     bitmapBindTexture((struct Bitmap *)skin_bitmap_ptr);
 
@@ -377,8 +390,8 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
         0.0, 0.0, cursor_rect_ptr->width, cursor_rect_ptr->height);
   }
 
-  if(contents_surface && openness == 255 &&
-      job->aux[0] == content_job_no) {
+  if(contents_surface)
+{
     int wcontent_width = ptr->width - padding * 2;
     int wcontent_height = ptr->height - padding - padding_bottom;
     int content_width = contents_surface->w;
@@ -417,8 +430,10 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
         (double)clip_right / content_width,
         (double)clip_bottom / content_height);
   }
+}
 
-  glUseProgram(0);
+
+ glUseProgram(0);
 }
 
 static void window_mark(struct Window *ptr) {
@@ -434,11 +449,12 @@ static void window_mark(struct Window *ptr) {
 static void window_free(struct Window *ptr) {
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
+ windowc--;
 }
 
 static VALUE window_alloc(VALUE klass) {
   struct Window *ptr = ALLOC(struct Window);
-  ptr->renderable.clear = NULL;
+//  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderWindow;
   ptr->renderable.render = renderWindow;
   ptr->renderable.disposed = false;
@@ -497,6 +513,10 @@ static VALUE window_alloc(VALUE klass) {
   ptr->tone = rb_tone_new2();
 #endif
   registerRenderable(&ptr->renderable);
+  windowc++;
+
+  if ( windowc > maxwindowc ) maxwindowc = windowc;
+
   return ret;
 }
 
