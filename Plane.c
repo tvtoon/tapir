@@ -19,6 +19,7 @@
 #include "Bitmap.h"
 #include "Color.h"
 #include "Plane.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -67,8 +68,17 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
 
 static void prepareRenderPlane(struct Renderable *renderable, int t) {
   struct Plane *ptr = (struct Plane *)renderable;
-  if(!ptr->visible) return;
   struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "NULL pointer combo!\n" );
+  rb_raise( rb_eRGSSError, "Maximum null pointer combo!\n" );
+  return;
+}
+
+  if(!ptr->visible) return;
+
   job.renderable = renderable;
   job.z = ptr->z;
   job.y = 0;
@@ -150,6 +160,8 @@ static void renderPlane(
 }
 
 static void plane_free(struct Plane *ptr) {
+ printf( "Freeing plane!\n" );
+
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
   planec--;
@@ -157,6 +169,8 @@ static void plane_free(struct Plane *ptr) {
 
 static VALUE plane_alloc(VALUE klass) {
   struct Plane *ptr = ALLOC(struct Plane);
+
+ printf( "Allocating plane!\n" );
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderPlane;
   ptr->renderable.render = renderPlane;
@@ -193,6 +207,9 @@ static VALUE plane_alloc(VALUE klass) {
  */
 static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
+
+ printf( "Initializing plane!\n" );
+
   switch(argc) {
     case 0:
       break;
@@ -211,6 +228,9 @@ static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
 static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   struct Plane *ptr = rb_plane_data_mut(self);
   const struct Plane *orig_ptr = rb_plane_data(orig);
+
+ printf( "Initializing plane by copy!\n" );
+
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
   ptr->visible = orig_ptr->visible;
@@ -228,6 +248,7 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_plane_m_dispose(VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
+ printf( "Disposing plane!\n" );
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }
