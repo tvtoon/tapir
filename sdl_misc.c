@@ -129,6 +129,7 @@ static void deinitTransition(void)
 int initSDL(const char *window_title)
 {
  int img_flags = IMG_INIT_JPG|IMG_INIT_PNG|IMG_INIT_TIF, mix_init_flags = 0, shaderrc = 0;
+ unsigned short ui = 0;
 
  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
 {
@@ -222,6 +223,12 @@ int initSDL(const char *window_title)
  registry = malloc(sizeof(*registry) * registry_capacity);
  main_queue.capacity = 256;
  initRenderQueue(&main_queue);
+
+ for ( ; ui < 512; ui++ )
+{
+  tnewqa[ui].rendta = 8;
+  tnewqa[ui].rendia = 512;
+}
 
  shaderrc += initTransition();
  shaderrc += initSpriteSDL();
