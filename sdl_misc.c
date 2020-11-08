@@ -60,6 +60,15 @@ static GLuint transition_texture;
 static GLuint transition_texture2;
 static int transition_vagueness = 255;
 
+/* The new deal: type and index for rendering. */
+typedef struct
+{
+ unsigned char rendta;
+ unsigned short rendia;
+} newqueue;
+
+static newqueue tnewqa[512];
+
 static int initTransition(void) {
   static const char *vsh_source =
     "#version 120\n"
@@ -303,8 +312,12 @@ static void renderScreen()
 
  for (; t < registry_size; t++)
 {
-//  if (registry[t]->clear) registry[t]->clear(registry[t]);
-  registry[t]->prepare(registry[t], t);
+  if ( tnewqa[t].rendta == 0 )
+{
+ printf( "Preparing plane %u!\n", tnewqa[t].rendia );
+ prepareRenderPlane( tnewqa[t].rendia );
+}
+  else registry[t]->prepare(registry[t], t);
 }
 /*
  for( t = 0; t < registry_size; ++t )
@@ -404,16 +417,9 @@ void capturedRenderSDL(SDL_Surface *surface)
 
 }
 
-void registerRenderable(struct Renderable *renderable)
+void registerRenderable(struct Renderable *renderable )
 {
-/*
-  if(registry_size >= registry_capacity) {
-    registry_capacity = registry_capacity + registry_capacity / 2;
-    registry = realloc(registry, sizeof(*registry) * registry_capacity);
-    printf( "Realloc renderable: %u\n", registry_capacity );
-  }
-  registry[registry_size++] = renderable;
-*/
+
  if ( registry_size == registry_capacity )
 {
   fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
@@ -427,9 +433,49 @@ void registerRenderable(struct Renderable *renderable)
 
 }
 
+unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type )
+{
+ const unsigned short ret = registry_size;
+
+ if ( registry_size == registry_capacity )
+{
+  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
+  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
+}
+ else
+{
+  tnewqa[registry_size].rendta = type;
+  tnewqa[registry_size].rendia = index;
+  registry_size++;
+}
+
+ return(ret);
+}
+
+unsigned short NEWdisposeRenderable( const unsigned short index )
+{
+ const unsigned short ret = tnewqa[registry_size].rendia;
+ unsigned short i = index, j = index + 1;
+
+ if ( index != registry_size )
+{
+
+  for ( ; j < registry_size; i++, j++ )
+{
+   tnewqa[i].rendta = tnewqa[j].rendta;
+   tnewqa[i].rendia = tnewqa[j].rendia;
+   registry[i] = registry[j];
+}
+
+  registry_size--;
+}
+
+ return(ret);
+}
+
 void disposeRenderable(struct Renderable *renderable)
 {
- size_t i = 0;
+ unsigned short i = 0, j = 0;
 
  if ( renderable->disposed == 0 )
 {
@@ -444,9 +490,11 @@ void disposeRenderable(struct Renderable *renderable)
   if ( i != registry_size )
 {
 
-   for (; i + 1 < registry_size; i++ )
+   for ( j = i + 1; j < registry_size; i++, j++ )
 {
-    registry[i] = registry[i + 1];
+    tnewqa[i].rendta = tnewqa[j].rendta;
+    tnewqa[i].rendia = tnewqa[j].rendia;
+    registry[i] = registry[j];
 }
 
    registry_size--;
@@ -486,8 +534,18 @@ void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewpor
 
  for( ; i < queue->size; i++ )
 {
+
+  if ( tnewqa[i].rendta == 0 )
+{
+  printf( "Rendering plane %u!\n", tnewqa[i].rendia );
+renderPlane( tnewqa[i].rendia, viewport );
+}
+  else
+{
   job = &queue->queue[i];
   job->renderable->render(job->renderable, job, viewport);
+}
+
 }
 
  queue->size = 0;

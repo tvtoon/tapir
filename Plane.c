@@ -19,6 +19,7 @@
 #include "Bitmap.h"
 #include "Color.h"
 #include "Plane.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -26,24 +27,30 @@
 #include "misc.h"
 
 struct Plane {
-  struct Renderable renderable;
+//  struct Renderable renderable;
   VALUE viewport, bitmap, color, tone;
-  bool visible;
-  int z, ox, oy, opacity, blend_type;
-  double zoom_x, zoom_y;
+ VALUE bdispose;
+ bool visible;
+ int z, ox, oy, opacity, blend_type;
+ double zoom_x, zoom_y;
+ unsigned short rendid;
 };
 
+static struct Plane *planspa[8] = { 0,0,0,0,0,0,0,0 };
 static VALUE rb_cPlane;
 static GLuint shader;
 
+static unsigned short cminindex = 0;
 static unsigned short planec = 0;
 unsigned short maxplanec = 0;
 
-static void plane_mark(struct Plane *ptr) {
+static void plane_mark(struct Plane *ptr)
+{
   rb_gc_mark(ptr->viewport);
   rb_gc_mark(ptr->bitmap);
   rb_gc_mark(ptr->color);
   rb_gc_mark(ptr->tone);
+  rb_gc_mark(ptr->bdispose);
 }
 
 static const struct Plane *rb_plane_data(VALUE obj) {
@@ -65,25 +72,38 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
   return (struct Plane *)rb_plane_data(obj);
 }
 
-static void prepareRenderPlane(struct Renderable *renderable, int t) {
-  struct Plane *ptr = (struct Plane *)renderable;
-  if(!ptr->visible) return;
-  struct RenderJob job;
+void prepareRenderPlane( const unsigned short index )
+{
+//  struct Plane *ptr = (struct Plane *)renderable;
+ struct Plane *ptr = planspa[index];
+ struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "NULL pointer combo!\n" );
+  rb_raise( rb_eRGSSError, "Maximum null pointer combo!\n" );
+  return;
+}
+
+ if ( !ptr->visible ) return;
+/*
   job.renderable = renderable;
-  job.z = ptr->z;
-  job.y = 0;
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
-  job.t = t;
+*/
+  job.z = ptr->z;
+  job.y = 0;
+  job.t = index;
+
   queueRenderJob(ptr->viewport, job);
 }
 
-static void renderPlane(
-    struct Renderable *renderable, const struct RenderJob *job,
-    const struct RenderViewport *viewport) {
-  (void) job;
-  struct Plane *ptr = (struct Plane *)renderable;
+void renderPlane( const unsigned short index, const struct RenderViewport *viewport)
+{
+//  (void) job;
+//  struct Plane *ptr = (struct Plane *)renderable;
+ struct Plane *ptr = planspa[index];
   {
     const struct Color *color = rb_color_data(ptr->color);
     if(color->red || color->green || color->blue || color->alpha) {
@@ -149,18 +169,44 @@ static void renderPlane(
   glUseProgram(0);
 }
 
-static void plane_free(struct Plane *ptr) {
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
+static void plane_free(struct Plane *ptr)
+{
+ unsigned short cindex = 0;
+
+ printf( "Freeing plane %u!\n", cminindex );
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  planspa[cindex] = 0;
   planec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE plane_alloc(VALUE klass) {
-  struct Plane *ptr = ALLOC(struct Plane);
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderPlane;
-  ptr->renderable.render = renderPlane;
-  ptr->renderable.disposed = false;
+}
+
+ xfree(ptr);
+}
+
+static VALUE plane_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Plane *ptr = 0;
+
+ printf( "Allocating plane %u!\n", cminindex );
+
+ if ( cminindex == 8 )
+{
+  fprintf( stderr, "Reached maximum plane count of 8!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum plane count of 8!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Plane);
   ptr->bitmap = Qnil;
   ptr->viewport = Qnil;
   ptr->visible = true;
@@ -173,13 +219,23 @@ static VALUE plane_alloc(VALUE klass) {
   ptr->blend_type = 0;
   ptr->color = Qnil;
   ptr->tone = Qnil;
-  VALUE ret = Data_Wrap_Struct(klass, plane_mark, plane_free, ptr);
+  ptr->bdispose = Qfalse;
+  ret = Data_Wrap_Struct(klass, plane_mark, plane_free, ptr);
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 0 );
+  planspa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 8; cminindex++ )
+{
+   if ( planspa[cminindex] == 0 ) break;
+}
+
+ printf( "Guess what cminindex %u?\n", cminindex );
   planec++;
 
   if ( planec > maxplanec ) maxplanec = planec;
+}
 
   return ret;
 }
@@ -193,6 +249,9 @@ static VALUE plane_alloc(VALUE klass) {
  */
 static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
+
+ printf( "Initializing plane %u!\n", cminindex );
+
   switch(argc) {
     case 0:
       break;
@@ -211,6 +270,9 @@ static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
 static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   struct Plane *ptr = rb_plane_data_mut(self);
   const struct Plane *orig_ptr = rb_plane_data(orig);
+
+ printf( "Initializing plane %u by copy!\n", cminindex );
+
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
   ptr->visible = orig_ptr->visible;
@@ -226,15 +288,35 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_plane_m_dispose(VALUE self) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+static VALUE rb_plane_m_dispose(VALUE self)
+{
+ unsigned short cindex = 0;
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+
+ printf( "Disposing plane %u!\n", cindex );
+
+  ptr->bdispose = Qtrue;
+  planspa[cindex] = 0;
+  planec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
+}
+
+}
+
+ return Qnil;
 }
 
 static VALUE rb_plane_m_disposed_p(VALUE self) {
   const struct Plane *ptr = rb_plane_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+//  return ptr->renderable.disposed ? Qtrue : Qfalse;
+ return ptr->bdispose;
 }
 
 static VALUE rb_plane_m_bitmap(VALUE self) {

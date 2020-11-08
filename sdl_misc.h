@@ -58,3 +58,6 @@ void queueRenderJob(VALUE viewport, struct RenderJob job);
 void registerRenderable(struct Renderable *renderable);
 void renderSDL(void);
 void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewport);
+
+unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type );
+unsigned short NEWdisposeRenderable( const unsigned short index );

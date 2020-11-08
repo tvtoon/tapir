@@ -7,13 +7,12 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-const struct Plane *rb_plane_data(VALUE obj);
-struct Plane *rb_plane_data_mut(VALUE obj);
-*/
 bool rb_plane_data_p(VALUE obj);
 int initPlaneSDL(void);
 void Init_Plane(void);
 void deinitPlaneSDL(void);
+
+void prepareRenderPlane( const unsigned short index );
+void renderPlane( const unsigned short index, const struct RenderViewport *viewport);
 
 unsigned short maxplanec;
