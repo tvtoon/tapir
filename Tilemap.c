@@ -18,6 +18,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "BitmapArray.h"
+#include "RGSSError.h"
 #include "Table.h"
 #include "Tilemap.h"
 #include "Viewport.h"
@@ -84,8 +85,17 @@ static const int counter_alternatives[48] = {
 
 static void prepareRenderTilemap(struct Renderable *renderable, int t) {
   struct Tilemap *ptr = (struct Tilemap *)renderable;
-  if(!ptr->visible) return;
   struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Tilemap NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Tilemap NULL pointer!\n" );
+  return;
+}
+
+  if(!ptr->visible) return;
+
   job.renderable = renderable;
   job.t = t;
 #if RGSS > 1
@@ -397,6 +407,8 @@ static void tilemap_free(struct Tilemap *ptr) {
 
 static VALUE tilemap_alloc(VALUE klass) {
   struct Tilemap *ptr = ALLOC(struct Tilemap);
+
+ printf( "Allocating tilemap!\n" );
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderTilemap;
   ptr->renderable.render = renderTilemap;
@@ -478,6 +490,7 @@ static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_tilemap_m_dispose(VALUE self) {
   struct Tilemap *ptr = rb_tilemap_data_mut(self);
+ printf( "Disposing tilemap!\n" );
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

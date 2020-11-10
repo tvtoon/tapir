@@ -15,6 +15,7 @@
 #include "rubyfill.h"
 #include "sdl_misc.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -29,17 +30,18 @@ unsigned short maxvportqc = 0;
  * A graphic object container.
  */
 
-/*
-static void clearViewportQueue(struct Renderable *renderable) {
-  struct Viewport *ptr = (struct Viewport *)renderable;
-  clearRenderQueue(&ptr->viewport_queue);
-}
-*/
-
 static void prepareRenderViewport(struct Renderable *renderable, int t) {
   struct Viewport *ptr = (struct Viewport *)renderable;
-  if(!ptr->visible) return;
   struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Viewport NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Viewport NULL pointer!\n" );
+  return;
+}
+
+  if(!ptr->visible) return;
 
   clearRenderQueue(&ptr->viewport_queue);
   job.renderable = renderable;
@@ -116,6 +118,8 @@ static void viewport_free(struct Viewport *ptr) {
 
 static VALUE viewport_alloc(VALUE klass) {
   struct Viewport *ptr = ALLOC(struct Viewport);
+
+ printf( "Allocating viewport!\n" );
 //  ptr->renderable.clear = clearViewportQueue;
   ptr->renderable.prepare = prepareRenderViewport;
   ptr->renderable.render = renderViewport;
@@ -196,6 +200,7 @@ static VALUE rb_viewport_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_viewport_m_dispose(VALUE self) {
   struct Viewport *ptr = rb_viewport_data_mut(self);
+ printf( "Disposing viewport!\n" );
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

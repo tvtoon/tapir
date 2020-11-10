@@ -19,6 +19,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Sprite.h"
 #include "Tone.h"
@@ -39,8 +40,17 @@ unsigned short maxspritec = 0;
 
 static void prepareRenderSprite(struct Renderable *renderable, int t) {
   struct Sprite *ptr = (struct Sprite *)renderable;
-  if(!ptr->visible) return;
   struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Sprite NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Sprite NULL pointer!\n" );
+  return;
+}
+
+  if(!ptr->visible) return;
+
   job.renderable = renderable;
   job.z = ptr->z;
   job.y = ptr->y;
@@ -183,6 +193,8 @@ static void sprite_free(struct Sprite *ptr) {
 
 static VALUE sprite_alloc(VALUE klass) {
   struct Sprite *ptr = ALLOC(struct Sprite);
+
+ printf( "Allocating sprite!\n" );
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderSprite;
   ptr->renderable.render = renderSprite;
@@ -290,6 +302,7 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_sprite_m_dispose(VALUE self) {
   struct Sprite *ptr = rb_sprite_data_mut(self);
+ printf( "Disposing sprite!\n" );
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

@@ -18,6 +18,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -31,45 +32,6 @@ static GLuint shader3;
 static GLuint shader4;
 static GLuint cursor_shader;
 
-/*
-#if RGSS == 3
-static VALUE rb_window_m_move( VALUE self, VALUE x, VALUE y, VALUE width, VALUE height);
-static VALUE rb_window_m_open_p(VALUE self);
-static VALUE rb_window_m_close_p(VALUE self);
-#endif
-
-#if RGSS == 1
-static VALUE rb_window_m_stretch(VALUE self);
-static VALUE rb_window_m_set_stretch(VALUE self, VALUE newval);
-#endif
-
-#if RGSS >= 2
-static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_arrows_visible(VALUE self);
-static VALUE rb_window_m_set_arrows_visible(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_padding(VALUE self);
-static VALUE rb_window_m_set_padding(VALUE self, VALUE newval);
-static VALUE rb_window_m_padding_bottom(VALUE self);
-static VALUE rb_window_m_set_padding_bottom(VALUE self, VALUE newval);
-#endif
-
-#if RGSS >= 2
-static VALUE rb_window_m_openness(VALUE self);
-static VALUE rb_window_m_set_openness(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_tone(VALUE self);
-static VALUE rb_window_m_set_tone(VALUE self, VALUE newval);
-#endif
-*/
-
 static VALUE rb_cWindow;
 
 static unsigned short windowc = 0;
@@ -82,10 +44,17 @@ unsigned short maxwindowc = 0;
 static void prepareRenderWindow(struct Renderable *renderable, int t)
 {
   struct Window *ptr = (struct Window *)renderable;
+  struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Window NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Window NULL pointer!\n" );
+  return;
+}
 
   if(!ptr->visible) return;
 
-  struct RenderJob job;
   job.renderable = renderable;
 /*
   job.z = ptr->z;
@@ -454,6 +423,8 @@ static void window_free(struct Window *ptr) {
 
 static VALUE window_alloc(VALUE klass) {
   struct Window *ptr = ALLOC(struct Window);
+
+ printf( "Allocating window!\n" );
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderWindow;
   ptr->renderable.render = renderWindow;
@@ -588,6 +559,7 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_window_m_dispose(VALUE self) {
   struct Window *ptr = rb_window_data_mut(self);
+ printf( "Disposing window!\n" );
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }
