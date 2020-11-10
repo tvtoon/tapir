@@ -198,8 +198,6 @@ static VALUE plane_alloc(VALUE klass)
  VALUE ret = Qnil;
  struct Plane *ptr = 0;
 
- printf( "Allocating plane %u!\n", cminindex );
-
  if ( cminindex == 8 )
 {
   fprintf( stderr, "Reached maximum plane count of 8!\n" );
@@ -207,6 +205,7 @@ static VALUE plane_alloc(VALUE klass)
 }
  else
 {
+ printf( "Allocating plane %u!\n", cminindex );
   ptr = ALLOC(struct Plane);
   ptr->bitmap = Qnil;
   ptr->viewport = Qnil;
@@ -294,9 +293,6 @@ static VALUE rb_plane_m_dispose(VALUE self)
  if ( ptr->bdispose == Qfalse )
 {
   cindex = NEWdisposeRenderable( ptr->rendid );
-
- printf( "Disposing plane %u!\n", cindex );
-
   ptr->bdispose = Qtrue;
   planspa[cindex] = 0;
   planec--;
@@ -306,6 +302,7 @@ static VALUE rb_plane_m_dispose(VALUE self)
    cminindex = cindex;
 }
 
+ printf( "Disposing plane %u!\n", cindex );
 }
 
  return Qnil;

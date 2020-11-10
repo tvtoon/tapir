@@ -441,6 +441,7 @@ static VALUE tilemap_alloc(VALUE klass)
 }
  else
 {
+ printf( "Allocating tilemap %u!\n", cminindex );
   ptr = ALLOC(struct Tilemap);
 #if RGSS > 1
   ptr->bitmaps = Qnil;
@@ -543,6 +544,7 @@ static VALUE rb_tilemap_m_dispose(VALUE self)
    cminindex = cindex;
 }
 
+ printf( "Disposing tilemap %u!\n", cindex );
 }
 
  return Qnil;

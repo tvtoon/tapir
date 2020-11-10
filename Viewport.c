@@ -146,6 +146,7 @@ static VALUE viewport_alloc(VALUE klass)
 }
  else
 {
+ printf( "Allocating viewport %u!\n", cminindex );
   ptr = ALLOC(struct Viewport);
   ptr->viewport_queue.capacity = 64;
   initRenderQueue(&ptr->viewport_queue);
@@ -246,6 +247,7 @@ static VALUE rb_viewport_m_dispose(VALUE self)
    cminindex = cindex;
 }
 
+ printf( "Disposing viewport %u!\n", cindex );
 }
 
  return Qnil;

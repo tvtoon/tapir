@@ -50,7 +50,7 @@ SDL_Window *window = NULL;
 
 static SDL_GLContext glcontext = NULL;
 
-static unsigned short registry_size = 0, registry_capacity = 0;
+static unsigned short registry_size = 0, registry_capacity = 0, regminfi = 0;
 //static struct Renderable **registry;
 
 static struct RenderQueue main_queue;
@@ -320,14 +320,18 @@ static void renderScreen()
 
  clearRenderQueue(&main_queue);
 
- for (; reg < registry_size; reg++)
+ for (; reg < registry_size; reg++ )
 {
 /*
   if ( tnewqa[t].rendta < 2 )
 {
  printf( "Preparing plane %u!\n", tnewqa[t].rendia );
 */
-  preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
+  if ( tnewqa[reg].rendia != 512 )
+{
+   preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
+   reg++;
+}
 /*
 }
   else registry[t]->prepare(registry[t], t);
@@ -427,18 +431,24 @@ void capturedRenderSDL(SDL_Surface *surface)
 
 unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type )
 {
- const unsigned short ret = registry_size;
+ const unsigned short ret = regminfi;
 
  if ( registry_size == registry_capacity )
 {
-  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
-  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
+  fprintf( stderr, "No more register available, maximum of %u!\n", registry_capacity );
+  rb_raise(rb_eRGSSError, "No more register available, maximum of %u!\n", registry_capacity );
 }
  else
 {
-  tnewqa[registry_size].rendta = type;
-  tnewqa[registry_size].rendia = index;
+  tnewqa[regminfi].rendta = type;
+  tnewqa[regminfi].rendia = index;
   registry_size++;
+
+  for ( regminfi++; regminfi < 256; regminfi++ )
+{
+   if ( tnewqa[regminfi].rendia == 512 ) break;
+}
+
 }
 
  return(ret);
@@ -446,9 +456,10 @@ unsigned short NEWregisterRenderable( const unsigned short index, const unsigned
 
 unsigned short NEWdisposeRenderable( const unsigned short index )
 {
- const unsigned short ret = tnewqa[registry_size].rendia;
- unsigned short i = index, j = index + 1;
+ unsigned short ret = 512;
+// unsigned short i = index, j = index + 1;
 
+/*
  if ( index != registry_size )
 {
 
@@ -456,7 +467,21 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 {
    tnewqa[i].rendta = tnewqa[j].rendta;
    tnewqa[i].rendia = tnewqa[j].rendia;
-//   registry[i] = registry[j];
+}
+*/
+ if ( registry_size == 0 )
+{
+  fprintf( stderr, "Disposing without registers!\n" );
+  rb_raise(rb_eRGSSError, "Disposing without registers!\n" );
+}
+ else
+{
+  ret = tnewqa[index].rendia;
+  tnewqa[index].rendia = 512;
+
+  if ( regminfi > index )
+{
+   regminfi = index;
 }
 
   registry_size--;

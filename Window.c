@@ -454,6 +454,7 @@ static VALUE window_alloc(VALUE klass)
 }
  else
 {
+ printf( "Allocating window %u!\n", cminindex );
   ptr = ALLOC(struct Window);
   ptr->windowskin = Qnil;
   ptr->contents = Qnil;
@@ -609,6 +610,7 @@ static VALUE rb_window_m_dispose(VALUE self)
    cminindex = cindex;
 }
 
+ printf( "Disposing window %u!\n", cindex );
 }
 
  return Qnil;

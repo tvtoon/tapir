@@ -247,6 +247,7 @@ static VALUE sprite_alloc(VALUE klass)
 }
  else
 {
+ printf( "Allocating sprite %u!\n", cminindex );
   ptr = ALLOC(struct Sprite);
   ptr->z = 0;
   ptr->viewport = Qnil;
@@ -374,6 +375,7 @@ static VALUE rb_sprite_m_dispose(VALUE self) {
    cminindex = cindex;
 }
 
+ printf( "Disposing sprite %u!\n", cindex );
 }
 
  return Qnil;
