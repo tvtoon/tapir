@@ -58,7 +58,7 @@ unsigned short maxspritec = 0;
  * A graphic object containing a bitmap.
  */
 
-void prepareRenderSprite( const unsigned short index, const unsigned short reg )
+void prepareRenderSprite( const unsigned short index )
 {
  struct Sprite *ptr = spritespa[index];
  struct RenderJob job;
@@ -81,7 +81,7 @@ void prepareRenderSprite( const unsigned short index, const unsigned short reg )
  job.z = ptr->z;
  job.y = ptr->y;
  job.t = index;
-job.reg = reg;
+job.reg = 1;
  queueRenderJob(ptr->viewport, job);
 }
 

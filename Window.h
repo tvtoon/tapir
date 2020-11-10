@@ -43,7 +43,7 @@ struct Window *rb_window_data_mut(VALUE obj);
 void Init_Window(void);
 void deinitWindowSDL(void);
 
-void prepareRenderWindow( const unsigned short index, const unsigned short reg );
+void prepareRenderWindow( const unsigned short index );
 void renderWindow( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxwindowc;

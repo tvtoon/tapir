@@ -33,14 +33,7 @@ unsigned short maxvportqc = 0;
  * A graphic object container.
  */
 
-/*
-static void clearViewportQueue(struct Renderable *renderable) {
-  struct Viewport *ptr = (struct Viewport *)renderable;
-  clearRenderQueue(&ptr->viewport_queue);
-}
-*/
-
-void prepareRenderViewport( const unsigned short index, const unsigned short reg )
+void prepareRenderViewport( const unsigned short index )
 {
  struct Viewport *ptr = vportspa[index];
  struct RenderJob job;
@@ -58,7 +51,7 @@ void prepareRenderViewport( const unsigned short index, const unsigned short reg
  job.z = ptr->z;
  job.y = 0;
  job.t = index;
-job.reg = reg;
+job.reg = 3;
  queueRenderJob(Qnil, job);
 }
 

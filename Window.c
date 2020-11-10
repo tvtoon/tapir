@@ -44,7 +44,7 @@ unsigned short maxwindowc = 0;
  * A graphic object containing a bitmap.
  */
 
-void prepareRenderWindow( const unsigned short index, const unsigned short reg )
+void prepareRenderWindow( const unsigned short index )
 {
  struct Window *ptr = windowspa[index];
  struct RenderJob job;
@@ -61,7 +61,7 @@ void prepareRenderWindow( const unsigned short index, const unsigned short reg )
  job.z = ptr->z;
  job.y = 0;
  job.t = index;
-job.reg = reg;
+job.reg = 4;
 /*
   job.aux[1] = 0;
   job.aux[2] = 0;

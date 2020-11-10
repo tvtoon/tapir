@@ -72,7 +72,7 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
   return (struct Plane *)rb_plane_data(obj);
 }
 
-void prepareRenderPlane( const unsigned short index, const unsigned short reg )
+void prepareRenderPlane( const unsigned short index )
 {
 //  struct Plane *ptr = (struct Plane *)renderable;
  struct Plane *ptr = planspa[index];
@@ -95,7 +95,7 @@ void prepareRenderPlane( const unsigned short index, const unsigned short reg )
   job.z = ptr->z;
   job.y = 0;
   job.t = index;
-job.reg = reg;
+job.reg = 0;
 
   queueRenderJob(ptr->viewport, job);
 }

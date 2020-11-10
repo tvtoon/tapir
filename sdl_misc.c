@@ -69,7 +69,7 @@ typedef struct
 
 static newqueue tnewqa[512];
 
-static void ( *preparefuna[5])( const unsigned short index, const unsigned short reg ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
+static void ( *preparefuna[5])( const unsigned short index ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
 static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
 
 static int initTransition(void) {
@@ -327,7 +327,7 @@ static void renderScreen()
 {
  printf( "Preparing plane %u!\n", tnewqa[t].rendia );
 */
-  preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia, reg );
+  preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
 /*
 }
   else registry[t]->prepare(registry[t], t);
@@ -464,54 +464,6 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 
  return(ret);
 }
-/*
-void registerRenderable(struct Renderable *renderable )
-{
-
- if ( registry_size == registry_capacity )
-{
-  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
-  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
-}
- else
-{
-  registry[registry_size] = renderable;
-  registry_size++;
-}
-
-}
-
-void disposeRenderable(struct Renderable *renderable)
-{
- unsigned short i = 0, j = 0;
-
- if ( renderable->disposed == 0 )
-{
-  renderable->disposed = 1;
-
-  for ( ; i < registry_size; i++ )
-{
-   if ( registry[i] == renderable ) break;
-}
-
-  if ( i != registry_size )
-{
-
-   for ( j = i + 1; j < registry_size; i++, j++ )
-{
-    tnewqa[i].rendta = tnewqa[j].rendta;
-    tnewqa[i].rendia = tnewqa[j].rendia;
-    registry[i] = registry[j];
-}
-
-   registry_size--;
-}
-
-}
-
-}
-
-*/
 
 void disposeAll(void)
 {
@@ -544,11 +496,10 @@ void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewpor
  for( ; i < queue->size; i++ )
 {
 /*
-  if ( tnewqa[i].rendta < 2 )
-{
-//  printf( "Rendering plane %u!\n", tnewqa[i].rendia );
+tnewqa[i].rendta
+tnewqa[i].rendia
 */
- renderfuna[ tnewqa[queue->queue[i].reg].rendta]( /*tnewqa[i].rendia*/ queue->queue[i].t, viewport );
+ renderfuna[ queue->queue[i].reg ]( queue->queue[i].t, viewport );
 /*
 }
   else

@@ -86,7 +86,7 @@ static const int counter_alternatives[48] = {
 };
 #endif
 
-void prepareRenderTilemap( const unsigned short index, const unsigned short reg )
+void prepareRenderTilemap( const unsigned short index )
 {
  struct Tilemap *ptr = tmapspa[index];
  struct RenderJob job;
@@ -102,7 +102,7 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short reg 
 
 ptr->jobz = 0;
 
-job.reg = reg;
+job.reg = 2;
  job.t = index;
 #if RGSS > 1
  job.z = 0;
