@@ -18,6 +18,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "BitmapArray.h"
+#include "RGSSError.h"
 #include "Table.h"
 #include "Tilemap.h"
 #include "Viewport.h"
@@ -28,6 +29,9 @@ static GLuint shader;
 
 VALUE rb_cTilemap;
 
+static struct Tilemap *tmapspa[8] = { 0,0,0,0,0,0,0,0 };
+
+static unsigned short cminindex = 0;
 static unsigned short tmapc = 0;
 unsigned short maxtmapc = 0;
 
@@ -82,30 +86,41 @@ static const int counter_alternatives[48] = {
 };
 #endif
 
-static void prepareRenderTilemap(struct Renderable *renderable, int t) {
-  struct Tilemap *ptr = (struct Tilemap *)renderable;
-  if(!ptr->visible) return;
-  struct RenderJob job;
-  job.renderable = renderable;
-  job.t = t;
+void prepareRenderTilemap( const unsigned short index, const unsigned short reg )
+{
+ struct Tilemap *ptr = tmapspa[index];
+ struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Tilemap NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Tilemap NULL pointer!\n" );
+  return;
+}
+
+ if(!ptr->visible) return;
+
+ptr->jobz = 0;
+
+job.reg = reg;
+ job.t = index;
 #if RGSS > 1
-  job.z = 0;
+ job.z = 0;
+ job.y = 0;
 /*
-  job.y = 0;
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
 */
   queueRenderJob(ptr->viewport, job);
   job.z = 200;
-/*
-  job.y = 0;
-*/
   job.aux[0] = 1;
   queueRenderJob(ptr->viewport, job);
 #else
   if(ptr->map_data == Qnil) return;
+
   const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+
   int xsize = map_data_ptr->xsize;
   int ysize = map_data_ptr->ysize;
   int zsize = map_data_ptr->zsize;
@@ -136,10 +151,9 @@ static void prepareRenderTilemap(struct Renderable *renderable, int t) {
           z = (1 + priority + yi) * 32 - ptr->oy;
         }
 
-/*
+
         job.z = z;
         job.y = 0;
-*/
         job.aux[0] = xii;
         job.aux[1] = yii;
         job.aux[2] = zi;
@@ -150,8 +164,8 @@ static void prepareRenderTilemap(struct Renderable *renderable, int t) {
 #endif
 }
 
-static void renderTile(struct Tilemap *ptr, int tile_id, int x, int y,
-    const struct RenderViewport *viewport) {
+static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, const struct RenderViewport *viewport )
+{
   VALUE tileset = Qnil;
   int autotile_shape_id = -1;
   bool is_counter = false;
@@ -318,19 +332,21 @@ static void renderTile(struct Tilemap *ptr, int tile_id, int x, int y,
   }
 }
 
-static void renderTilemap(
-    struct Renderable *renderable, const struct RenderJob *job,
-    const struct RenderViewport *viewport) {
-  struct Tilemap *ptr = (struct Tilemap *)renderable;
+void renderTilemap( const unsigned short index, const struct RenderViewport *viewport )
+{
+ struct Tilemap *ptr = tmapspa[index];
+
 #if RGSS > 1
-  if(ptr->map_data == Qnil) return;
-  const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+ if(ptr->map_data == Qnil) return;
+
+ const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
   int xsize = map_data_ptr->xsize;
   int ysize = map_data_ptr->ysize;
   int zsize = map_data_ptr->zsize;
 
-  const struct Table *flags_ptr = NULL;
-  if(ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
+ const struct Table *flags_ptr = NULL;
+
+ if(ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
 
   int x_start = (viewport->ox + ptr->ox) >> 5;
   int x_end = (viewport->ox + ptr->ox + viewport->width + 31) >> 5;
@@ -352,13 +368,15 @@ static void renderTilemap(
           z = (flags_ptr->data[tile_id] & 0x10) ? 200 : 0;
         }
 
-        if(z != job->z) continue;
+        if(z != ptr->jobz ) continue;
 
         renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy,
             viewport);
       }
     }
   }
+
+ptr->jobz ^= 200;
 #else
   if(ptr->map_data == Qnil) return;
   const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
@@ -387,20 +405,43 @@ static void tilemap_mark(struct Tilemap *ptr) {
   rb_gc_mark(ptr->map_data);
   rb_gc_mark(ptr->flash_data);
   rb_gc_mark(ptr->viewport);
+  rb_gc_mark(ptr->bdispose);
 }
 
-static void tilemap_free(struct Tilemap *ptr) {
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
- tmapc--;
+static void tilemap_free(struct Tilemap *ptr)
+{
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  tmapspa[cindex] = 0;
+  tmapc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE tilemap_alloc(VALUE klass) {
-  struct Tilemap *ptr = ALLOC(struct Tilemap);
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderTilemap;
-  ptr->renderable.render = renderTilemap;
-  ptr->renderable.disposed = false;
+}
+
+ xfree(ptr);
+}
+
+static VALUE tilemap_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Tilemap *ptr = 0;
+
+ if ( cminindex == 8 )
+{
+  fprintf( stderr, "Reached maximum tilemap count of 8!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum tilemap count of 8!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Tilemap);
 #if RGSS > 1
   ptr->bitmaps = Qnil;
   ptr->flags = Qnil;
@@ -416,18 +457,27 @@ static VALUE tilemap_alloc(VALUE klass) {
   ptr->ox = 0;
   ptr->oy = 0;
   ptr->autotile_tick = 0;
-  VALUE ret = Data_Wrap_Struct(klass, tilemap_mark, tilemap_free, ptr);
+  ptr->bdispose = Qfalse;
+  ret = Data_Wrap_Struct(klass, tilemap_mark, tilemap_free, ptr);
 #if RGSS > 1
   ptr->bitmaps = rb_bitmaparray_new();
 #else
   ptr->autotiles = rb_bitmaparray_new();
 #endif
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 2 );
+  tmapspa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 8; cminindex++ )
+{
+   if ( tmapspa[cminindex] == 0 ) break;
+}
+
   tmapc++;
 
   if ( tmapc > maxtmapc ) maxtmapc = tmapc;
+}
 
-  return ret;
+ return ret;
 }
 
 /*
@@ -476,15 +526,32 @@ static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_tilemap_m_dispose(VALUE self) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+static VALUE rb_tilemap_m_dispose(VALUE self)
+{
+ unsigned short cindex = 0;
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  tmapspa[cindex] = 0;
+  tmapc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE rb_tilemap_m_disposed_p(VALUE self) {
-  const struct Tilemap *ptr = rb_tilemap_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+}
+
+ return Qnil;
+}
+
+static VALUE rb_tilemap_m_disposed_p(VALUE self)
+{
+ const struct Tilemap *ptr = rb_tilemap_data(self);
+ return ptr->bdispose;
 }
 
 static VALUE rb_tilemap_m_update(VALUE self) {

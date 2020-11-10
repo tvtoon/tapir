@@ -15,6 +15,7 @@
 #include "rubyfill.h"
 #include "sdl_misc.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -22,8 +23,11 @@
 
 static VALUE rb_cViewport;
 
+static struct Viewport *vportspa[32] = { 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0 };
+static unsigned short cminindex = 0;
 static unsigned short vportqc = 0;
 unsigned short maxvportqc = 0;
+
 
 /*
  * A graphic object container.
@@ -36,93 +40,122 @@ static void clearViewportQueue(struct Renderable *renderable) {
 }
 */
 
-static void prepareRenderViewport(struct Renderable *renderable, int t) {
-  struct Viewport *ptr = (struct Viewport *)renderable;
-  if(!ptr->visible) return;
-  struct RenderJob job;
+void prepareRenderViewport( const unsigned short index, const unsigned short reg )
+{
+ struct Viewport *ptr = vportspa[index];
+ struct RenderJob job;
 
-  clearRenderQueue(&ptr->viewport_queue);
-  job.renderable = renderable;
-  job.z = ptr->z;
-  job.y = 0;
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-  job.t = t;
-  queueRenderJob(Qnil, job);
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Viewport NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Viewport NULL pointer!\n" );
+  return;
 }
 
-static void renderViewport(
-    struct Renderable *renderable, const struct RenderJob *job,
-    const struct RenderViewport *viewport) {
-  (void) job;
-  (void) viewport;
+ if(!ptr->visible) return;
 
-  struct Viewport *ptr = (struct Viewport *)renderable;
+ clearRenderQueue(&ptr->viewport_queue);
+ job.z = ptr->z;
+ job.y = 0;
+ job.t = index;
+job.reg = reg;
+ queueRenderJob(Qnil, job);
+}
 
-  struct RenderViewport rviewport;
-  rviewport.width = window_width;
-  rviewport.height = window_height;
-  rviewport.ox = 0;
-  rviewport.oy = 0;
+void renderViewport( const unsigned short index, const struct RenderViewport *viewport )
+{
+ struct Viewport *ptr = vportspa[index];
+ struct RenderViewport rviewport;
 
-  {
+ (void) viewport;
+
+ rviewport.width = window_width;
+ rviewport.height = window_height;
+ rviewport.ox = 0;
+ rviewport.oy = 0;
+
+{
     const struct Color *color = rb_color_data(ptr->color);
-    if(color->red || color->green || color->blue || color->alpha) {
+    if(color->red || color->green || color->blue || color->alpha)
+{
       WARN_UNIMPLEMENTED("Viewport#color");
-    }
-  }
-  {
+}
+
+}
+
+{
     const struct Tone *tone = rb_tone_data(ptr->tone);
-    if(tone->red || tone->green || tone->blue || tone->gray) {
+    if(tone->red || tone->green || tone->blue || tone->gray)
+{
       WARN_UNIMPLEMENTED("Viewport#tone");
-    }
-  }
-  {
-    const struct Rect *rect = rb_rect_data(ptr->rect);
-    if(rect->width <= 0 || rect->height <= 0) return;
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(
-        rect->x, window_height - (rect->y + rect->height),
-        rect->width, rect->height);
-    glViewport(
-        rect->x, window_height - (rect->y + rect->height),
-        rect->width, rect->height);
-    rviewport.width = rect->width;
-    rviewport.height = rect->height;
-  }
-  rviewport.ox = ptr->ox;
-  rviewport.oy = ptr->oy;
+}
 
-  renderQueue(&ptr->viewport_queue, &rviewport);
+}
 
-  glDisable(GL_SCISSOR_TEST);
-  glScissor(0, 0, window_width, window_height);
-  glViewport(0, 0, window_width, window_height);
+{
+  const struct Rect *rect = rb_rect_data(ptr->rect);
+
+  if(rect->width <= 0 || rect->height <= 0) return;
+
+  glEnable(GL_SCISSOR_TEST);
+  glScissor( rect->x, window_height - (rect->y + rect->height), rect->width, rect->height);
+  glViewport( rect->x, window_height - (rect->y + rect->height), rect->width, rect->height);
+  rviewport.width = rect->width;
+  rviewport.height = rect->height;
+}
+
+ rviewport.ox = ptr->ox;
+ rviewport.oy = ptr->oy;
+ renderQueue(&ptr->viewport_queue, &rviewport);
+ glDisable(GL_SCISSOR_TEST);
+ glScissor(0, 0, window_width, window_height);
+ glViewport(0, 0, window_width, window_height);
 }
 
 static void viewport_mark(struct Viewport *ptr) {
   rb_gc_mark(ptr->rect);
   rb_gc_mark(ptr->color);
   rb_gc_mark(ptr->tone);
+  rb_gc_mark(ptr->bdispose);
 }
 
-static void viewport_free(struct Viewport *ptr) {
-  disposeRenderable(&ptr->renderable);
-  deinitRenderQueue(&ptr->viewport_queue);
-  xfree(ptr);
+static void viewport_free(struct Viewport *ptr)
+{
+ unsigned short cindex = 0;
+ deinitRenderQueue(&ptr->viewport_queue);
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  vportspa[cindex] = 0;
   vportqc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE viewport_alloc(VALUE klass) {
-  struct Viewport *ptr = ALLOC(struct Viewport);
-//  ptr->renderable.clear = clearViewportQueue;
-  ptr->renderable.prepare = prepareRenderViewport;
-  ptr->renderable.render = renderViewport;
-  ptr->renderable.disposed = false;
+}
+
+ xfree(ptr);
+}
+
+static VALUE viewport_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Viewport *ptr = 0;
+
+ if ( cminindex == 32 )
+{
+  fprintf( stderr, "Reached maximum viewport count of 32!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum viewport count of 32!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Viewport);
   ptr->viewport_queue.capacity = 64;
   initRenderQueue(&ptr->viewport_queue);
-
   ptr->rect = Qnil;
   ptr->color = Qnil;
   ptr->tone = Qnil;
@@ -130,14 +163,23 @@ static VALUE viewport_alloc(VALUE klass) {
   ptr->ox = 0;
   ptr->oy = 0;
   ptr->z = 0;
-  VALUE ret = Data_Wrap_Struct(klass, viewport_mark, viewport_free, ptr);
+  ptr->bdispose = Qfalse;
+  ret = Data_Wrap_Struct(klass, viewport_mark, viewport_free, ptr);
   ptr->rect = rb_rect_new2();
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 3 );
+  vportspa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 32; cminindex++ )
+{
+   if ( vportspa[cminindex] == 0 ) break;
+}
+
   vportqc++;
 
   if ( vportqc > maxvportqc ) maxvportqc = vportqc;
+}
 
   return ret;
 }
@@ -194,15 +236,32 @@ static VALUE rb_viewport_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_viewport_m_dispose(VALUE self) {
-  struct Viewport *ptr = rb_viewport_data_mut(self);
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+static VALUE rb_viewport_m_dispose(VALUE self)
+{
+ struct Viewport *ptr = rb_viewport_data_mut(self);
+ unsigned short cindex = 0;
+// deinitRenderQueue(&ptr->viewport_queue);
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  vportspa[cindex] = 0;
+  vportqc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE rb_viewport_m_disposed_p(VALUE self) {
-  const struct Viewport *ptr = rb_viewport_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+}
+
+ return Qnil;
+}
+
+static VALUE rb_viewport_m_disposed_p(VALUE self)
+{
+ const struct Viewport *ptr = rb_viewport_data(self);
+ return ptr->bdispose;
 }
 
 static VALUE rb_viewport_m_flash(VALUE self, VALUE color, VALUE duration) {

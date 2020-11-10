@@ -13,8 +13,9 @@
 */
 
 struct Window {
-  struct Renderable renderable;
+//  struct Renderable renderable;
   VALUE viewport, windowskin, contents, cursor_rect;
+ VALUE bdispose;
   bool visible, active, pause;
 #if RGSS == 1
   bool stretch;
@@ -32,6 +33,7 @@ struct Window {
 #endif
   int cursor_tick;
   int pause_tick;
+ unsigned short rendid;
 };
 
 bool rb_window_data_p(VALUE obj);
@@ -40,5 +42,8 @@ int initWindowSDL(void);
 struct Window *rb_window_data_mut(VALUE obj);
 void Init_Window(void);
 void deinitWindowSDL(void);
+
+void prepareRenderWindow( const unsigned short index, const unsigned short reg );
+void renderWindow( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxwindowc;

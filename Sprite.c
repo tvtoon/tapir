@@ -19,6 +19,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Sprite.h"
 #include "Tone.h"
@@ -30,6 +31,26 @@ static GLuint shader;
 
 static VALUE rb_cSprite;
 
+static struct Sprite *spritespa[256] = {
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
+
+static unsigned short cminindex = 0;
 static unsigned short spritec = 0;
 unsigned short maxspritec = 0;
 
@@ -37,44 +58,61 @@ unsigned short maxspritec = 0;
  * A graphic object containing a bitmap.
  */
 
-static void prepareRenderSprite(struct Renderable *renderable, int t) {
-  struct Sprite *ptr = (struct Sprite *)renderable;
-  if(!ptr->visible) return;
-  struct RenderJob job;
-  job.renderable = renderable;
-  job.z = ptr->z;
-  job.y = ptr->y;
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-  job.t = t;
-  queueRenderJob(ptr->viewport, job);
+void prepareRenderSprite( const unsigned short index, const unsigned short reg )
+{
+ struct Sprite *ptr = spritespa[index];
+ struct RenderJob job;
+
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Sprite NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Sprite NULL pointer!\n" );
+  return;
 }
 
-static void renderSprite(
-    struct Renderable *renderable, const struct RenderJob *job,
-    const struct RenderViewport *viewport) {
-  (void) job;
-  struct Sprite *ptr = (struct Sprite *)renderable;
+ if(!ptr->visible) return;
 
-  const struct Color *color_ptr = rb_color_data(ptr->color);
-  const struct Color *flash_color_ptr = rb_color_data(ptr->flash_color);
-  if(ptr->flash_duration > 0 && ptr->flash_is_nil) return;
-  double flash_opacity =
-    ptr->flash_duration <= 0 ? 0.0 :
-    1.0 - (double)ptr->flash_count / ptr->flash_duration;
-  const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
+/*
+ job.renderable = renderable;
+ job.aux[0] = 0;
+ job.aux[1] = 0;
+ job.aux[2] = 0;
+*/
+ job.z = ptr->z;
+ job.y = ptr->y;
+ job.t = index;
+job.reg = reg;
+ queueRenderJob(ptr->viewport, job);
+}
+
+void renderSprite( const unsigned short index, const struct RenderViewport *viewport )
+{
+ struct Sprite *ptr = spritespa[index];
+ const struct Color *color_ptr = rb_color_data(ptr->color);
+ const struct Color *flash_color_ptr = rb_color_data(ptr->flash_color);
+
+ if(ptr->flash_duration > 0 && ptr->flash_is_nil) return;
+
+ double flash_opacity = ptr->flash_duration <= 0 ? 0.0 : 1.0 - (double)ptr->flash_count / ptr->flash_duration;
+
+ const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
 #if RGSS > 1
   if(ptr->wave_amp) WARN_UNIMPLEMENTED("Sprite#wave_amp");
 #endif
+
   if(ptr->bush_depth) WARN_UNIMPLEMENTED("Sprite#bush_depth");
+
   if(ptr->bitmap == Qnil) return;
+
   const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
   SDL_Surface *surface = bitmap_ptr->surface;
+
   if(!surface) return;
+
   const struct Rect *src_rect = rb_rect_data(ptr->src_rect);
 
   glEnable(GL_BLEND);
+
   if(ptr->blend_type == 1) {
     glBlendFuncSeparate(
         GL_ONE, GL_ONE,
@@ -173,24 +211,48 @@ static void sprite_mark(struct Sprite *ptr) {
   rb_gc_mark(ptr->color);
   rb_gc_mark(ptr->tone);
   rb_gc_mark(ptr->flash_color);
+  rb_gc_mark(ptr->bdispose);
 }
 
-static void sprite_free(struct Sprite *ptr) {
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
- spritec--;
+static void sprite_free(struct Sprite *ptr)
+{
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  spritespa[cindex] = 0;
+  spritec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE sprite_alloc(VALUE klass) {
-  struct Sprite *ptr = ALLOC(struct Sprite);
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderSprite;
-  ptr->renderable.render = renderSprite;
-  ptr->renderable.disposed = false;
+}
+
+ xfree(ptr);
+}
+
+static VALUE sprite_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Sprite *ptr = 0;
+
+ if ( cminindex == 256 )
+{
+  fprintf( stderr, "Reached maximum sprite count of 256!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum sprite count of 256!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Sprite);
   ptr->z = 0;
   ptr->viewport = Qnil;
   ptr->bitmap = Qnil;
   ptr->src_rect = Qnil;
+  ptr->bdispose = Qfalse;
   ptr->visible = true;
   ptr->x = 0;
   ptr->y = 0;
@@ -216,17 +278,25 @@ static VALUE sprite_alloc(VALUE klass) {
   ptr->flash_duration = 0;
   ptr->flash_count = 0;
   ptr->flash_is_nil = false;
-  VALUE ret = Data_Wrap_Struct(klass, sprite_mark, sprite_free, ptr);
+  ret = Data_Wrap_Struct(klass, sprite_mark, sprite_free, ptr);
   ptr->src_rect = rb_rect_new2();
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 1 );
+  spritespa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 256; cminindex++ )
+{
+   if ( spritespa[cminindex] == 0 ) break;
+}
+
   spritec++;
 
   if ( spritec > maxspritec ) maxspritec = spritec;
+}
 
-  return ret;
+ return ret;
 }
 
 /*
@@ -289,14 +359,29 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
 }
 
 static VALUE rb_sprite_m_dispose(VALUE self) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  spritespa[cindex] = 0;
+  spritec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
+}
+
+}
+
+ return Qnil;
 }
 
 static VALUE rb_sprite_m_disposed_p(VALUE self) {
   const struct Sprite *ptr = rb_sprite_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+ return ptr->bdispose;
 }
 
 static VALUE rb_sprite_m_flash(VALUE self, VALUE color, VALUE duration) {

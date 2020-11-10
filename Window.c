@@ -18,6 +18,7 @@
 #include "sdl_misc.h"
 #include "Bitmap.h"
 #include "Color.h"
+#include "RGSSError.h"
 #include "Rect.h"
 #include "Tone.h"
 #include "Viewport.h"
@@ -31,47 +32,11 @@ static GLuint shader3;
 static GLuint shader4;
 static GLuint cursor_shader;
 
-/*
-#if RGSS == 3
-static VALUE rb_window_m_move( VALUE self, VALUE x, VALUE y, VALUE width, VALUE height);
-static VALUE rb_window_m_open_p(VALUE self);
-static VALUE rb_window_m_close_p(VALUE self);
-#endif
-
-#if RGSS == 1
-static VALUE rb_window_m_stretch(VALUE self);
-static VALUE rb_window_m_set_stretch(VALUE self, VALUE newval);
-#endif
-
-#if RGSS >= 2
-static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_arrows_visible(VALUE self);
-static VALUE rb_window_m_set_arrows_visible(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_padding(VALUE self);
-static VALUE rb_window_m_set_padding(VALUE self, VALUE newval);
-static VALUE rb_window_m_padding_bottom(VALUE self);
-static VALUE rb_window_m_set_padding_bottom(VALUE self, VALUE newval);
-#endif
-
-#if RGSS >= 2
-static VALUE rb_window_m_openness(VALUE self);
-static VALUE rb_window_m_set_openness(VALUE self, VALUE newval);
-#endif
-
-#if RGSS == 3
-static VALUE rb_window_m_tone(VALUE self);
-static VALUE rb_window_m_set_tone(VALUE self, VALUE newval);
-#endif
-*/
-
 static VALUE rb_cWindow;
 
+static struct Window *windowspa[64] = { 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0 };
+
+static unsigned short cminindex = 0;
 static unsigned short windowc = 0;
 unsigned short maxwindowc = 0;
 
@@ -79,35 +44,44 @@ unsigned short maxwindowc = 0;
  * A graphic object containing a bitmap.
  */
 
-static void prepareRenderWindow(struct Renderable *renderable, int t)
+void prepareRenderWindow( const unsigned short index, const unsigned short reg )
 {
-  struct Window *ptr = (struct Window *)renderable;
+ struct Window *ptr = windowspa[index];
+ struct RenderJob job;
 
-  if(!ptr->visible) return;
+ if ( ptr == 0 )
+{
+  fprintf( stderr, "Window NULL pointer!\n" );
+  rb_raise( rb_eRGSSError, "Window NULL pointer!\n" );
+  return;
+}
 
-  struct RenderJob job;
-  job.renderable = renderable;
+ if (!ptr->visible) return;
+
+ job.z = ptr->z;
+ job.y = 0;
+ job.t = index;
+job.reg = reg;
 /*
-  job.z = ptr->z;
-  job.y = 0;
-  job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
+
+ Only for RGSS1...
 */
-  job.t = t;
-  queueRenderJob(ptr->viewport, job);
+ job.aux[0] = 0;
+ queueRenderJob(ptr->viewport, job);
 #if RGSS == 1
-  job.z = ptr->z + 2;
-  job.aux[0] = 1;
-  queueRenderJob(ptr->viewport, job);
+ job.z = ptr->z + 2;
+ job.aux[0] = 1;
+ queueRenderJob(ptr->viewport, job);
 #endif
 }
 
-static void renderWindow( struct Renderable *renderable, const struct RenderJob *job, const struct RenderViewport *viewport)
+void renderWindow( const unsigned short index, const struct RenderViewport *viewport )
 {
- struct Window *ptr = (struct Window *)renderable;
+ struct Window *ptr = windowspa[index];
 #if RGSS > 1
- const int content_job_no = 0;
+// const int content_job_no = 0;
  const int openness = ptr->openness;
 #else
  const int content_job_no = 1;
@@ -115,8 +89,8 @@ static void renderWindow( struct Renderable *renderable, const struct RenderJob 
 #endif
  if(openness == 0) return;
 
-  int open_height = ptr->height * openness / 255;
-  int open_y = ptr->y + (ptr->height - open_height) / 2;
+ int open_height = ptr->height * openness / 255;
+ int open_y = ptr->y + (ptr->height - open_height) / 2;
 
 #if RGSS == 3
   int padding = ptr->padding;
@@ -444,21 +418,43 @@ static void window_mark(struct Window *ptr) {
 #if RGSS == 3
   rb_gc_mark(ptr->tone);
 #endif
+  rb_gc_mark(ptr->bdispose);
 }
 
-static void window_free(struct Window *ptr) {
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
- windowc--;
+static void window_free(struct Window *ptr)
+{
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  windowspa[cindex] = 0;
+  windowc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE window_alloc(VALUE klass) {
-  struct Window *ptr = ALLOC(struct Window);
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderWindow;
-  ptr->renderable.render = renderWindow;
-  ptr->renderable.disposed = false;
+}
 
+ xfree(ptr);
+}
+
+static VALUE window_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Window *ptr = 0;
+
+ if ( cminindex == 64 )
+{
+  fprintf( stderr, "Reached maximum window count of 64!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum window count of 64!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Window);
   ptr->windowskin = Qnil;
   ptr->contents = Qnil;
 #if RGSS == 1
@@ -505,19 +501,27 @@ static VALUE window_alloc(VALUE klass) {
 #endif
   ptr->cursor_tick = 0;
   ptr->pause_tick = 0;
-
-  VALUE ret = Data_Wrap_Struct(klass, window_mark, window_free, ptr);
+  ptr->bdispose = Qfalse;
+  ret = Data_Wrap_Struct(klass, window_mark, window_free, ptr);
   ptr->contents = rb_bitmap_new(1, 1);
   ptr->cursor_rect = rb_rect_new2();
 #if RGSS == 3
   ptr->tone = rb_tone_new2();
 #endif
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 4 );
+  windowspa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 64; cminindex++ )
+{
+   if ( windowspa[cminindex] == 0 ) break;
+}
+
   windowc++;
 
   if ( windowc > maxwindowc ) maxwindowc = windowc;
+}
 
-  return ret;
+ return ret;
 }
 
 /*
@@ -532,16 +536,18 @@ static VALUE window_alloc(VALUE klass) {
  */
 static VALUE rb_window_m_initialize(int argc, VALUE *argv, VALUE self)
 {
-  struct Window *ptr = rb_window_data_mut(self);
-  if(argc > 4) {
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 4)", argc);
-  }
-  ptr->x = argc > 0 ? NUM2INT(argv[0]) : 0;
-  ptr->y = argc > 1 ? NUM2INT(argv[1]) : 0;
-  ptr->width = argc > 2 ? NUM2INT(argv[2]) : 0;
-  ptr->height = argc > 3 ? NUM2INT(argv[3]) : 0;
-  return Qnil;
+ struct Window *ptr = rb_window_data_mut(self);
+
+ if (argc > 4)
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 4)", argc);
+}
+
+ ptr->x = argc > 0 ? NUM2INT(argv[0]) : 0;
+ ptr->y = argc > 1 ? NUM2INT(argv[1]) : 0;
+ ptr->width = argc > 2 ? NUM2INT(argv[2]) : 0;
+ ptr->height = argc > 3 ? NUM2INT(argv[3]) : 0;
+ return Qnil;
 }
 
 static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
@@ -586,25 +592,46 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_window_m_dispose(VALUE self) {
-  struct Window *ptr = rb_window_data_mut(self);
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+static VALUE rb_window_m_dispose(VALUE self)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  windowspa[cindex] = 0;
+  windowc--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE rb_window_m_disposed_p(VALUE self) {
-  const struct Window *ptr = rb_window_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
 }
 
-static VALUE rb_window_m_update(VALUE self) {
-  struct Window *ptr = rb_window_data_mut(self);
-  ptr->cursor_tick = (ptr->cursor_tick + 1) % 40;
-  if(ptr->pause) {
-    ++ptr->pause_tick;
-    if(ptr->pause_tick >= 64 + 16) ptr->pause_tick -= 64;
-  }
-  return Qnil;
+ return Qnil;
+}
+
+static VALUE rb_window_m_disposed_p(VALUE self)
+{
+ const struct Window *ptr = rb_window_data(self);
+ return ptr->bdispose;
+}
+
+static VALUE rb_window_m_update(VALUE self)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+ ptr->cursor_tick = (ptr->cursor_tick + 1) % 40;
+
+ if(ptr->pause)
+{
+  ++ptr->pause_tick;
+  if(ptr->pause_tick >= 64 + 16) ptr->pause_tick -= 64;
+}
+
+ return Qnil;
 }
 
 #if RGSS == 3

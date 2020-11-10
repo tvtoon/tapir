@@ -50,8 +50,8 @@ SDL_Window *window = NULL;
 
 static SDL_GLContext glcontext = NULL;
 
-static size_t registry_size = 0, registry_capacity = 0;
-static struct Renderable **registry;
+static unsigned short registry_size = 0, registry_capacity = 0;
+//static struct Renderable **registry;
 
 static struct RenderQueue main_queue;
 
@@ -68,6 +68,9 @@ typedef struct
 } newqueue;
 
 static newqueue tnewqa[512];
+
+static void ( *preparefuna[5])( const unsigned short index, const unsigned short reg ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
+static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
 
 static int initTransition(void) {
   static const char *vsh_source =
@@ -220,13 +223,13 @@ int initSDL(const char *window_title)
 }
 
  registry_capacity = 256;
- registry = malloc(sizeof(*registry) * registry_capacity);
+// registry = malloc(sizeof(*registry) * registry_capacity);
  main_queue.capacity = 256;
  initRenderQueue(&main_queue);
 
  for ( ; ui < 512; ui++ )
 {
-  tnewqa[ui].rendta = 8;
+  tnewqa[ui].rendta = 0;
   tnewqa[ui].rendia = 512;
 }
 
@@ -261,7 +264,7 @@ void cleanupSDL() {
   IMG_Quit();
   SDL_Quit();
   deinitRenderQueue(&main_queue);
-  if(registry) free(registry);
+//  if(registry) free(registry);
 }
 
 static int compare_jobs(const void *o1, const void *o2) {
@@ -312,32 +315,30 @@ void event_loop() {
 
 static void renderScreen()
 {
- size_t t = 0;
+ unsigned short reg = 0;
  struct RenderViewport viewport;
 
  clearRenderQueue(&main_queue);
 
- for (; t < registry_size; t++)
+ for (; reg < registry_size; reg++)
 {
-  if ( tnewqa[t].rendta == 0 )
+/*
+  if ( tnewqa[t].rendta < 2 )
 {
  printf( "Preparing plane %u!\n", tnewqa[t].rendia );
- prepareRenderPlane( tnewqa[t].rendia );
+*/
+  preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia, reg );
+/*
 }
   else registry[t]->prepare(registry[t], t);
+*/
 }
-/*
- for( t = 0; t < registry_size; ++t )
-{
 
-}
- */
  viewport.width = window_width;
  viewport.height = window_height;
  viewport.ox = 0;
  viewport.oy = 0;
  renderQueue(&main_queue, &viewport);
-// disposeAll();
 }
 
 void renderSDL() {
@@ -424,22 +425,6 @@ void capturedRenderSDL(SDL_Surface *surface)
 
 }
 
-void registerRenderable(struct Renderable *renderable )
-{
-
- if ( registry_size == registry_capacity )
-{
-  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
-  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
-}
- else
-{
-  registry[registry_size] = renderable;
-  registry_size++;
-}
-
-}
-
 unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type )
 {
  const unsigned short ret = registry_size;
@@ -471,13 +456,29 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 {
    tnewqa[i].rendta = tnewqa[j].rendta;
    tnewqa[i].rendia = tnewqa[j].rendia;
-   registry[i] = registry[j];
+//   registry[i] = registry[j];
 }
 
   registry_size--;
 }
 
  return(ret);
+}
+/*
+void registerRenderable(struct Renderable *renderable )
+{
+
+ if ( registry_size == registry_capacity )
+{
+  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
+  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
+}
+ else
+{
+  registry[registry_size] = renderable;
+  registry_size++;
+}
+
 }
 
 void disposeRenderable(struct Renderable *renderable)
@@ -486,7 +487,6 @@ void disposeRenderable(struct Renderable *renderable)
 
  if ( renderable->disposed == 0 )
 {
-/* true */
   renderable->disposed = 1;
 
   for ( ; i < registry_size; i++ )
@@ -511,15 +511,17 @@ void disposeRenderable(struct Renderable *renderable)
 
 }
 
+*/
+
 void disposeAll(void)
 {
  size_t i = 0;
-// TODO: dispose all Bitmaps too
+/* TODO: dispose all Bitmaps too
  for ( ; i < registry_size; ++i)
 {
   registry[i]->disposed = true;
 }
-
+*/
  registry_size = 0;
 }
 
@@ -535,24 +537,26 @@ void clearRenderQueue(struct RenderQueue *queue) {
 void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewport)
 {
  size_t i = 0;
- struct RenderJob *job = 0;
+// struct RenderJob *job = 0;
 
  qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
 
  for( ; i < queue->size; i++ )
 {
-
-  if ( tnewqa[i].rendta == 0 )
+/*
+  if ( tnewqa[i].rendta < 2 )
 {
-  printf( "Rendering plane %u!\n", tnewqa[i].rendia );
-renderPlane( tnewqa[i].rendia, viewport );
+//  printf( "Rendering plane %u!\n", tnewqa[i].rendia );
+*/
+ renderfuna[ tnewqa[queue->queue[i].reg].rendta]( /*tnewqa[i].rendia*/ queue->queue[i].t, viewport );
+/*
 }
   else
 {
   job = &queue->queue[i];
   job->renderable->render(job->renderable, job, viewport);
 }
-
+*/
 }
 
  queue->size = 0;
@@ -571,15 +575,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
   queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
 }
-/*
-  if(queue->size >= queue->capacity) {
-    queue->capacity = queue->capacity + queue->capacity / 2;
-    queue->queue = realloc( queue->queue, sizeof(*queue->queue) * queue->capacity);
-    printf( "Realloc queue: %u\n", queue->capacity );
-  }
 
-  queue->queue[queue->size++] = job;
-*/
  if ( queue->size == queue->capacity )
 {
   fprintf( stderr, "Hopeless queue %u!\n", queue->capacity );

@@ -72,7 +72,7 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
   return (struct Plane *)rb_plane_data(obj);
 }
 
-void prepareRenderPlane( const unsigned short index )
+void prepareRenderPlane( const unsigned short index, const unsigned short reg )
 {
 //  struct Plane *ptr = (struct Plane *)renderable;
  struct Plane *ptr = planspa[index];
@@ -95,6 +95,7 @@ void prepareRenderPlane( const unsigned short index )
   job.z = ptr->z;
   job.y = 0;
   job.t = index;
+job.reg = reg;
 
   queueRenderJob(ptr->viewport, job);
 }
@@ -231,7 +232,6 @@ static VALUE plane_alloc(VALUE klass)
    if ( planspa[cminindex] == 0 ) break;
 }
 
- printf( "Guess what cminindex %u?\n", cminindex );
   planec++;
 
   if ( planec > maxplanec ) maxplanec = planec;
@@ -249,8 +249,6 @@ static VALUE plane_alloc(VALUE klass)
  */
 static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
-
- printf( "Initializing plane %u!\n", cminindex );
 
   switch(argc) {
     case 0:
