@@ -97,20 +97,19 @@ static void prepareRenderTilemap(struct Renderable *renderable, int t) {
   if(!ptr->visible) return;
 
   job.renderable = renderable;
+  ptr->jobz = 0;
   job.t = t;
 #if RGSS > 1
   job.z = 0;
-/*
   job.y = 0;
+/*
+
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
 */
   queueRenderJob(ptr->viewport, job);
   job.z = 200;
-/*
-  job.y = 0;
-*/
   job.aux[0] = 1;
   queueRenderJob(ptr->viewport, job);
 #else
@@ -329,7 +328,7 @@ static void renderTile(struct Tilemap *ptr, int tile_id, int x, int y,
 }
 
 static void renderTilemap(
-    struct Renderable *renderable, const struct RenderJob *job,
+    struct Renderable *renderable, /*const struct RenderJob *job,*/
     const struct RenderViewport *viewport) {
   struct Tilemap *ptr = (struct Tilemap *)renderable;
 #if RGSS > 1
@@ -362,13 +361,16 @@ static void renderTilemap(
           z = (flags_ptr->data[tile_id] & 0x10) ? 200 : 0;
         }
 
-        if(z != job->z) continue;
+//        if(z != job->z) continue;
+        if(z != ptr->jobz) continue;
 
         renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy,
             viewport);
       }
     }
   }
+
+ ptr->jobz ^= 200;
 #else
   if(ptr->map_data == Qnil) return;
   const struct Table *map_data_ptr = rb_table_data(ptr->map_data);

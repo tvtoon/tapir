@@ -62,9 +62,9 @@ static void prepareRenderSprite(struct Renderable *renderable, int t) {
 }
 
 static void renderSprite(
-    struct Renderable *renderable, const struct RenderJob *job,
+    struct Renderable *renderable, /*const struct RenderJob *job,*/
     const struct RenderViewport *viewport) {
-  (void) job;
+//  (void) job;
   struct Sprite *ptr = (struct Sprite *)renderable;
 
   const struct Color *color_ptr = rb_color_data(ptr->color);

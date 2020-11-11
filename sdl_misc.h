@@ -17,7 +17,7 @@ struct RenderJob;
 struct Renderable {
 //  void (*clear)(struct Renderable *renderable);
   void (*prepare)(struct Renderable *renderable, int t);
-  void (*render)(struct Renderable *renderable, const struct RenderJob *job, const struct RenderViewport *viewport);
+  void (*render)( struct Renderable *renderable, /*const struct RenderJob *job,*/ const struct RenderViewport *viewport);
   bool disposed;
 };
 

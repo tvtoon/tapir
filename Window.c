@@ -57,12 +57,12 @@ static void prepareRenderWindow(struct Renderable *renderable, int t)
 
   job.renderable = renderable;
 /*
-  job.z = ptr->z;
-  job.y = 0;
   job.aux[0] = 0;
   job.aux[1] = 0;
   job.aux[2] = 0;
 */
+  job.z = ptr->z;
+  job.y = 0;
   job.t = t;
   queueRenderJob(ptr->viewport, job);
 #if RGSS == 1
@@ -72,11 +72,11 @@ static void prepareRenderWindow(struct Renderable *renderable, int t)
 #endif
 }
 
-static void renderWindow( struct Renderable *renderable, const struct RenderJob *job, const struct RenderViewport *viewport)
+static void renderWindow( struct Renderable *renderable, /*const struct RenderJob *job,*/ const struct RenderViewport *viewport)
 {
  struct Window *ptr = (struct Window *)renderable;
 #if RGSS > 1
- const int content_job_no = 0;
+// const int content_job_no = 0;
  const int openness = ptr->openness;
 #else
  const int content_job_no = 1;

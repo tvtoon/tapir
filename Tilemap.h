@@ -27,6 +27,7 @@ struct Tilemap {
   bool visible;
   int ox, oy;
   int autotile_tick;
+ int jobz;
 };
 
 bool rb_tilemap_data_p(VALUE obj);

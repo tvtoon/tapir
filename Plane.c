@@ -90,9 +90,9 @@ static void prepareRenderPlane(struct Renderable *renderable, int t) {
 }
 
 static void renderPlane(
-    struct Renderable *renderable, const struct RenderJob *job,
+    struct Renderable *renderable, /*const struct RenderJob *job,*/
     const struct RenderViewport *viewport) {
-  (void) job;
+//  (void) job;
   struct Plane *ptr = (struct Plane *)renderable;
   {
     const struct Color *color = rb_color_data(ptr->color);

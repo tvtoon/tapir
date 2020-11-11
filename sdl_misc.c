@@ -487,7 +487,7 @@ void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewpor
  for( ; i < queue->size; i++ )
 {
   job = &queue->queue[i];
-  job->renderable->render(job->renderable, job, viewport);
+  job->renderable->render(job->renderable,/* job,*/ viewport);
 }
 
  queue->size = 0;

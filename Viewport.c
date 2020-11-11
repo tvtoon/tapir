@@ -55,9 +55,9 @@ static void prepareRenderViewport(struct Renderable *renderable, int t) {
 }
 
 static void renderViewport(
-    struct Renderable *renderable, const struct RenderJob *job,
+    struct Renderable *renderable, /*const struct RenderJob *job,*/
     const struct RenderViewport *viewport) {
-  (void) job;
+//  (void) job;
   (void) viewport;
 
   struct Viewport *ptr = (struct Viewport *)renderable;
