@@ -34,7 +34,16 @@ static GLuint cursor_shader;
 
 static VALUE rb_cWindow;
 
-static struct Window *windowspa[64] = { 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0 };
+static struct Window *windowspa[128] = {
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
 
 static unsigned short cminindex = 0;
 static unsigned short windowc = 0;
@@ -447,7 +456,7 @@ static VALUE window_alloc(VALUE klass)
  VALUE ret = Qnil;
  struct Window *ptr = 0;
 
- if ( cminindex == 64 )
+ if ( cminindex == 128 )
 {
   fprintf( stderr, "Reached maximum window count of 64!\n" );
   rb_raise( rb_eRGSSError, "Reached maximum window count of 64!\n" );
@@ -512,7 +521,7 @@ static VALUE window_alloc(VALUE klass)
   ptr->rendid = NEWregisterRenderable( cminindex, 4 );
   windowspa[cminindex] = ptr;
 
-  for ( cminindex++; cminindex < 64; cminindex++ )
+  for ( cminindex++; cminindex < 128; cminindex++ )
 {
    if ( windowspa[cminindex] == 0 ) break;
 }
