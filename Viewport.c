@@ -118,8 +118,9 @@ static void viewport_free(struct Viewport *ptr) {
 
 static VALUE viewport_alloc(VALUE klass) {
   struct Viewport *ptr = ALLOC(struct Viewport);
-
+#ifdef __DEBUG__
  printf( "Allocating viewport!\n" );
+#endif
 //  ptr->renderable.clear = clearViewportQueue;
   ptr->renderable.prepare = prepareRenderViewport;
   ptr->renderable.render = renderViewport;
@@ -200,7 +201,9 @@ static VALUE rb_viewport_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_viewport_m_dispose(VALUE self) {
   struct Viewport *ptr = rb_viewport_data_mut(self);
+#ifdef __DEBUG__
  printf( "Disposing viewport!\n" );
+#endif
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

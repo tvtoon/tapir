@@ -423,8 +423,9 @@ static void window_free(struct Window *ptr) {
 
 static VALUE window_alloc(VALUE klass) {
   struct Window *ptr = ALLOC(struct Window);
-
+#ifdef __DEBUG__
  printf( "Allocating window!\n" );
+#endif
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderWindow;
   ptr->renderable.render = renderWindow;
@@ -559,7 +560,9 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_window_m_dispose(VALUE self) {
   struct Window *ptr = rb_window_data_mut(self);
+#ifdef __DEBUG__
  printf( "Disposing window!\n" );
+#endif
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

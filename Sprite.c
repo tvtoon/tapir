@@ -193,8 +193,9 @@ static void sprite_free(struct Sprite *ptr) {
 
 static VALUE sprite_alloc(VALUE klass) {
   struct Sprite *ptr = ALLOC(struct Sprite);
-
+#ifdef __DEBUG__
  printf( "Allocating sprite!\n" );
+#endif
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderSprite;
   ptr->renderable.render = renderSprite;
@@ -302,7 +303,9 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_sprite_m_dispose(VALUE self) {
   struct Sprite *ptr = rb_sprite_data_mut(self);
+#ifdef __DEBUG__
  printf( "Disposing sprite!\n" );
+#endif
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

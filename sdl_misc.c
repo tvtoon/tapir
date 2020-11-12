@@ -501,12 +501,12 @@ void deinitRenderQueue(struct RenderQueue *queue)
 void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
  struct RenderQueue *queue = &main_queue;
-
+/*
  if(viewport != Qnil)
 {
   queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
 }
-/*
+
   if(queue->size >= queue->capacity) {
     queue->capacity = queue->capacity + queue->capacity / 2;
     queue->queue = realloc( queue->queue, sizeof(*queue->queue) * queue->capacity);

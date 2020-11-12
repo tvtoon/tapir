@@ -409,8 +409,9 @@ static void tilemap_free(struct Tilemap *ptr) {
 
 static VALUE tilemap_alloc(VALUE klass) {
   struct Tilemap *ptr = ALLOC(struct Tilemap);
-
+#ifdef __DEBUG__
  printf( "Allocating tilemap!\n" );
+#endif
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderTilemap;
   ptr->renderable.render = renderTilemap;
@@ -492,7 +493,9 @@ static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_tilemap_m_dispose(VALUE self) {
   struct Tilemap *ptr = rb_tilemap_data_mut(self);
+#ifdef __DEBUG__
  printf( "Disposing tilemap!\n" );
+#endif
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }

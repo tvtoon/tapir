@@ -160,8 +160,9 @@ static void renderPlane(
 }
 
 static void plane_free(struct Plane *ptr) {
+#ifdef __DEBUG__
  printf( "Freeing plane!\n" );
-
+#endif
   disposeRenderable(&ptr->renderable);
   xfree(ptr);
   planec--;
@@ -169,8 +170,9 @@ static void plane_free(struct Plane *ptr) {
 
 static VALUE plane_alloc(VALUE klass) {
   struct Plane *ptr = ALLOC(struct Plane);
-
+#ifdef __DEBUG__
  printf( "Allocating plane!\n" );
+#endif
 //  ptr->renderable.clear = NULL;
   ptr->renderable.prepare = prepareRenderPlane;
   ptr->renderable.render = renderPlane;
@@ -207,9 +209,9 @@ static VALUE plane_alloc(VALUE klass) {
  */
 static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
-
+#ifdef __DEBUG__
  printf( "Initializing plane!\n" );
-
+#endif
   switch(argc) {
     case 0:
       break;
@@ -228,9 +230,9 @@ static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
 static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   struct Plane *ptr = rb_plane_data_mut(self);
   const struct Plane *orig_ptr = rb_plane_data(orig);
-
+#ifdef __DEBUG__
  printf( "Initializing plane by copy!\n" );
-
+#endif
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
   ptr->visible = orig_ptr->visible;
@@ -248,7 +250,9 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_plane_m_dispose(VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
+#ifdef __DEBUG__
  printf( "Disposing plane!\n" );
+#endif
   disposeRenderable(&ptr->renderable);
   return Qnil;
 }
