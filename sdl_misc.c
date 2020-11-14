@@ -48,17 +48,16 @@ int window_brightness = 255;
 
 SDL_Window *window = NULL;
 
-static SDL_GLContext glcontext = NULL;
-
-static unsigned short registry_size = 0, registry_capacity = 0, regminfi = 0;
-//static struct Renderable **registry;
-
-static struct RenderQueue main_queue;
-
 static GLuint transition_shader;
 static GLuint transition_texture;
 static GLuint transition_texture2;
+static SDL_GLContext glcontext = NULL;
+//static struct RenderQueue main_queue;
+static const unsigned short mq_capacity = 512, registry_capacity = 1024;
+static struct RenderJob job_queuea[512];
 static int transition_vagueness = 255;
+static unsigned char newreg = 1;
+static unsigned short mq_size = 0, registry_size = 0, regminfi = 0;
 
 /* The new deal: type and index for rendering. */
 typedef struct
@@ -67,7 +66,7 @@ typedef struct
  unsigned short rendia;
 } newqueue;
 
-static newqueue tnewqa[512];
+static newqueue tnewqa[1024];
 
 static void ( *preparefuna[5])( const unsigned short index ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
 static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
@@ -133,6 +132,14 @@ int initSDL(const char *window_title)
 {
  int img_flags = IMG_INIT_JPG|IMG_INIT_PNG|IMG_INIT_TIF, mix_init_flags = 0, shaderrc = 0;
  unsigned short ui = 0;
+
+// initRenderQueue(&main_queue);
+// main_queue.queue = malloc(sizeof(*queue->queue) * mq_capacity);
+ for ( ; ui < registry_capacity; ui++ )
+{
+  tnewqa[ui].rendta = 0;
+  tnewqa[ui].rendia = registry_capacity;
+}
 
  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
 {
@@ -222,17 +229,6 @@ int initSDL(const char *window_title)
   return(1);
 }
 
- registry_capacity = 256;
-// registry = malloc(sizeof(*registry) * registry_capacity);
- main_queue.capacity = 256;
- initRenderQueue(&main_queue);
-
- for ( ; ui < 512; ui++ )
-{
-  tnewqa[ui].rendta = 0;
-  tnewqa[ui].rendia = 512;
-}
-
  shaderrc += initTransition();
  shaderrc += initSpriteSDL();
  shaderrc += initWindowSDL();
@@ -263,48 +259,57 @@ void cleanupSDL() {
   TTF_Quit();
   IMG_Quit();
   SDL_Quit();
-  deinitRenderQueue(&main_queue);
+//  deinitRenderQueue(&main_queue);
 //  if(registry) free(registry);
 }
 
-static int compare_jobs(const void *o1, const void *o2) {
-  const struct RenderJob *j1 = (const struct RenderJob *)o1;
-  const struct RenderJob *j2 = (const struct RenderJob *)o2;
+static int compare_jobs(const void *o1, const void *o2)
+{
+ const struct RenderJob *j1 = (const struct RenderJob *)o1;
+ const struct RenderJob *j2 = (const struct RenderJob *)o2;
 
-  if(j1->z < j2->z) return -1;
-  else if(j1->z > j2->z) return 1;
+ if(j1->z < j2->z) return -1;
+ else if(j1->z > j2->z) return 1;
 
-  if(j1->y < j2->y) return -1;
-  else if(j1->y > j2->y) return 1;
+ if(j1->y < j2->y) return -1;
+ else if(j1->y > j2->y) return 1;
 
-  if(j1->t < j2->t) return -1;
-  else if(j1->t > j2->t) return 1;
+ if(j1->t < j2->t) return -1;
+ else if(j1->t > j2->t) return 1;
 
-  return 0;
+ return 0;
 }
 
-void event_loop() {
-  SDL_Event e;
-  int quit = 0;
+void event_loop()
+{
+ SDL_Event e;
+ int quit = 0;
 
-  while(SDL_PollEvent(&e)) {
-    switch(e.type) {
-      case SDL_KEYDOWN:
-        if(e.key.keysym.sym == SDLK_F12) {
-          rb_raise(rb_eRGSSReset, "RGSS Reset");
-        }
-        if(!e.key.repeat) {
-          keyPressed(e.key.keysym.sym);
-        }
-        break;
-      case SDL_KEYUP:
-        keyReleased(e.key.keysym.sym);
-        break;
-      case SDL_QUIT:
-        quit = 1;
-        break;
-    }
-  }
+ while(SDL_PollEvent(&e))
+{
+  switch(e.type)
+{
+   case SDL_KEYDOWN:
+    if(e.key.keysym.sym == SDLK_F12)
+{
+     rb_raise(rb_eRGSSReset, "RGSS Reset");
+}
+    if(!e.key.repeat)
+{
+     keyPressed(e.key.keysym.sym);
+}
+    break;
+
+   case SDL_KEYUP:
+    keyReleased(e.key.keysym.sym);
+    break;
+
+   case SDL_QUIT:
+    quit = 1;
+    break;
+}
+
+}
 
  if ( quit == 1 )
 {
@@ -316,83 +321,81 @@ void event_loop() {
 static void renderScreen()
 {
  unsigned short reg = 0;
- struct RenderViewport viewport;
+ const struct RenderViewport viewport = { window_width, window_height, 0, 0 };
 
- clearRenderQueue(&main_queue);
+ if ( newreg == 1 )
+{
+//  clearRenderQueue(&main_queue);
+  mq_size = 0;
 
- for (; reg < registry_size; reg++ )
+  for (; reg < registry_size; reg++ )
 {
-/*
-  if ( tnewqa[t].rendta < 2 )
+
+   if ( tnewqa[reg].rendia != registry_capacity )
 {
- printf( "Preparing plane %u!\n", tnewqa[t].rendia );
-*/
-  if ( tnewqa[reg].rendia != 512 )
-{
-   preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
-   reg++;
+    preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
+    reg++;
+}
+
+}
+
+  qsort( job_queuea, mq_size, sizeof(*job_queuea), compare_jobs);
+  newreg = 0;
 }
 /*
-}
-  else registry[t]->prepare(registry[t], t);
-*/
-}
-
- viewport.width = window_width;
- viewport.height = window_height;
- viewport.ox = 0;
- viewport.oy = 0;
  renderQueue(&main_queue, &viewport);
+ qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
+*/
+ for ( reg = 0; reg < mq_size; reg++ )
+{
+  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].t, &viewport );
 }
 
-void renderSDL() {
-  SDL_GL_MakeCurrent(window, glcontext);
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glScissor(0, 0, window_width, window_height);
-  glViewport(0, 0, window_width, window_height);
-  renderScreen();
+}
 
-  if(window_brightness != 255) {
-    // transition
+void renderSDL()
+{
+ SDL_GL_MakeCurrent(window, glcontext);
+ glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+ glClear(GL_COLOR_BUFFER_BIT);
+ glScissor(0, 0, window_width, window_height);
+ glViewport(0, 0, window_width, window_height);
+ renderScreen();
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
+ if (window_brightness != 255)
+{
+// transition
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, transition_texture2);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, transition_texture2);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, transition_texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, transition_texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glUseProgram(transition_shader);
-    glUniform1i(glGetUniformLocation(transition_shader, "tex"), 0);
-    glUniform1i(glGetUniformLocation(transition_shader, "tex2"), 1);
-    glUniform2f(glGetUniformLocation(transition_shader, "resolution"),
-        window_width, window_height);
-    glUniform1f(glGetUniformLocation(transition_shader, "brightness"),
-        window_brightness / 255.0);
-    glUniform1f(glGetUniformLocation(transition_shader, "vagueness"),
-        transition_vagueness / 255.0);
+  glUseProgram(transition_shader);
+  glUniform1i(glGetUniformLocation(transition_shader, "tex"), 0);
+  glUniform1i(glGetUniformLocation(transition_shader, "tex2"), 1);
+  glUniform2f(glGetUniformLocation(transition_shader, "resolution"), window_width, window_height);
+  glUniform1f(glGetUniformLocation(transition_shader, "brightness"), window_brightness / 255.0);
+  glUniform1f(glGetUniformLocation(transition_shader, "vagueness"), transition_vagueness / 255.0);
+  gl_draw_rect( 0, 0, window_width, window_height, 0.0, 0.0, 1.0, 1.0 );
+  glUseProgram(0);
+}
 
-    gl_draw_rect(
-        0, 0, window_width, window_height, 0.0, 0.0, 1.0, 1.0);
-
-    glUseProgram(0);
-  }
-
-  SDL_GL_SwapWindow(window);
+ SDL_GL_SwapWindow(window);
 }
 
 void capturedRenderSDL(SDL_Surface *surface)
@@ -444,11 +447,12 @@ unsigned short NEWregisterRenderable( const unsigned short index, const unsigned
   tnewqa[regminfi].rendia = index;
   registry_size++;
 
-  for ( regminfi++; regminfi < 256; regminfi++ )
+  for ( regminfi++; regminfi < registry_capacity; regminfi++ )
 {
-   if ( tnewqa[regminfi].rendia == 512 ) break;
+   if ( tnewqa[regminfi].rendia == registry_capacity ) break;
 }
 
+  newreg = 1;
 }
 
  return(ret);
@@ -456,19 +460,8 @@ unsigned short NEWregisterRenderable( const unsigned short index, const unsigned
 
 unsigned short NEWdisposeRenderable( const unsigned short index )
 {
- unsigned short ret = 512;
-// unsigned short i = index, j = index + 1;
+ unsigned short ret = registry_capacity;
 
-/*
- if ( index != registry_size )
-{
-
-  for ( ; j < registry_size; i++, j++ )
-{
-   tnewqa[i].rendta = tnewqa[j].rendta;
-   tnewqa[i].rendia = tnewqa[j].rendia;
-}
-*/
  if ( registry_size == 0 )
 {
   fprintf( stderr, "Disposing without registers!\n" );
@@ -477,7 +470,7 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
  else
 {
   ret = tnewqa[index].rendia;
-  tnewqa[index].rendia = 512;
+  tnewqa[index].rendia = registry_capacity;
 
   if ( regminfi > index )
 {
@@ -485,6 +478,7 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 }
 
   registry_size--;
+  newreg = 1;
 }
 
  return(ret);
@@ -502,65 +496,33 @@ void disposeAll(void)
  registry_size = 0;
 }
 
-void initRenderQueue(struct RenderQueue *queue) {
-//  queue->capacity = 256;//100
-  queue->queue = malloc(sizeof(*queue->queue) * queue->capacity);
-}
-
-void clearRenderQueue(struct RenderQueue *queue) {
-  queue->size = 0;
-}
-
-void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewport)
-{
- size_t i = 0;
-// struct RenderJob *job = 0;
-
- qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
-
- for( ; i < queue->size; i++ )
-{
-/*
-tnewqa[i].rendta
-tnewqa[i].rendia
-*/
- renderfuna[ queue->queue[i].reg ]( queue->queue[i].t, viewport );
-/*
-}
-  else
-{
-  job = &queue->queue[i];
-  job->renderable->render(job->renderable, job, viewport);
-}
-*/
-}
-
- queue->size = 0;
-}
-
-void deinitRenderQueue(struct RenderQueue *queue)
-{
-  if(queue->queue) free(queue->queue);
-}
-
 void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
- struct RenderQueue *queue = &main_queue;
 /*
+ struct RenderQueue *queue = &main_queue;
+
  if(viewport != Qnil)
 {
   queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
 }
-*/
+
  if ( queue->size == queue->capacity )
+*/
+ if ( mq_size == mq_capacity )
 {
-  fprintf( stderr, "Hopeless queue %u!\n", queue->capacity );
-  rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", queue->capacity );
+  fprintf( stderr, "Hopeless queue %u!\n", mq_capacity );
+  rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", mq_capacity );
 }
  else
 {
-  queue->queue[queue->size] = job;
-  queue->size++;
+  job_queuea[mq_size].z = job.z;
+  job_queuea[mq_size].y = job.y;
+  job_queuea[mq_size].t = job.t;
+  job_queuea[mq_size].aux[0] = job.aux[0];
+  job_queuea[mq_size].aux[1] = job.aux[1];
+  job_queuea[mq_size].aux[2] = job.aux[2];
+  job_queuea[mq_size].reg = job.reg;
+  mq_size++;
 }
 
 }
