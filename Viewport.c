@@ -47,7 +47,7 @@ void prepareRenderViewport( const unsigned short index )
 
  if(!ptr->visible) return;
 
- clearRenderQueue(&ptr->viewport_queue);
+// clearRenderQueue(&ptr->viewport_queue);
  job.z = ptr->z;
  job.y = 0;
  job.t = index;
@@ -99,7 +99,7 @@ void renderViewport( const unsigned short index, const struct RenderViewport *vi
 
  rviewport.ox = ptr->ox;
  rviewport.oy = ptr->oy;
- renderQueue(&ptr->viewport_queue, &rviewport);
+// renderQueue(&ptr->viewport_queue, &rviewport);
  glDisable(GL_SCISSOR_TEST);
  glScissor(0, 0, window_width, window_height);
  glViewport(0, 0, window_width, window_height);
@@ -115,7 +115,7 @@ static void viewport_mark(struct Viewport *ptr) {
 static void viewport_free(struct Viewport *ptr)
 {
  unsigned short cindex = 0;
- deinitRenderQueue(&ptr->viewport_queue);
+// deinitRenderQueue(&ptr->viewport_queue);
 
  if ( ptr->bdispose == Qfalse )
 {
@@ -148,8 +148,8 @@ static VALUE viewport_alloc(VALUE klass)
 {
  printf( "Allocating viewport %u!\n", cminindex );
   ptr = ALLOC(struct Viewport);
-  ptr->viewport_queue.capacity = 64;
-  initRenderQueue(&ptr->viewport_queue);
+//  ptr->viewport_queue.capacity = 64;
+//  initRenderQueue(&ptr->viewport_queue);
   ptr->rect = Qnil;
   ptr->color = Qnil;
   ptr->tone = Qnil;

@@ -9,7 +9,7 @@
 struct Viewport
 {
 //  struct Renderable renderable;
-  struct RenderQueue viewport_queue;
+//  struct RenderQueue viewport_queue;
   VALUE rect, color, tone;
  VALUE bdispose;
   bool visible;
