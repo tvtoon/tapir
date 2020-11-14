@@ -34,7 +34,16 @@ static GLuint cursor_shader;
 
 static VALUE rb_cWindow;
 
-static struct Window *windowspa[128] = {
+static struct Window *windowspa[256] =
+{
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -52,6 +61,39 @@ unsigned short maxwindowc = 0;
 /*
  * A graphic object containing a bitmap.
  */
+
+static void window_mark(struct Window *ptr)
+{
+  rb_gc_mark(ptr->viewport);
+  rb_gc_mark(ptr->windowskin);
+  rb_gc_mark(ptr->contents);
+  rb_gc_mark(ptr->cursor_rect);
+#if RGSS == 3
+  rb_gc_mark(ptr->tone);
+#endif
+  rb_gc_mark(ptr->bdispose);
+}
+
+static const struct Window *rb_window_data(VALUE obj) {
+  Check_Type(obj, T_DATA);
+  // Note: original RGSS doesn't check types.
+  if(RDATA(obj)->dmark != (void(*)(void*))window_mark) {
+    rb_raise(rb_eTypeError,
+        "can't convert %s into Window",
+        rb_class2name(rb_obj_class(obj)));
+  }
+  struct Window *ret;
+  Data_Get_Struct(obj, struct Window, ret);
+  return ret;
+}
+
+static struct Window *rb_window_data_mut(VALUE obj)
+{
+  // Note: original RGSS doesn't check frozen.
+  if(OBJ_FROZEN(obj)) rb_error_frozen("Window");
+  return (struct Window *)rb_window_data(obj);
+}
+
 
 void prepareRenderWindow( const unsigned short index )
 {
@@ -419,17 +461,6 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
  glUseProgram(0);
 }
 
-static void window_mark(struct Window *ptr) {
-  rb_gc_mark(ptr->viewport);
-  rb_gc_mark(ptr->windowskin);
-  rb_gc_mark(ptr->contents);
-  rb_gc_mark(ptr->cursor_rect);
-#if RGSS == 3
-  rb_gc_mark(ptr->tone);
-#endif
-  rb_gc_mark(ptr->bdispose);
-}
-
 static void window_free(struct Window *ptr)
 {
  unsigned short cindex = 0;
@@ -456,10 +487,10 @@ static VALUE window_alloc(VALUE klass)
  VALUE ret = Qnil;
  struct Window *ptr = 0;
 
- if ( cminindex == 128 )
+ if ( cminindex == 256 )
 {
-  fprintf( stderr, "Reached maximum window count of 64!\n" );
-  rb_raise( rb_eRGSSError, "Reached maximum window count of 64!\n" );
+  fprintf( stderr, "Reached maximum window count of 256!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum window count of 256!\n" );
 }
  else
 {
@@ -521,7 +552,7 @@ static VALUE window_alloc(VALUE klass)
   ptr->rendid = NEWregisterRenderable( cminindex, 4 );
   windowspa[cminindex] = ptr;
 
-  for ( cminindex++; cminindex < 128; cminindex++ )
+  for ( cminindex++; cminindex < 256; cminindex++ )
 {
    if ( windowspa[cminindex] == 0 ) break;
 }
@@ -938,24 +969,6 @@ static VALUE rb_window_m_set_tone(VALUE self, VALUE newval) {
 
 /* static END */
 
-bool rb_window_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))window_mark;
-}
-
-const struct Window *rb_window_data(VALUE obj) {
-  Check_Type(obj, T_DATA);
-  // Note: original RGSS doesn't check types.
-  if(RDATA(obj)->dmark != (void(*)(void*))window_mark) {
-    rb_raise(rb_eTypeError,
-        "can't convert %s into Window",
-        rb_class2name(rb_obj_class(obj)));
-  }
-  struct Window *ret;
-  Data_Get_Struct(obj, struct Window, ret);
-  return ret;
-}
-
 int initWindowSDL()
 {
   static const char *vsh1_source =
@@ -1204,12 +1217,6 @@ int initWindowSDL()
   if ( cursor_shader == 0 ) return(1);
 
   return(0);
-}
-
-struct Window *rb_window_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Window");
-  return (struct Window *)rb_window_data(obj);
 }
 
 void Init_Window(void) {

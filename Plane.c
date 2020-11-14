@@ -452,11 +452,6 @@ static VALUE rb_plane_m_set_tone(VALUE self, VALUE newval) {
 
 /* static END */
 
-bool rb_plane_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))plane_mark;
-}
-
 /*
  * A graphic object containing a bitmap.
  */

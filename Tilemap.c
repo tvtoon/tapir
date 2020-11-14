@@ -86,6 +86,42 @@ static const int counter_alternatives[48] = {
 };
 #endif
 
+static void tilemap_mark(struct Tilemap *ptr) {
+#if RGSS > 1
+  rb_gc_mark(ptr->bitmaps);
+  rb_gc_mark(ptr->flags);
+#else
+  rb_gc_mark(ptr->autotiles);
+  rb_gc_mark(ptr->tileset);
+  rb_gc_mark(ptr->priorities);
+#endif
+  rb_gc_mark(ptr->map_data);
+  rb_gc_mark(ptr->flash_data);
+  rb_gc_mark(ptr->viewport);
+  rb_gc_mark(ptr->bdispose);
+}
+
+static const struct Tilemap *rb_tilemap_data(VALUE obj)
+{
+  Check_Type(obj, T_DATA);
+  // Note: original RGSS doesn't check types.
+  if(RDATA(obj)->dmark != (void(*)(void*))tilemap_mark) {
+    rb_raise(rb_eTypeError,
+        "can't convert %s into Tilemap",
+        rb_class2name(rb_obj_class(obj)));
+  }
+  struct Tilemap *ret;
+  Data_Get_Struct(obj, struct Tilemap, ret);
+  return ret;
+}
+
+static struct Tilemap *rb_tilemap_data_mut(VALUE obj)
+{
+  // Note: original RGSS doesn't check frozen.
+  if(OBJ_FROZEN(obj)) rb_error_frozen("Tilemap");
+  return (struct Tilemap *)rb_tilemap_data(obj);
+}
+
 void prepareRenderTilemap( const unsigned short index )
 {
  struct Tilemap *ptr = tmapspa[index];
@@ -393,21 +429,6 @@ ptr->jobz ^= 200;
 #endif
 }
 
-static void tilemap_mark(struct Tilemap *ptr) {
-#if RGSS > 1
-  rb_gc_mark(ptr->bitmaps);
-  rb_gc_mark(ptr->flags);
-#else
-  rb_gc_mark(ptr->autotiles);
-  rb_gc_mark(ptr->tileset);
-  rb_gc_mark(ptr->priorities);
-#endif
-  rb_gc_mark(ptr->map_data);
-  rb_gc_mark(ptr->flash_data);
-  rb_gc_mark(ptr->viewport);
-  rb_gc_mark(ptr->bdispose);
-}
-
 static void tilemap_free(struct Tilemap *ptr)
 {
  unsigned short cindex = 0;
@@ -682,24 +703,6 @@ static VALUE rb_tilemap_m_set_priorities(VALUE self, VALUE newval) {
 
 /* static END */
 
-bool rb_tilemap_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))tilemap_mark;
-}
-
-const struct Tilemap *rb_tilemap_data(VALUE obj) {
-  Check_Type(obj, T_DATA);
-  // Note: original RGSS doesn't check types.
-  if(RDATA(obj)->dmark != (void(*)(void*))tilemap_mark) {
-    rb_raise(rb_eTypeError,
-        "can't convert %s into Tilemap",
-        rb_class2name(rb_obj_class(obj)));
-  }
-  struct Tilemap *ret;
-  Data_Get_Struct(obj, struct Tilemap, ret);
-  return ret;
-}
-
 int initTilemapSDL()
 {
   static const char *vsh_source =
@@ -734,12 +737,6 @@ int initTilemapSDL()
  if (shader == 0) return(1);
 
  return(0);
-}
-
-struct Tilemap *rb_tilemap_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Tilemap");
-  return (struct Tilemap *)rb_tilemap_data(obj);
 }
 
 void Init_Tilemap(void) {

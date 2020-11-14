@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-bool rb_plane_data_p(VALUE obj);
+//bool rb_plane_data_p(VALUE obj);
 int initPlaneSDL(void);
 void Init_Plane(void);
 void deinitPlaneSDL(void);

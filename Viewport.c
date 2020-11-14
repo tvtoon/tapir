@@ -23,7 +23,7 @@
 
 static VALUE rb_cViewport;
 
-static struct Viewport *vportspa[32] = { 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0 };
+static struct Viewport *vportspa[64] = { 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0 };
 static unsigned short cminindex = 0;
 static unsigned short vportqc = 0;
 unsigned short maxvportqc = 0;
@@ -32,6 +32,13 @@ unsigned short maxvportqc = 0;
 /*
  * A graphic object container.
  */
+
+static struct Viewport *rb_viewport_data_mut(VALUE obj)
+{
+// Note: original RGSS doesn't check frozen.
+ if(OBJ_FROZEN(obj)) rb_error_frozen("Viewport");
+ return (struct Viewport *)rb_viewport_data(obj);
+}
 
 void prepareRenderViewport( const unsigned short index )
 {
@@ -139,10 +146,10 @@ static VALUE viewport_alloc(VALUE klass)
  VALUE ret = Qnil;
  struct Viewport *ptr = 0;
 
- if ( cminindex == 32 )
+ if ( cminindex == 64 )
 {
-  fprintf( stderr, "Reached maximum viewport count of 32!\n" );
-  rb_raise( rb_eRGSSError, "Reached maximum viewport count of 32!\n" );
+  fprintf( stderr, "Reached maximum viewport count of 64!\n" );
+  rb_raise( rb_eRGSSError, "Reached maximum viewport count of 64!\n" );
 }
  else
 {
@@ -165,7 +172,7 @@ static VALUE viewport_alloc(VALUE klass)
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
   vportspa[cminindex] = ptr;
 
-  for ( cminindex++; cminindex < 32; cminindex++ )
+  for ( cminindex++; cminindex < 64; cminindex++ )
 {
    if ( vportspa[cminindex] == 0 ) break;
 }
@@ -352,11 +359,6 @@ static VALUE rb_viewport_m_set_tone(VALUE self, VALUE newval) {
 
 /* static END */
 
-bool rb_viewport_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))viewport_mark;
-}
-
 const struct Viewport *rb_viewport_data(VALUE obj) {
   Check_Type(obj, T_DATA);
   // Note: original RGSS doesn't check types.
@@ -368,12 +370,6 @@ const struct Viewport *rb_viewport_data(VALUE obj) {
   struct Viewport *ret;
   Data_Get_Struct(obj, struct Viewport, ret);
   return ret;
-}
-
-struct Viewport *rb_viewport_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Viewport");
-  return (struct Viewport *)rb_viewport_data(obj);
 }
 
 void Init_Viewport(void) {
