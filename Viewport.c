@@ -47,8 +47,10 @@ void prepareRenderViewport( const unsigned short index )
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "Viewport NULL pointer!\n" );
-  rb_raise( rb_eRGSSError, "Viewport NULL pointer!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Viewport NULL pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Viewport NULL pointer at index %u!\n", index );
   return;
 }
 
@@ -148,12 +150,16 @@ static VALUE viewport_alloc(VALUE klass)
 
  if ( cminindex == 64 )
 {
+#ifdef __DEBUG__
   fprintf( stderr, "Reached maximum viewport count of 64!\n" );
+#endif
   rb_raise( rb_eRGSSError, "Reached maximum viewport count of 64!\n" );
 }
  else
 {
- printf( "Allocating viewport %u!\n", cminindex );
+#ifdef __DEBUG__
+  printf( "Allocating viewport %u!\n", cminindex );
+#endif
   ptr = ALLOC(struct Viewport);
 //  ptr->viewport_queue.capacity = 64;
 //  initRenderQueue(&ptr->viewport_queue);
@@ -253,8 +259,9 @@ static VALUE rb_viewport_m_dispose(VALUE self)
 {
    cminindex = cindex;
 }
-
- printf( "Disposing viewport %u!\n", cindex );
+#ifdef __DEBUG__
+  printf( "Disposing viewport %u!\n", cindex );
+#endif
 }
 
  return Qnil;

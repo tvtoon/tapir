@@ -129,8 +129,10 @@ void prepareRenderTilemap( const unsigned short index )
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "Tilemap NULL pointer!\n" );
-  rb_raise( rb_eRGSSError, "Tilemap NULL pointer!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Tilemap NULL pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Tilemap NULL pointer at index %u!\n", index );
   return;
 }
 
@@ -457,12 +459,16 @@ static VALUE tilemap_alloc(VALUE klass)
 
  if ( cminindex == 8 )
 {
+#ifdef __DEBUG__
   fprintf( stderr, "Reached maximum tilemap count of 8!\n" );
+#endif
   rb_raise( rb_eRGSSError, "Reached maximum tilemap count of 8!\n" );
 }
  else
 {
- printf( "Allocating tilemap %u!\n", cminindex );
+#ifdef __DEBUG__
+  printf( "Allocating tilemap %u!\n", cminindex );
+#endif
   ptr = ALLOC(struct Tilemap);
 #if RGSS > 1
   ptr->bitmaps = Qnil;
@@ -564,8 +570,9 @@ static VALUE rb_tilemap_m_dispose(VALUE self)
 {
    cminindex = cindex;
 }
-
- printf( "Disposing tilemap %u!\n", cindex );
+#ifdef __DEBUG__
+  printf( "Disposing tilemap %u!\n", cindex );
+#endif
 }
 
  return Qnil;

@@ -15,6 +15,8 @@
 #include "misc.h"
 
 static VALUE rb_cColor;
+//static unsigned int colorc = 0;
+unsigned int maxcolorc = 0;
 
 /*
  * A color has four Float values in its RDATA, each representing red, green,
@@ -59,7 +61,14 @@ static VALUE color_alloc(VALUE klass) {
   ptr->blue = 0.0;
   ptr->alpha = 0.0;
   VALUE ret = Data_Wrap_Struct(klass, color_mark, -1, ptr);
-  return ret;
+/*
+ colorc++;
+
+ if ( colorc > maxcolorc ) maxcolorc = colorc;
+*/
+ maxcolorc++;
+
+ return ret;
 }
 
 /*

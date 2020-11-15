@@ -113,8 +113,10 @@ void prepareRenderSprite( const unsigned short index )
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "Sprite NULL pointer!\n" );
-  rb_raise( rb_eRGSSError, "Sprite NULL pointer!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Sprite NULL pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Sprite NULL pointer at index %u!\n", index );
   return;
 }
 
@@ -280,12 +282,16 @@ static VALUE sprite_alloc(VALUE klass)
 
  if ( cminindex == 512 )
 {
+#ifdef __DEBUG__
   fprintf( stderr, "Reached maximum sprite count of 512!\n" );
+#endif
   rb_raise( rb_eRGSSError, "Reached maximum sprite count of 512!\n" );
 }
  else
 {
+#ifdef __DEBUG__
  printf( "Allocating sprite %u!\n", cminindex );
+#endif
   ptr = ALLOC(struct Sprite);
   ptr->z = 0;
   ptr->viewport = Qnil;
@@ -413,7 +419,9 @@ static VALUE rb_sprite_m_dispose(VALUE self) {
    cminindex = cindex;
 }
 
- printf( "Disposing sprite %u!\n", cindex );
+#ifdef __DEBUG__
+  printf( "Disposing sprite %u!\n", cindex );
+#endif
 }
 
  return Qnil;

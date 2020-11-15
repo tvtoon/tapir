@@ -21,6 +21,9 @@
 
 static VALUE rb_cFont;
 
+static unsigned int fontc = 0;
+unsigned int maxfontc = 0;
+
 static double as_double(VALUE val) {
   if(TYPE(val) == T_FLOAT) {
     return NUM2DBL(val);
@@ -33,6 +36,7 @@ static void font_invalidate_cache(struct Font *ptr) {
   if(ptr->cache) {
     TTF_CloseFont(ptr->cache);
     ptr->cache = NULL;
+fontc--;
   }
 }
 
@@ -88,6 +92,10 @@ static VALUE font_alloc(VALUE klass) {
 #if RGSS == 3
   ptr->out_color = rb_color_new2();
 #endif
+fontc++;
+
+ if ( fontc > maxfontc ) maxfontc = fontc;
+
   return ret;
 }
 

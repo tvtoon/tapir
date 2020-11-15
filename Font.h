@@ -7,14 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-#include <stdbool.h>
-#include <ruby.h>
-#include <SDL.h>
-#include <SDL_ttf.h>
-*/
-
-struct Font {
+struct Font
+{
   VALUE name, size;
   VALUE color;
 #if RGSS == 3
@@ -35,3 +29,5 @@ const struct Font *rb_font_data(VALUE obj);
 struct Font *rb_font_data_mut(VALUE obj);
 void Init_Font(void);
 void rb_font_set(VALUE self, VALUE other);
+
+unsigned int maxfontc;

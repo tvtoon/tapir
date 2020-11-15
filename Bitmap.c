@@ -29,17 +29,28 @@
 #include "surface_misc.h"
 
 static VALUE rb_cBitmap;
+static unsigned int bitmapc = 0;
+unsigned int maxbitmapc = 0;
 
 static void bitmap_mark(struct Bitmap *ptr) {
   rb_gc_mark(ptr->font);
 }
 
 static void bitmap_free(struct Bitmap *ptr) {
-  if(ptr->surface) SDL_FreeSurface(ptr->surface);
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-  }
-  xfree(ptr);
+  if(ptr->surface)
+{
+  bitmapc--;
+SDL_FreeSurface(ptr->surface);
+}
+
+ if (ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+}
+
+ xfree(ptr);
 }
 
 static VALUE bitmap_alloc(VALUE klass) {
@@ -50,6 +61,10 @@ static VALUE bitmap_alloc(VALUE klass) {
   ptr->font = Qnil;
   VALUE ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
   ptr->font = rb_font_new();
+ bitmapc++;
+
+ if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
+
   return ret;
 }
 
@@ -99,7 +114,7 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
 /* Windows PATH_MAX less extension. */
    if ( filens > 251 )
 {
-    rb_raise(rb_eRGSSError, "File %s size is too large.", StringValueCStr(argv[0]) );
+    rb_raise(rb_eRGSSError, "File \"%s\" name size is too large.", StringValueCStr(argv[0]) );
     break;
 }
 
@@ -165,16 +180,25 @@ static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_bitmap_m_dispose(VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-    ptr->texture_id = 0;
-    ptr->texture_invalidated = true;
-  }
+static VALUE rb_bitmap_m_dispose(VALUE self)
+{
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+
+ if (ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+}
+
+ if ( ptr->surface )
+{
   SDL_FreeSurface(ptr->surface);
   ptr->surface = NULL;
-  return Qnil;
+  bitmapc--;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_clear(VALUE self) {

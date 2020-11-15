@@ -15,6 +15,8 @@
 #include "misc.h"
 
 static VALUE rb_cTone;
+//static unsigned int tonec = 0;
+unsigned int maxtonec = 0;
 
 /*
  * A tone has four Float values in its RDATA, each representing red, green,
@@ -52,7 +54,14 @@ static VALUE tone_alloc(VALUE klass) {
   ptr->blue = 0.0;
   ptr->gray = 0.0;
   VALUE ret = Data_Wrap_Struct(klass, tone_mark, -1, ptr);
-  return ret;
+/*
+ tonec++;
+
+ if ( tonec > maxtonec ) maxtonec = tonec;
+*/
+maxtonec++;
+
+ return ret;
 }
 
 /*

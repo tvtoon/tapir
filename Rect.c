@@ -18,6 +18,8 @@
 #define INT2FIX_E(x) INT2NUM((int32_t)(((uint32_t)(x) + 0x40000000U) & 0x7FFFFFFFU) - 0x40000000)
 
 static VALUE rb_cRect;
+//static unsigned int rectc = 0;
+unsigned int maxrectc = 0;
 
 /*
  * A rectangle has four <tt>int32_t</tt> values in its RDATA,
@@ -46,6 +48,13 @@ static VALUE rect_alloc(VALUE klass) {
   ptr->width = 0;
   ptr->height = 0;
   VALUE ret = Data_Wrap_Struct(klass, rect_mark, -1, ptr);
+/*
+ rectc++;
+
+ if ( rectc > maxrectc ) maxrectc = rectc;
+*/
+maxrectc++;
+
   return ret;
 }
 

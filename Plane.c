@@ -80,8 +80,10 @@ void prepareRenderPlane( const unsigned short index )
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "NULL pointer combo!\n" );
-  rb_raise( rb_eRGSSError, "Maximum null pointer combo!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Plane null pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Plane null pointer at index %u!\n", index );
   return;
 }
 
@@ -173,9 +175,9 @@ void renderPlane( const unsigned short index, const struct RenderViewport *viewp
 static void plane_free(struct Plane *ptr)
 {
  unsigned short cindex = 0;
-
+#ifdef __DEBUG__
  printf( "Freeing plane %u!\n", cminindex );
-
+#endif
  if ( ptr->bdispose == Qfalse )
 {
   cindex = NEWdisposeRenderable( ptr->rendid );
@@ -200,12 +202,16 @@ static VALUE plane_alloc(VALUE klass)
 
  if ( cminindex == 8 )
 {
+#ifdef __DEBUG__
   fprintf( stderr, "Reached maximum plane count of 8!\n" );
+#endif
   rb_raise( rb_eRGSSError, "Reached maximum plane count of 8!\n" );
 }
  else
 {
+#ifdef __DEBUG__
  printf( "Allocating plane %u!\n", cminindex );
+#endif
   ptr = ALLOC(struct Plane);
   ptr->bitmap = Qnil;
   ptr->viewport = Qnil;
@@ -267,9 +273,9 @@ static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
 static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   struct Plane *ptr = rb_plane_data_mut(self);
   const struct Plane *orig_ptr = rb_plane_data(orig);
-
+#ifdef __DEBUG__
  printf( "Initializing plane %u by copy!\n", cminindex );
-
+#endif
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
   ptr->visible = orig_ptr->visible;
@@ -301,8 +307,9 @@ static VALUE rb_plane_m_dispose(VALUE self)
 {
    cminindex = cindex;
 }
-
- printf( "Disposing plane %u!\n", cindex );
+#ifdef __DEBUG__
+  printf( "Disposing plane %u!\n", cindex );
+#endif
 }
 
  return Qnil;

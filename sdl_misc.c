@@ -571,9 +571,10 @@ void load_transition_image( const char *filename, const size_t filenso, const in
 /*
 
  filens = strlen(filename);
+ printf( "Loading \"%s\".\n", filename );
+
  Windows PATH_MAX less extension.
 */
- printf( "Loading \"%s\".\n", filename );
 
  if ( filenso > 251 )
 {
@@ -599,10 +600,10 @@ void load_transition_image( const char *filename, const size_t filenso, const in
    else
 {
     transition_image = create_rgba_surface_from(img);
-    printf( "Transition... " );
+//    printf( "Transition... " );
     glBindTexture(GL_TEXTURE_2D, transition_texture2);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, transition_image->w, transition_image->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
-    printf( "GL!\n" );
+//    printf( "GL!\n" );
     SDL_FreeSurface(transition_image);
     transition_vagueness = vagueness;
 }

@@ -102,8 +102,10 @@ void prepareRenderWindow( const unsigned short index )
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "Window NULL pointer!\n" );
-  rb_raise( rb_eRGSSError, "Window NULL pointer!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Window NULL pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Window NULL pointer at index %u!\n", index );
   return;
 }
 
@@ -489,12 +491,16 @@ static VALUE window_alloc(VALUE klass)
 
  if ( cminindex == 256 )
 {
+#ifdef __DEBUG__
   fprintf( stderr, "Reached maximum window count of 256!\n" );
+#endif
   rb_raise( rb_eRGSSError, "Reached maximum window count of 256!\n" );
 }
  else
 {
- printf( "Allocating window %u!\n", cminindex );
+#ifdef __DEBUG__
+  printf( "Allocating window %u!\n", cminindex );
+#endif
   ptr = ALLOC(struct Window);
   ptr->windowskin = Qnil;
   ptr->contents = Qnil;
@@ -649,8 +655,9 @@ static VALUE rb_window_m_dispose(VALUE self)
 {
    cminindex = cindex;
 }
-
- printf( "Disposing window %u!\n", cindex );
+#ifdef __DEBUG__
+  printf( "Disposing window %u!\n", cindex );
+#endif
 }
 
  return Qnil;
