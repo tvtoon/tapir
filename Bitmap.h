@@ -7,11 +7,13 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-struct Bitmap {
-  SDL_Surface *surface;
-  GLuint texture_id;
-  bool texture_invalidated;
-  VALUE font;
+struct Bitmap
+{
+ SDL_Surface *surface;
+ GLuint texture_id;
+ bool texture_invalidated;
+ VALUE font;
+ VALUE rect;
 };
 
 VALUE rb_bitmap_new(int width, int height);

@@ -34,6 +34,7 @@ unsigned int maxbitmapc = 0;
 
 static void bitmap_mark(struct Bitmap *ptr) {
   rb_gc_mark(ptr->font);
+  rb_gc_mark(ptr->rect);
 }
 
 static void bitmap_free(struct Bitmap *ptr) {
@@ -53,19 +54,23 @@ SDL_FreeSurface(ptr->surface);
  xfree(ptr);
 }
 
-static VALUE bitmap_alloc(VALUE klass) {
-  struct Bitmap *ptr = ALLOC(struct Bitmap);
-  ptr->surface = NULL;
-  ptr->texture_id = 0;
-  ptr->texture_invalidated = true;
-  ptr->font = Qnil;
-  VALUE ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
-  ptr->font = rb_font_new();
+static VALUE bitmap_alloc(VALUE klass)
+{
+ struct Bitmap *ptr = ALLOC(struct Bitmap);
+ VALUE ret = Qnil;
+
+ ptr->surface = NULL;
+ ptr->texture_id = 0;
+ ptr->texture_invalidated = true;
+ ptr->font = Qnil;
+ ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
+ ptr->font = rb_font_new();
+ ptr->rect = rb_rect_new(0, 0, 0, 0);
  bitmapc++;
 
  if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
 
-  return ret;
+ return ret;
 }
 
 static VALUE rb_bitmap_m_disposed_p(VALUE self) {
@@ -85,10 +90,12 @@ static VALUE rb_bitmap_m_height(VALUE self) {
   return INT2NUM(ptr->surface->h);
 }
 
-static VALUE rb_bitmap_m_rect(VALUE self) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+static VALUE rb_bitmap_m_rect(VALUE self)
+{
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+//  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+ return(ptr->rect);
 }
 
 /*
@@ -106,6 +113,7 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
  const char extensions[4][5] = { ".png", ".jpg", ".bmp", "\0" };
  size_t filens = 0;
  struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ struct Rect *recto = rb_rect_data_mut(ptr->rect);
 
  switch(argc)
 {
@@ -158,26 +166,40 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
    break;
 }
 
+ if (ptr->surface)
+{
+  recto->width = ptr->surface->w;
+  recto->height = ptr->surface->h;
+//  rect_set( struct Rect *ptr, 0, 0, int32_t newwidth, int32_t newheight);
+}
+
  return Qnil;
 }
 
-static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  const struct Bitmap *orig_ptr = rb_bitmap_data(orig);
-  if(orig_ptr->surface) {
-    ptr->surface = create_rgba_surface(
-        orig_ptr->surface->w, orig_ptr->surface->h);
-    SDL_BlitSurface(orig_ptr->surface, NULL, ptr->surface, NULL);
-  } else {
-    ptr->surface = NULL;
-  }
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-    ptr->texture_id = 0;
-    ptr->texture_invalidated = true;
-  }
-  rb_font_set(ptr->font, orig_ptr->font);
-  return Qnil;
+static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig)
+{
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ const struct Bitmap *orig_ptr = rb_bitmap_data(orig);
+
+ if(orig_ptr->surface)
+{
+  ptr->surface = create_rgba_surface( orig_ptr->surface->w, orig_ptr->surface->h);
+  SDL_BlitSurface(orig_ptr->surface, NULL, ptr->surface, NULL);
+}
+ else
+{
+  ptr->surface = NULL;
+}
+
+ if(ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+}
+
+ rb_font_set(ptr->font, orig_ptr->font);
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_dispose(VALUE self)
@@ -883,10 +905,12 @@ static VALUE rb_bitmap_m_set_font(VALUE self, VALUE newval) {
 
 /* static END */
 
-VALUE rb_bitmap_rect(VALUE self) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+VALUE rb_bitmap_rect(VALUE self)
+{
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+//  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+ return(ptr->rect);
 }
 
 VALUE rb_bitmap_new(int width, int height) {

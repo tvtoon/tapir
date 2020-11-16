@@ -199,35 +199,34 @@ static VALUE viewport_alloc(VALUE klass)
  *
  * Creates a new viewport.
  */
-static VALUE rb_viewport_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Viewport *ptr = rb_viewport_data_mut(self);
-  switch(argc) {
-    case 1:
-      rb_rect_set2(ptr->rect, argv[0]);
-      break;
-    case 4:
-      rect_set(rb_rect_data_mut(ptr->rect),
-          NUM2INT(argv[0]), NUM2INT(argv[1]),
-          NUM2INT(argv[2]), NUM2INT(argv[3]));
-      break;
+static VALUE rb_viewport_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ struct Viewport *ptr = rb_viewport_data_mut(self);
+
+ switch(argc)
+{
+  case 1:
+   rb_rect_set2(ptr->rect, argv[0]);
+   break;
+
+  case 4:
+   rect_set(rb_rect_data_mut(ptr->rect), NUM2INT(argv[0]), NUM2INT(argv[1]), NUM2INT(argv[2]), NUM2INT(argv[3]));
+   break;
 #if RGSS == 3
-    case 0:
-      rect_set(rb_rect_data_mut(ptr->rect),
-          0, 0,
-          window_width, window_height);
-      break;
+  case 0:
+   rect_set(rb_rect_data_mut(ptr->rect), 0, 0, window_width, window_height);
+   break;
 #endif
-    default:
+  default:
 #if RGSS == 3
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0..1 or 4)", argc);
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1 or 4)", argc);
 #else
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 1 or 4)", argc);
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 4)", argc);
 #endif
-      break;
-  }
-  return Qnil;
+   break;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_viewport_m_initialize_copy(VALUE self, VALUE orig) {
@@ -292,10 +291,11 @@ static VALUE rb_viewport_m_rect(VALUE self) {
   return ptr->rect;
 }
 
-static VALUE rb_viewport_m_set_rect(VALUE self, VALUE newval) {
-  struct Viewport *ptr = rb_viewport_data_mut(self);
-  rb_rect_set2(ptr->rect, newval);
-  return newval;
+static VALUE rb_viewport_m_set_rect(VALUE self, VALUE newval)
+{
+ struct Viewport *ptr = rb_viewport_data_mut(self);
+ rb_rect_set2(ptr->rect, newval);
+ return newval;
 }
 
 static VALUE rb_viewport_m_visible(VALUE self) {

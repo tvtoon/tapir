@@ -1,5 +1,9 @@
 # en.UTF-8
 
+0.2.1
+^Dirty cleanup for debugging something else...
+^The Bitmap type now has their proper Rect, it was allocating like mad without reason. The font one will come later.
+
 0.2.0
 ^Trashed "renderable" and its crazy function pointer jobs, the system is so much clean now, with jobs only working at "sdl_misc.c" side.
 ^No more insane reallocations, there is a limit for queues and registration.

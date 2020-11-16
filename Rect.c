@@ -53,7 +53,6 @@ static VALUE rect_alloc(VALUE klass) {
 
  if ( rectc > maxrectc ) maxrectc = rectc;
 */
-maxrectc++;
 
   return ret;
 }
@@ -338,8 +337,10 @@ VALUE rb_rect_new(int32_t x, int32_t y, int32_t width, int32_t height) {
   return ret;
 }
 
-VALUE rb_rect_new2(void) {
-  return rb_rect_new(0, 0, 0, 0);
+VALUE rb_rect_new2(void)
+{
+maxrectc++;
+ return rb_rect_new(0, 0, 0, 0);
 }
 
 void Init_Rect() {
