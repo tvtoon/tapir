@@ -7,22 +7,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-#include <ruby.h>
-
-#include <stdbool.h>
-#include <SDL.h>
-#define GL_GLEXT_PROTOTYPES
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
-*/
-
-/*extern VALUE rb_cBitmap;*/
-struct Bitmap {
-  SDL_Surface *surface;
-  GLuint texture_id;
-  bool texture_invalidated;
-  VALUE font;
+struct Bitmap
+{
+ SDL_Surface *surface;
+ GLuint texture_id;
+ bool texture_invalidated;
+ VALUE font;
+ VALUE rect;
+ VALUE pixcol;
 };
 
 VALUE rb_bitmap_new(int width, int height);
@@ -32,3 +24,5 @@ const struct Bitmap *rb_bitmap_data(VALUE obj);
 struct Bitmap *rb_bitmap_data_mut(VALUE obj);
 void bitmapBindTexture(struct Bitmap *ptr);
 void Init_Bitmap(void);
+
+unsigned int maxbitmapc;

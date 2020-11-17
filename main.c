@@ -289,6 +289,7 @@ char *ruby_argv_array[] = {
 // ruby_cleanup(0);
 // ruby_finalize();
  printf( "Max Plane: %u.\nMax Sprite: %u.\nMax Tilemap: %u.\nMax Viewport: %u.\nMax Window: %u.\n", maxplanec, maxspritec, maxtmapc, maxvportqc, maxwindowc );
+ printf( "Max Bitmap: %u.\nMax Color: %u.\nMax Font: %u.\nMax Rect: %u.\nMax Tone: %u.\n", maxbitmapc, maxcolorc, maxfontc, maxrectc, maxtonec );
 
  fprintf( stderr, "End state!\n" );
  return state;

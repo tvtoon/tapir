@@ -6,15 +6,11 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-/*
-#include <stdbool.h>
-#include <ruby.h>
-#include "sdl_misc.h"
-*/
 
-struct Window {
-  struct Renderable renderable;
-  VALUE viewport, windowskin, contents, cursor_rect;
+struct Window
+{
+ VALUE viewport, windowskin, contents, cursor_rect;
+ VALUE bdispose;
   bool visible, active, pause;
 #if RGSS == 1
   bool stretch;
@@ -32,13 +28,18 @@ struct Window {
 #endif
   int cursor_tick;
   int pause_tick;
+ unsigned short rendid;
 };
-
+/*
 bool rb_window_data_p(VALUE obj);
 const struct Window *rb_window_data(VALUE obj);
-int initWindowSDL(void);
 struct Window *rb_window_data_mut(VALUE obj);
+*/
+int initWindowSDL(void);
 void Init_Window(void);
 void deinitWindowSDL(void);
+
+void prepareRenderWindow( const unsigned short index, const unsigned short rindex );
+void renderWindow( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxwindowc;

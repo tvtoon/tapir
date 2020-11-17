@@ -27,24 +27,30 @@
 #include "misc.h"
 
 struct Plane {
-  struct Renderable renderable;
+//  struct Renderable renderable;
   VALUE viewport, bitmap, color, tone;
-  bool visible;
-  int z, ox, oy, opacity, blend_type;
-  double zoom_x, zoom_y;
+ VALUE bdispose;
+ bool visible;
+ int z, ox, oy, opacity, blend_type;
+ double zoom_x, zoom_y;
+ unsigned short rendid;
 };
 
+static struct Plane *planspa[8] = { 0,0,0,0,0,0,0,0 };
 static VALUE rb_cPlane;
 static GLuint shader;
 
+static unsigned short cminindex = 0;
 static unsigned short planec = 0;
 unsigned short maxplanec = 0;
 
-static void plane_mark(struct Plane *ptr) {
+static void plane_mark(struct Plane *ptr)
+{
   rb_gc_mark(ptr->viewport);
   rb_gc_mark(ptr->bitmap);
   rb_gc_mark(ptr->color);
   rb_gc_mark(ptr->tone);
+  rb_gc_mark(ptr->bdispose);
 }
 
 static const struct Plane *rb_plane_data(VALUE obj) {
@@ -66,34 +72,36 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
   return (struct Plane *)rb_plane_data(obj);
 }
 
-static void prepareRenderPlane(struct Renderable *renderable, int t) {
-  struct Plane *ptr = (struct Plane *)renderable;
-  struct RenderJob job;
+void prepareRenderPlane( const unsigned short index, const unsigned short rindex )
+{
+ struct Plane *ptr = planspa[index];
+ struct RenderJob job;
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "NULL pointer combo!\n" );
-  rb_raise( rb_eRGSSError, "Maximum null pointer combo!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Plane null pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Plane null pointer at index %u!\n", index );
   return;
 }
 
-  if(!ptr->visible) return;
+ if ( !ptr->visible ) return;
 
-  job.renderable = renderable;
-  job.z = ptr->z;
-  job.y = 0;
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-  job.t = t;
-  queueRenderJob(ptr->viewport, job);
+ job.z = ptr->z;
+ job.y = 0;
+ job.t = rindex;
+ job.reg = 0;
+ job.rindex = index;
+
+ queueRenderJob(ptr->viewport, job);
 }
 
-static void renderPlane(
-    struct Renderable *renderable, /*const struct RenderJob *job,*/
-    const struct RenderViewport *viewport) {
+void renderPlane( const unsigned short index, const struct RenderViewport *viewport)
+{
 //  (void) job;
-  struct Plane *ptr = (struct Plane *)renderable;
+//  struct Plane *ptr = (struct Plane *)renderable;
+ struct Plane *ptr = planspa[index];
   {
     const struct Color *color = rb_color_data(ptr->color);
     if(color->red || color->green || color->blue || color->alpha) {
@@ -159,24 +167,47 @@ static void renderPlane(
   glUseProgram(0);
 }
 
-static void plane_free(struct Plane *ptr) {
+static void plane_free(struct Plane *ptr)
+{
+ unsigned short cindex = 0;
 #ifdef __DEBUG__
- printf( "Freeing plane!\n" );
+ printf( "Freeing plane %u!\n", cminindex );
 #endif
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  planspa[cindex] = 0;
   planec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static VALUE plane_alloc(VALUE klass) {
-  struct Plane *ptr = ALLOC(struct Plane);
+}
+
+ xfree(ptr);
+}
+
+static VALUE plane_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Plane *ptr = 0;
+
+ if ( cminindex == 8 )
+{
 #ifdef __DEBUG__
- printf( "Allocating plane!\n" );
+  fprintf( stderr, "Reached maximum plane count of 8!\n" );
 #endif
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderPlane;
-  ptr->renderable.render = renderPlane;
-  ptr->renderable.disposed = false;
+  rb_raise( rb_eRGSSError, "Reached maximum plane count of 8!\n" );
+}
+ else
+{
+#ifdef __DEBUG__
+ printf( "Allocating plane %u!\n", cminindex );
+#endif
+  ptr = ALLOC(struct Plane);
   ptr->bitmap = Qnil;
   ptr->viewport = Qnil;
   ptr->visible = true;
@@ -189,13 +220,22 @@ static VALUE plane_alloc(VALUE klass) {
   ptr->blend_type = 0;
   ptr->color = Qnil;
   ptr->tone = Qnil;
-  VALUE ret = Data_Wrap_Struct(klass, plane_mark, plane_free, ptr);
+  ptr->bdispose = Qfalse;
+  ret = Data_Wrap_Struct(klass, plane_mark, plane_free, ptr);
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 0 );
+  planspa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 8; cminindex++ )
+{
+   if ( planspa[cminindex] == 0 ) break;
+}
+
   planec++;
 
   if ( planec > maxplanec ) maxplanec = planec;
+}
 
   return ret;
 }
@@ -209,9 +249,7 @@ static VALUE plane_alloc(VALUE klass) {
  */
 static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
   struct Plane *ptr = rb_plane_data_mut(self);
-#ifdef __DEBUG__
- printf( "Initializing plane!\n" );
-#endif
+
   switch(argc) {
     case 0:
       break;
@@ -231,7 +269,7 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   struct Plane *ptr = rb_plane_data_mut(self);
   const struct Plane *orig_ptr = rb_plane_data(orig);
 #ifdef __DEBUG__
- printf( "Initializing plane by copy!\n" );
+ printf( "Initializing plane %u by copy!\n", cminindex );
 #endif
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
@@ -248,18 +286,34 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
   return Qnil;
 }
 
-static VALUE rb_plane_m_dispose(VALUE self) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+static VALUE rb_plane_m_dispose(VALUE self)
+{
+ unsigned short cindex = 0;
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  planspa[cindex] = 0;
+  planec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
+}
 #ifdef __DEBUG__
- printf( "Disposing plane!\n" );
+  printf( "Disposing plane %u!\n", cindex );
 #endif
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_plane_m_disposed_p(VALUE self) {
   const struct Plane *ptr = rb_plane_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+//  return ptr->renderable.disposed ? Qtrue : Qfalse;
+ return ptr->bdispose;
 }
 
 static VALUE rb_plane_m_bitmap(VALUE self) {
@@ -399,11 +453,6 @@ static VALUE rb_plane_m_set_tone(VALUE self, VALUE newval) {
 }
 
 /* static END */
-
-bool rb_plane_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))plane_mark;
-}
 
 /*
  * A graphic object containing a bitmap.

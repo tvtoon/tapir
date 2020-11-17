@@ -7,12 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-#include <stdbool.h>
-#include <stdint.h>
-#include <ruby.h>
-*/
-
 struct Rect {
   int32_t x, y, width, height;
 };
@@ -25,3 +19,5 @@ struct Rect *rb_rect_data_mut(VALUE obj);
 void Init_Rect(void);
 void rb_rect_set2(VALUE self, VALUE other);
 void rect_set(struct Rect *ptr, int32_t x, int32_t y, int32_t width, int32_t height);
+
+unsigned int maxrectc;

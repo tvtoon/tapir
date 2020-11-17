@@ -31,6 +31,43 @@ static GLuint shader;
 
 static VALUE rb_cSprite;
 
+static struct Sprite *spritespa[512] = {
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
+
+static unsigned short cminindex = 0;
 static unsigned short spritec = 0;
 unsigned short maxspritec = 0;
 
@@ -38,53 +75,89 @@ unsigned short maxspritec = 0;
  * A graphic object containing a bitmap.
  */
 
-static void prepareRenderSprite(struct Renderable *renderable, int t) {
-  struct Sprite *ptr = (struct Sprite *)renderable;
-  struct RenderJob job;
+static void sprite_mark(struct Sprite *ptr)
+{
+  rb_gc_mark(ptr->viewport);
+  rb_gc_mark(ptr->bitmap);
+  rb_gc_mark(ptr->src_rect);
+  rb_gc_mark(ptr->color);
+  rb_gc_mark(ptr->tone);
+  rb_gc_mark(ptr->flash_color);
+  rb_gc_mark(ptr->bdispose);
+}
+
+static const struct Sprite *rb_sprite_data(VALUE obj)
+{
+  Check_Type(obj, T_DATA);
+  // Note: original RGSS doesn't check types.
+  if(RDATA(obj)->dmark != (void(*)(void*))sprite_mark) {
+    rb_raise(rb_eTypeError,
+        "can't convert %s into Sprite",
+        rb_class2name(rb_obj_class(obj)));
+  }
+  struct Sprite *ret;
+  Data_Get_Struct(obj, struct Sprite, ret);
+  return ret;
+}
+
+static struct Sprite *rb_sprite_data_mut(VALUE obj) {
+  // Note: original RGSS doesn't check frozen.
+  if(OBJ_FROZEN(obj)) rb_error_frozen("Sprite");
+  return (struct Sprite *)rb_sprite_data(obj);
+}
+
+void prepareRenderSprite( const unsigned short index, const unsigned short rindex )
+{
+ struct Sprite *ptr = spritespa[index];
+ struct RenderJob job;
 
  if ( ptr == 0 )
 {
-  fprintf( stderr, "Sprite NULL pointer!\n" );
-  rb_raise( rb_eRGSSError, "Sprite NULL pointer!\n" );
+#ifdef __DEBUG__
+  fprintf( stderr, "Sprite NULL pointer at index %u!\n", index );
+#endif
+  rb_raise( rb_eRGSSError, "Sprite NULL pointer at index %u!\n", index );
   return;
 }
 
-  if(!ptr->visible) return;
+ if(!ptr->visible) return;
 
-  job.renderable = renderable;
-  job.z = ptr->z;
-  job.y = ptr->y;
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-  job.t = t;
-  queueRenderJob(ptr->viewport, job);
+ job.z = ptr->z;
+ job.y = ptr->y;
+ job.t = rindex;
+ job.reg = 1;
+ job.rindex = index;
+ queueRenderJob(ptr->viewport, job);
 }
 
-static void renderSprite(
-    struct Renderable *renderable, /*const struct RenderJob *job,*/
-    const struct RenderViewport *viewport) {
-//  (void) job;
-  struct Sprite *ptr = (struct Sprite *)renderable;
+void renderSprite( const unsigned short index, const struct RenderViewport *viewport )
+{
+ struct Sprite *ptr = spritespa[index];
+ const struct Color *color_ptr = rb_color_data(ptr->color);
+ const struct Color *flash_color_ptr = rb_color_data(ptr->flash_color);
 
-  const struct Color *color_ptr = rb_color_data(ptr->color);
-  const struct Color *flash_color_ptr = rb_color_data(ptr->flash_color);
-  if(ptr->flash_duration > 0 && ptr->flash_is_nil) return;
-  double flash_opacity =
-    ptr->flash_duration <= 0 ? 0.0 :
-    1.0 - (double)ptr->flash_count / ptr->flash_duration;
-  const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
+ if(ptr->flash_duration > 0 && ptr->flash_is_nil) return;
+
+ double flash_opacity = ptr->flash_duration <= 0 ? 0.0 : 1.0 - (double)ptr->flash_count / ptr->flash_duration;
+
+ const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
 #if RGSS > 1
   if(ptr->wave_amp) WARN_UNIMPLEMENTED("Sprite#wave_amp");
 #endif
+
   if(ptr->bush_depth) WARN_UNIMPLEMENTED("Sprite#bush_depth");
+
   if(ptr->bitmap == Qnil) return;
+
   const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
   SDL_Surface *surface = bitmap_ptr->surface;
+
   if(!surface) return;
+
   const struct Rect *src_rect = rb_rect_data(ptr->src_rect);
 
   glEnable(GL_BLEND);
+
   if(ptr->blend_type == 1) {
     glBlendFuncSeparate(
         GL_ONE, GL_ONE,
@@ -176,34 +249,50 @@ static void renderSprite(
   glUseProgram(0);
 }
 
-static void sprite_mark(struct Sprite *ptr) {
-  rb_gc_mark(ptr->viewport);
-  rb_gc_mark(ptr->bitmap);
-  rb_gc_mark(ptr->src_rect);
-  rb_gc_mark(ptr->color);
-  rb_gc_mark(ptr->tone);
-  rb_gc_mark(ptr->flash_color);
+static void sprite_free(struct Sprite *ptr)
+{
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  spritespa[cindex] = 0;
+  spritec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
 }
 
-static void sprite_free(struct Sprite *ptr) {
-  disposeRenderable(&ptr->renderable);
-  xfree(ptr);
- spritec--;
 }
 
-static VALUE sprite_alloc(VALUE klass) {
-  struct Sprite *ptr = ALLOC(struct Sprite);
+ xfree(ptr);
+}
+
+static VALUE sprite_alloc(VALUE klass)
+{
+ VALUE ret = Qnil;
+ struct Sprite *ptr = 0;
+
+ if ( cminindex == 512 )
+{
 #ifdef __DEBUG__
- printf( "Allocating sprite!\n" );
+  fprintf( stderr, "Reached maximum sprite count of 512!\n" );
 #endif
-//  ptr->renderable.clear = NULL;
-  ptr->renderable.prepare = prepareRenderSprite;
-  ptr->renderable.render = renderSprite;
-  ptr->renderable.disposed = false;
+  rb_raise( rb_eRGSSError, "Reached maximum sprite count of 512!\n" );
+}
+ else
+{
+#ifdef __DEBUG__
+ printf( "Allocating sprite %u!\n", cminindex );
+#endif
+  ptr = ALLOC(struct Sprite);
   ptr->z = 0;
   ptr->viewport = Qnil;
   ptr->bitmap = Qnil;
   ptr->src_rect = Qnil;
+  ptr->bdispose = Qfalse;
   ptr->visible = true;
   ptr->x = 0;
   ptr->y = 0;
@@ -229,17 +318,25 @@ static VALUE sprite_alloc(VALUE klass) {
   ptr->flash_duration = 0;
   ptr->flash_count = 0;
   ptr->flash_is_nil = false;
-  VALUE ret = Data_Wrap_Struct(klass, sprite_mark, sprite_free, ptr);
+  ret = Data_Wrap_Struct(klass, sprite_mark, sprite_free, ptr);
   ptr->src_rect = rb_rect_new2();
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
-  registerRenderable(&ptr->renderable);
+  ptr->rendid = NEWregisterRenderable( cminindex, 1 );
+  spritespa[cminindex] = ptr;
+
+  for ( cminindex++; cminindex < 512; cminindex++ )
+{
+   if ( spritespa[cminindex] == 0 ) break;
+}
+
   spritec++;
 
   if ( spritec > maxspritec ) maxspritec = spritec;
+}
 
-  return ret;
+ return ret;
 }
 
 /*
@@ -302,17 +399,32 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
 }
 
 static VALUE rb_sprite_m_dispose(VALUE self) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+ unsigned short cindex = 0;
+
+ if ( ptr->bdispose == Qfalse )
+{
+  cindex = NEWdisposeRenderable( ptr->rendid );
+  ptr->bdispose = Qtrue;
+  spritespa[cindex] = 0;
+  spritec--;
+
+  if ( cminindex > cindex )
+{
+   cminindex = cindex;
+}
+
 #ifdef __DEBUG__
- printf( "Disposing sprite!\n" );
+  printf( "Disposing sprite %u!\n", cindex );
 #endif
-  disposeRenderable(&ptr->renderable);
-  return Qnil;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_sprite_m_disposed_p(VALUE self) {
   const struct Sprite *ptr = rb_sprite_data(self);
-  return ptr->renderable.disposed ? Qtrue : Qfalse;
+ return ptr->bdispose;
 }
 
 static VALUE rb_sprite_m_flash(VALUE self, VALUE color, VALUE duration) {
@@ -346,16 +458,30 @@ static VALUE rb_sprite_m_bitmap(VALUE self) {
   return ptr->bitmap;
 }
 
-static VALUE rb_sprite_m_set_bitmap(VALUE self, VALUE newval) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-  const struct Bitmap *bitmap_ptr;
-  if(newval != Qnil) bitmap_ptr = rb_bitmap_data(newval);
-  if(ptr->bitmap == newval) return newval;
-  ptr->bitmap = newval;
-  if(newval != Qnil && bitmap_ptr->surface) {
+static VALUE rb_sprite_m_set_bitmap(VALUE self, VALUE newval)
+{
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+ const struct Bitmap *bitmap_ptr;
+
+ if (newval != Qnil)
+{
+  bitmap_ptr = rb_bitmap_data(newval);
+
+  if (ptr->bitmap != newval)
+{
+// return newval;
+   ptr->bitmap = newval;
+
+   if ( /*newval != Qnil &&*/ bitmap_ptr->surface )
+{
     rb_rect_set2(ptr->src_rect, rb_bitmap_rect(newval));
-  }
-  return newval;
+}
+
+}
+
+}
+
+ return newval;
 }
 
 static VALUE rb_sprite_m_src_rect(VALUE self) {
@@ -614,30 +740,6 @@ static VALUE rb_sprite_m_set_tone(VALUE self, VALUE newval) {
 }
 
 /* static END */
-
-bool rb_sprite_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))sprite_mark;
-}
-
-const struct Sprite *rb_sprite_data(VALUE obj) {
-  Check_Type(obj, T_DATA);
-  // Note: original RGSS doesn't check types.
-  if(RDATA(obj)->dmark != (void(*)(void*))sprite_mark) {
-    rb_raise(rb_eTypeError,
-        "can't convert %s into Sprite",
-        rb_class2name(rb_obj_class(obj)));
-  }
-  struct Sprite *ret;
-  Data_Get_Struct(obj, struct Sprite, ret);
-  return ret;
-}
-
-struct Sprite *rb_sprite_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Sprite");
-  return (struct Sprite *)rb_sprite_data(obj);
-}
 
 int initSpriteSDL()
 {

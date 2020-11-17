@@ -9,13 +9,6 @@
 
 // Color class in RGSS.
 
-/*
-#include <stdbool.h>
-#include <ruby.h>
-
-extern VALUE rb_cColor;
-*/
-
 struct Color { double red, green, blue, alpha; };
 
 VALUE rb_color_new(double red, double green, double blue, double alpha);
@@ -26,3 +19,5 @@ struct Color *rb_color_data_mut(VALUE obj);
 void Init_Color(void);
 void color_set( struct Color *ptr, double newred, double newgreen, double newblue, double newalpha);
 void rb_color_set2(VALUE self, VALUE other);
+
+unsigned int maxcolorc;

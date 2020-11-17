@@ -48,17 +48,28 @@ int window_brightness = 255;
 
 SDL_Window *window = NULL;
 
-static SDL_GLContext glcontext = NULL;
-
-static size_t registry_size = 0, registry_capacity = 0;
-static struct Renderable **registry;
-
-static struct RenderQueue main_queue;
-
 static GLuint transition_shader;
 static GLuint transition_texture;
 static GLuint transition_texture2;
+static SDL_GLContext glcontext = NULL;
+//static struct RenderQueue main_queue;
+static const unsigned short mq_capacity = 512, registry_capacity = 1024;
+static struct RenderJob job_queuea[512];
 static int transition_vagueness = 255;
+static unsigned char newreg = 1;
+static unsigned short mq_size = 0, registry_size = 0, regminfi = 0;
+
+/* The new deal: type and index for rendering. */
+typedef struct
+{
+ unsigned char rendta;
+ unsigned short rendia;
+} newqueue;
+
+static newqueue tnewqa[1024];
+
+static void ( *preparefuna[5])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
+static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
 
 static int initTransition(void) {
   static const char *vsh_source =
@@ -120,6 +131,15 @@ static void deinitTransition(void)
 int initSDL(const char *window_title)
 {
  int img_flags = IMG_INIT_JPG|IMG_INIT_PNG|IMG_INIT_TIF, mix_init_flags = 0, shaderrc = 0;
+ unsigned short ui = 0;
+
+// initRenderQueue(&main_queue);
+// main_queue.queue = malloc(sizeof(*queue->queue) * mq_capacity);
+ for ( ; ui < registry_capacity; ui++ )
+{
+  tnewqa[ui].rendta = 0;
+  tnewqa[ui].rendia = registry_capacity;
+}
 
  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
 {
@@ -209,11 +229,6 @@ int initSDL(const char *window_title)
   return(1);
 }
 
- registry_capacity = 256;
- registry = malloc(sizeof(*registry) * registry_capacity);
- main_queue.capacity = 256;
- initRenderQueue(&main_queue);
-
  shaderrc += initTransition();
  shaderrc += initSpriteSDL();
  shaderrc += initWindowSDL();
@@ -244,48 +259,57 @@ void cleanupSDL() {
   TTF_Quit();
   IMG_Quit();
   SDL_Quit();
-  deinitRenderQueue(&main_queue);
-  if(registry) free(registry);
+//  deinitRenderQueue(&main_queue);
+//  if(registry) free(registry);
 }
 
-static int compare_jobs(const void *o1, const void *o2) {
-  const struct RenderJob *j1 = (const struct RenderJob *)o1;
-  const struct RenderJob *j2 = (const struct RenderJob *)o2;
+static int compare_jobs(const void *o1, const void *o2)
+{
+ const struct RenderJob *j1 = (const struct RenderJob *)o1;
+ const struct RenderJob *j2 = (const struct RenderJob *)o2;
 
-  if(j1->z < j2->z) return -1;
-  else if(j1->z > j2->z) return 1;
+ if(j1->z < j2->z) return -1;
+ else if(j1->z > j2->z) return 1;
 
-  if(j1->y < j2->y) return -1;
-  else if(j1->y > j2->y) return 1;
+ if(j1->y < j2->y) return -1;
+ else if(j1->y > j2->y) return 1;
 
-  if(j1->t < j2->t) return -1;
-  else if(j1->t > j2->t) return 1;
+ if(j1->t < j2->t) return -1;
+ else if(j1->t > j2->t) return 1;
 
-  return 0;
+ return 0;
 }
 
-void event_loop() {
-  SDL_Event e;
-  int quit = 0;
+void event_loop()
+{
+ SDL_Event e;
+ int quit = 0;
 
-  while(SDL_PollEvent(&e)) {
-    switch(e.type) {
-      case SDL_KEYDOWN:
-        if(e.key.keysym.sym == SDLK_F12) {
-          rb_raise(rb_eRGSSReset, "RGSS Reset");
-        }
-        if(!e.key.repeat) {
-          keyPressed(e.key.keysym.sym);
-        }
-        break;
-      case SDL_KEYUP:
-        keyReleased(e.key.keysym.sym);
-        break;
-      case SDL_QUIT:
-        quit = 1;
-        break;
-    }
-  }
+ while(SDL_PollEvent(&e))
+{
+  switch(e.type)
+{
+   case SDL_KEYDOWN:
+    if(e.key.keysym.sym == SDLK_F12)
+{
+     rb_raise(rb_eRGSSReset, "RGSS Reset");
+}
+    if(!e.key.repeat)
+{
+     keyPressed(e.key.keysym.sym);
+}
+    break;
+
+   case SDL_KEYUP:
+    keyReleased(e.key.keysym.sym);
+    break;
+
+   case SDL_QUIT:
+    quit = 1;
+    break;
+}
+
+}
 
  if ( quit == 1 )
 {
@@ -296,78 +320,89 @@ void event_loop() {
 
 static void renderScreen()
 {
- size_t t = 0;
- struct RenderViewport viewport;
+ unsigned short reg = 0, regc = 0;
+ const struct RenderViewport viewport = { window_width, window_height, 0, 0 };
 
- clearRenderQueue(&main_queue);
-
- for (; t < registry_size; t++)
+ if ( newreg == 1 )
 {
-//  if (registry[t]->clear) registry[t]->clear(registry[t]);
-  registry[t]->prepare(registry[t], t);
-}
-/*
- for( t = 0; t < registry_size; ++t )
+  mq_size = 0;
+
+  for (; ( regc < registry_size ) || ( reg < registry_capacity ); reg++ )
 {
 
-}
- */
- viewport.width = window_width;
- viewport.height = window_height;
- viewport.ox = 0;
- viewport.oy = 0;
- renderQueue(&main_queue, &viewport);
-// disposeAll();
+   if ( tnewqa[reg].rendia != registry_capacity )
+{
+    preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia, reg );
+    regc++;
 }
 
-void renderSDL() {
-  SDL_GL_MakeCurrent(window, glcontext);
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glScissor(0, 0, window_width, window_height);
-  glViewport(0, 0, window_width, window_height);
-  renderScreen();
+}
 
-  if(window_brightness != 255) {
-    // transition
+  if ( regc != registry_size )
+{
+   fprintf( stderr, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
+   rb_raise(rb_eRGSSError, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
+   mq_size = 0;
+}
+  else
+{
+   qsort( job_queuea, mq_size, sizeof( struct RenderJob ), compare_jobs);
+}
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
+  newreg = 0;
+}
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, transition_texture2);
+ for ( reg = 0; reg < mq_size; reg++ )
+{
+//  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].t, &viewport );
+  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].rindex, &viewport );
+}
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, transition_texture);
+void renderSDL()
+{
+ SDL_GL_MakeCurrent(window, glcontext);
+ glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+ glClear(GL_COLOR_BUFFER_BIT);
+ glScissor(0, 0, window_width, window_height);
+ glViewport(0, 0, window_width, window_height);
+ renderScreen();
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+ if (window_brightness != 255)
+{
+// transition
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
 
-    glUseProgram(transition_shader);
-    glUniform1i(glGetUniformLocation(transition_shader, "tex"), 0);
-    glUniform1i(glGetUniformLocation(transition_shader, "tex2"), 1);
-    glUniform2f(glGetUniformLocation(transition_shader, "resolution"),
-        window_width, window_height);
-    glUniform1f(glGetUniformLocation(transition_shader, "brightness"),
-        window_brightness / 255.0);
-    glUniform1f(glGetUniformLocation(transition_shader, "vagueness"),
-        transition_vagueness / 255.0);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, transition_texture2);
 
-    gl_draw_rect(
-        0, 0, window_width, window_height, 0.0, 0.0, 1.0, 1.0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glUseProgram(0);
-  }
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, transition_texture);
 
-  SDL_GL_SwapWindow(window);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  glUseProgram(transition_shader);
+  glUniform1i(glGetUniformLocation(transition_shader, "tex"), 0);
+  glUniform1i(glGetUniformLocation(transition_shader, "tex2"), 1);
+  glUniform2f(glGetUniformLocation(transition_shader, "resolution"), window_width, window_height);
+  glUniform1f(glGetUniformLocation(transition_shader, "brightness"), window_brightness / 255.0);
+  glUniform1f(glGetUniformLocation(transition_shader, "vagueness"), transition_vagueness / 255.0);
+  gl_draw_rect( 0, 0, window_width, window_height, 0.0, 0.0, 1.0, 1.0 );
+  glUseProgram(0);
+}
+
+ SDL_GL_SwapWindow(window);
 }
 
 void capturedRenderSDL(SDL_Surface *surface)
@@ -404,102 +439,73 @@ void capturedRenderSDL(SDL_Surface *surface)
 
 }
 
-void registerRenderable(struct Renderable *renderable)
+unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type )
 {
-/*
-  if(registry_size >= registry_capacity) {
-    registry_capacity = registry_capacity + registry_capacity / 2;
-    registry = realloc(registry, sizeof(*registry) * registry_capacity);
-    printf( "Realloc renderable: %u\n", registry_capacity );
-  }
-  registry[registry_size++] = renderable;
-*/
+ const unsigned short ret = regminfi;
+
  if ( registry_size == registry_capacity )
 {
-  fprintf( stderr, "Hopeless register %u!\n", registry_capacity );
-  rb_raise(rb_eRGSSError, "Hopeless register %u!\n", registry_capacity );
+  fprintf( stderr, "No more register available, maximum of %u!\n", registry_capacity );
+  rb_raise(rb_eRGSSError, "No more register available, maximum of %u!\n", registry_capacity );
 }
  else
 {
-  registry[registry_size] = renderable;
+  tnewqa[regminfi].rendta = type;
+  tnewqa[regminfi].rendia = index;
   registry_size++;
-}
 
-}
-
-void disposeRenderable(struct Renderable *renderable)
+  for ( regminfi++; regminfi < registry_capacity; regminfi++ )
 {
- size_t i = 0;
-
- if ( renderable->disposed == 0 )
-{
-/* true */
-  renderable->disposed = 1;
-
-  for ( ; i < registry_size; i++ )
-{
-   if ( registry[i] == renderable ) break;
+   if ( tnewqa[regminfi].rendia == registry_capacity ) break;
 }
 
-  if ( i != registry_size )
+  newreg = 1;
+}
+
+ return(ret);
+}
+
+unsigned short NEWdisposeRenderable( const unsigned short index )
 {
+ unsigned short ret = registry_capacity;
 
-   for (; i + 1 < registry_size; i++ )
+ if ( registry_size == 0 )
 {
-    registry[i] = registry[i + 1];
+  fprintf( stderr, "Disposing without registers!\n" );
+  rb_raise(rb_eRGSSError, "Disposing without registers!\n" );
+}
+ else
+{
+  ret = tnewqa[index].rendia;
+  tnewqa[index].rendia = registry_capacity;
+
+  if ( regminfi > index )
+{
+   regminfi = index;
 }
 
-   registry_size--;
+  registry_size--;
+  newreg = 1;
 }
 
-}
-
+ return(ret);
 }
 
 void disposeAll(void)
 {
  size_t i = 0;
-// TODO: dispose all Bitmaps too
+/* TODO: dispose all Bitmaps too
  for ( ; i < registry_size; ++i)
 {
   registry[i]->disposed = true;
 }
-
+*/
  registry_size = 0;
-}
-
-void initRenderQueue(struct RenderQueue *queue) {
-//  queue->capacity = 256;//100
-  queue->queue = malloc(sizeof(*queue->queue) * queue->capacity);
-}
-
-void clearRenderQueue(struct RenderQueue *queue) {
-  queue->size = 0;
-}
-
-void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewport)
-{
- size_t i = 0;
- struct RenderJob *job = 0;
-
- qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
-
- for( ; i < queue->size; i++ )
-{
-  job = &queue->queue[i];
-  job->renderable->render(job->renderable,/* job,*/ viewport);
-}
-
- queue->size = 0;
-}
-
-void deinitRenderQueue(struct RenderQueue *queue)
-{
-  if(queue->queue) free(queue->queue);
 }
 
 void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
+/*
  struct RenderQueue *queue = &main_queue;
 /*
  if(viewport != Qnil)
@@ -507,23 +513,24 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
   queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
 }
 
-  if(queue->size >= queue->capacity) {
-    queue->capacity = queue->capacity + queue->capacity / 2;
-    queue->queue = realloc( queue->queue, sizeof(*queue->queue) * queue->capacity);
-    printf( "Realloc queue: %u\n", queue->capacity );
-  }
-
-  queue->queue[queue->size++] = job;
-*/
  if ( queue->size == queue->capacity )
+*/
+ if ( mq_size == mq_capacity )
 {
-  fprintf( stderr, "Hopeless queue %u!\n", queue->capacity );
-  rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", queue->capacity );
+  fprintf( stderr, "Hopeless queue %u!\n", mq_capacity );
+  rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", mq_capacity );
 }
  else
 {
-  queue->queue[queue->size] = job;
-  queue->size++;
+  job_queuea[mq_size].z = job.z;
+  job_queuea[mq_size].y = job.y;
+  job_queuea[mq_size].t = job.t;
+  job_queuea[mq_size].aux[0] = job.aux[0];
+  job_queuea[mq_size].aux[1] = job.aux[1];
+  job_queuea[mq_size].aux[2] = job.aux[2];
+  job_queuea[mq_size].reg = job.reg;
+  job_queuea[mq_size].rindex = job.rindex;
+  mq_size++;
 }
 
 }
@@ -572,9 +579,10 @@ void load_transition_image( const char *filename, const size_t filenso, const in
 /*
 
  filens = strlen(filename);
+ printf( "Loading \"%s\".\n", filename );
+
  Windows PATH_MAX less extension.
 */
- printf( "Loading \"%s\".\n", filename );
 
  if ( filenso > 251 )
 {
@@ -600,10 +608,10 @@ void load_transition_image( const char *filename, const size_t filenso, const in
    else
 {
     transition_image = create_rgba_surface_from(img);
-    printf( "Transition... " );
+//    printf( "Transition... " );
     glBindTexture(GL_TEXTURE_2D, transition_texture2);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, transition_image->w, transition_image->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, transition_image->pixels);
-    printf( "GL!\n" );
+//    printf( "GL!\n" );
     SDL_FreeSurface(transition_image);
     transition_vagueness = vagueness;
 }

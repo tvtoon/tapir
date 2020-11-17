@@ -29,28 +29,51 @@
 #include "surface_misc.h"
 
 static VALUE rb_cBitmap;
+static unsigned int bitmapc = 0;
+unsigned int maxbitmapc = 0;
 
-static void bitmap_mark(struct Bitmap *ptr) {
-  rb_gc_mark(ptr->font);
+static void bitmap_mark(struct Bitmap *ptr)
+{
+ rb_gc_mark(ptr->font);
+ rb_gc_mark(ptr->rect);
+ rb_gc_mark(ptr->pixcol);
 }
 
 static void bitmap_free(struct Bitmap *ptr) {
-  if(ptr->surface) SDL_FreeSurface(ptr->surface);
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-  }
-  xfree(ptr);
+  if(ptr->surface)
+{
+  bitmapc--;
+SDL_FreeSurface(ptr->surface);
 }
 
-static VALUE bitmap_alloc(VALUE klass) {
-  struct Bitmap *ptr = ALLOC(struct Bitmap);
-  ptr->surface = NULL;
+ if (ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
   ptr->texture_id = 0;
   ptr->texture_invalidated = true;
-  ptr->font = Qnil;
-  VALUE ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
-  ptr->font = rb_font_new();
-  return ret;
+}
+
+ xfree(ptr);
+}
+
+static VALUE bitmap_alloc(VALUE klass)
+{
+ struct Bitmap *ptr = ALLOC(struct Bitmap);
+ VALUE ret = Qnil;
+
+ ptr->surface = NULL;
+ ptr->texture_id = 0;
+ ptr->texture_invalidated = true;
+ ptr->font = Qnil;
+ ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
+ ptr->font = rb_font_new();
+ ptr->rect = rb_rect_new(0, 0, 0, 0);
+ ptr->pixcol = rb_color_new(0.0, 0.0, 0.0, 0.0);
+ bitmapc++;
+
+ if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
+
+ return ret;
 }
 
 static VALUE rb_bitmap_m_disposed_p(VALUE self) {
@@ -70,10 +93,12 @@ static VALUE rb_bitmap_m_height(VALUE self) {
   return INT2NUM(ptr->surface->h);
 }
 
-static VALUE rb_bitmap_m_rect(VALUE self) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+static VALUE rb_bitmap_m_rect(VALUE self)
+{
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+//  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+ return(ptr->rect);
 }
 
 /*
@@ -91,6 +116,7 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
  const char extensions[4][5] = { ".png", ".jpg", ".bmp", "\0" };
  size_t filens = 0;
  struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ struct Rect *recto = rb_rect_data_mut(ptr->rect);
 
  switch(argc)
 {
@@ -99,7 +125,7 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
 /* Windows PATH_MAX less extension. */
    if ( filens > 251 )
 {
-    rb_raise(rb_eRGSSError, "File %s size is too large.", StringValueCStr(argv[0]) );
+    rb_raise(rb_eRGSSError, "File \"%s\" name size is too large.", StringValueCStr(argv[0]) );
     break;
 }
 
@@ -143,38 +169,61 @@ static VALUE rb_bitmap_m_initialize(int argc, VALUE *argv, VALUE self)
    break;
 }
 
+ if (ptr->surface)
+{
+  recto->width = ptr->surface->w;
+  recto->height = ptr->surface->h;
+//  rect_set( struct Rect *ptr, 0, 0, int32_t newwidth, int32_t newheight);
+}
+
  return Qnil;
 }
 
-static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  const struct Bitmap *orig_ptr = rb_bitmap_data(orig);
-  if(orig_ptr->surface) {
-    ptr->surface = create_rgba_surface(
-        orig_ptr->surface->w, orig_ptr->surface->h);
-    SDL_BlitSurface(orig_ptr->surface, NULL, ptr->surface, NULL);
-  } else {
-    ptr->surface = NULL;
-  }
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-    ptr->texture_id = 0;
-    ptr->texture_invalidated = true;
-  }
-  rb_font_set(ptr->font, orig_ptr->font);
-  return Qnil;
+static VALUE rb_bitmap_m_initialize_copy(VALUE self, VALUE orig)
+{
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ const struct Bitmap *orig_ptr = rb_bitmap_data(orig);
+
+ if(orig_ptr->surface)
+{
+  ptr->surface = create_rgba_surface( orig_ptr->surface->w, orig_ptr->surface->h);
+  SDL_BlitSurface(orig_ptr->surface, NULL, ptr->surface, NULL);
+}
+ else
+{
+  ptr->surface = NULL;
 }
 
-static VALUE rb_bitmap_m_dispose(VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(ptr->texture_id) {
-    glDeleteTextures(1, &ptr->texture_id);
-    ptr->texture_id = 0;
-    ptr->texture_invalidated = true;
-  }
+ if(ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+}
+
+ rb_font_set(ptr->font, orig_ptr->font);
+ return Qnil;
+}
+
+static VALUE rb_bitmap_m_dispose(VALUE self)
+{
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+
+ if (ptr->texture_id)
+{
+  glDeleteTextures(1, &ptr->texture_id);
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+}
+
+ if ( ptr->surface )
+{
   SDL_FreeSurface(ptr->surface);
   ptr->surface = NULL;
-  return Qnil;
+  bitmapc--;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_clear(VALUE self) {
@@ -435,19 +484,42 @@ static VALUE rb_bitmap_m_clear_rect(int argc, VALUE *argv, VALUE self) {
 }
 #endif
 
-static VALUE rb_bitmap_m_get_pixel(VALUE self, VALUE x, VALUE y) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  int xi = NUM2INT(x);
-  int yi = NUM2INT(y);
-  if(!(0 <= xi && xi < ptr->surface->w && 0 <= yi && yi < ptr->surface->h)) {
-    return rb_color_new2();
-  }
-  Uint8 *pixel =
-    (Uint8*)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
-  VALUE color = rb_color_new(
-    pixel[0], pixel[1], pixel[2], pixel[3]);
-  return color;
+static VALUE rb_bitmap_m_get_pixel(VALUE self, VALUE x, VALUE y)
+{
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ struct Color *cola = rb_color_data_mut(ptr->pixcol);
+ int xi = NUM2INT(x);
+ int yi = NUM2INT(y);
+ unsigned char *pixel = 0;
+
+ if(!ptr->surface)
+{
+  rb_raise(rb_eRGSSError, "disposed bitmap");
+}
+ else
+{
+
+  if( ! ( ( 0 <= xi ) && ( xi < ptr->surface->w ) && ( 0 <= yi ) && ( yi < ptr->surface->h ) ) )
+{
+//   return rb_color_new2();
+   cola->red = 0.0;
+   cola->green = 0.0;
+   cola->blue = 0.0;
+   cola->alpha = 0.0;
+}
+  else
+{
+   pixel = (Uint8*)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
+/*
+   VALUE color = rb_color_new( pixel[0], pixel[1], pixel[2], pixel[3]);
+ Clamping inside...
+*/
+   color_set( cola,  pixel[0], pixel[1], pixel[2], pixel[3] );
+}
+// return color;
+}
+
+ return(ptr->pixcol);
 }
 
 static VALUE rb_bitmap_m_set_pixel(VALUE self, VALUE x, VALUE y, VALUE color) {
@@ -859,10 +931,12 @@ static VALUE rb_bitmap_m_set_font(VALUE self, VALUE newval) {
 
 /* static END */
 
-VALUE rb_bitmap_rect(VALUE self) {
-  const struct Bitmap *ptr = rb_bitmap_data(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+VALUE rb_bitmap_rect(VALUE self)
+{
+ const struct Bitmap *ptr = rb_bitmap_data(self);
+ if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+//  return rb_rect_new(0, 0, ptr->surface->w, ptr->surface->h);
+ return(ptr->rect);
 }
 
 VALUE rb_bitmap_new(int width, int height) {
