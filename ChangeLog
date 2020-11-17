@@ -1,5 +1,8 @@
 # en.UTF-8
 
+0.2.2
+^This is now main again, with the job fixed. Now on to figure why the pixel color blows...
+
 0.2.1
 ^Dirty cleanup for debugging something else...
 ^The Bitmap type now has their proper Rect, it was allocating like mad without reason. The font one will come later.

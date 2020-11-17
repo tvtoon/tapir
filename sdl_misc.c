@@ -68,7 +68,7 @@ typedef struct
 
 static newqueue tnewqa[1024];
 
-static void ( *preparefuna[5])( const unsigned short index ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
+static void ( *preparefuna[5])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
 static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
 
 static int initTransition(void) {
@@ -320,35 +320,42 @@ void event_loop()
 
 static void renderScreen()
 {
- unsigned short reg = 0;
+ unsigned short reg = 0, regc = 0;
  const struct RenderViewport viewport = { window_width, window_height, 0, 0 };
 
  if ( newreg == 1 )
 {
-//  clearRenderQueue(&main_queue);
   mq_size = 0;
 
-  for (; reg < registry_size; reg++ )
+  for (; ( regc < registry_size ) || ( reg < registry_capacity ); reg++ )
 {
 
    if ( tnewqa[reg].rendia != registry_capacity )
 {
-    preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia );
-    reg++;
+    preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia, reg );
+    regc++;
 }
 
 }
 
-  qsort( job_queuea, mq_size, sizeof(*job_queuea), compare_jobs);
+  if ( regc != registry_size )
+{
+   fprintf( stderr, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
+   rb_raise(rb_eRGSSError, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
+   mq_size = 0;
+}
+  else
+{
+   qsort( job_queuea, mq_size, sizeof( struct RenderJob ), compare_jobs);
+}
+
   newreg = 0;
 }
-/*
- renderQueue(&main_queue, &viewport);
- qsort(queue->queue, queue->size, sizeof(*queue->queue), compare_jobs);
-*/
+
  for ( reg = 0; reg < mq_size; reg++ )
 {
-  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].t, &viewport );
+//  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].t, &viewport );
+  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].rindex, &viewport );
 }
 
 }
@@ -522,6 +529,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
   job_queuea[mq_size].aux[1] = job.aux[1];
   job_queuea[mq_size].aux[2] = job.aux[2];
   job_queuea[mq_size].reg = job.reg;
+  job_queuea[mq_size].rindex = job.rindex;
   mq_size++;
 }
 

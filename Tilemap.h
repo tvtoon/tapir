@@ -36,7 +36,7 @@ void Init_Tilemap(void);
 void deinitTilemapSDL(void);
 void renderTilemaps(int z_min, int z_max);
 
-void prepareRenderTilemap( const unsigned short index );
+void prepareRenderTilemap( const unsigned short index, const unsigned short rindex );
 void renderTilemap( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxtmapc;

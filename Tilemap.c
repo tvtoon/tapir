@@ -122,7 +122,7 @@ static struct Tilemap *rb_tilemap_data_mut(VALUE obj)
   return (struct Tilemap *)rb_tilemap_data(obj);
 }
 
-void prepareRenderTilemap( const unsigned short index )
+void prepareRenderTilemap( const unsigned short index, const unsigned short rindex )
 {
  struct Tilemap *ptr = tmapspa[index];
  struct RenderJob job;
@@ -138,24 +138,20 @@ void prepareRenderTilemap( const unsigned short index )
 
  if(!ptr->visible) return;
 
-ptr->jobz = 0;
+ ptr->jobz = 0;
 
-job.reg = 2;
- job.t = index;
+ job.reg = 2;
+ job.t = rindex;
+ job.rindex = index;
 #if RGSS > 1
  job.z = 0;
  job.y = 0;
-/*
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-*/
-  queueRenderJob(ptr->viewport, job);
-  job.z = 200;
-  job.aux[0] = 1;
-  queueRenderJob(ptr->viewport, job);
+ queueRenderJob(ptr->viewport, job);
+ job.z = 200;
+ job.aux[0] = 1;
+ queueRenderJob(ptr->viewport, job);
 #else
-  if(ptr->map_data == Qnil) return;
+ if(ptr->map_data == Qnil) return;
 
   const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
 

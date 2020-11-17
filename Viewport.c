@@ -40,7 +40,7 @@ static struct Viewport *rb_viewport_data_mut(VALUE obj)
  return (struct Viewport *)rb_viewport_data(obj);
 }
 
-void prepareRenderViewport( const unsigned short index )
+void prepareRenderViewport( const unsigned short index, const unsigned short rindex )
 {
  struct Viewport *ptr = vportspa[index];
  struct RenderJob job;
@@ -59,8 +59,9 @@ void prepareRenderViewport( const unsigned short index )
 // clearRenderQueue(&ptr->viewport_queue);
  job.z = ptr->z;
  job.y = 0;
- job.t = index;
-job.reg = 3;
+ job.t = rindex;
+ job.reg = 3;
+ job.rindex = index;
  queueRenderJob(Qnil, job);
 }
 

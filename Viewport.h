@@ -22,7 +22,7 @@ struct Viewport *rb_viewport_data_mut(VALUE obj);
 const struct Viewport *rb_viewport_data(VALUE obj);
 void Init_Viewport(void);
 
-void prepareRenderViewport( const unsigned short index );
+void prepareRenderViewport( const unsigned short index, const unsigned short rindex );
 void renderViewport( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxvportqc;

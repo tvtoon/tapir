@@ -32,7 +32,7 @@ int initSpriteSDL(void);
 void Init_Sprite(void);
 void deinitSpriteSDL(void);
 
-void prepareRenderSprite( const unsigned short index );
+void prepareRenderSprite( const unsigned short index, const unsigned short rindex );
 void renderSprite( const unsigned short index, const struct RenderViewport *viewport );
 
 unsigned short maxspritec;

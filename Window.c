@@ -95,7 +95,7 @@ static struct Window *rb_window_data_mut(VALUE obj)
 }
 
 
-void prepareRenderWindow( const unsigned short index )
+void prepareRenderWindow( const unsigned short index, const unsigned short rindex )
 {
  struct Window *ptr = windowspa[index];
  struct RenderJob job;
@@ -113,12 +113,10 @@ void prepareRenderWindow( const unsigned short index )
 
  job.z = ptr->z;
  job.y = 0;
- job.t = index;
-job.reg = 4;
+ job.t = rindex;
+ job.reg = 4;
+ job.rindex = index;
 /*
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-
  Only for RGSS1...
 */
  job.aux[0] = 0;

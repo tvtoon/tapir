@@ -106,7 +106,7 @@ static struct Sprite *rb_sprite_data_mut(VALUE obj) {
   return (struct Sprite *)rb_sprite_data(obj);
 }
 
-void prepareRenderSprite( const unsigned short index )
+void prepareRenderSprite( const unsigned short index, const unsigned short rindex )
 {
  struct Sprite *ptr = spritespa[index];
  struct RenderJob job;
@@ -122,16 +122,11 @@ void prepareRenderSprite( const unsigned short index )
 
  if(!ptr->visible) return;
 
-/*
- job.renderable = renderable;
- job.aux[0] = 0;
- job.aux[1] = 0;
- job.aux[2] = 0;
-*/
  job.z = ptr->z;
  job.y = ptr->y;
- job.t = index;
-job.reg = 1;
+ job.t = rindex;
+ job.reg = 1;
+ job.rindex = index;
  queueRenderJob(ptr->viewport, job);
 }
 

@@ -72,9 +72,8 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
   return (struct Plane *)rb_plane_data(obj);
 }
 
-void prepareRenderPlane( const unsigned short index )
+void prepareRenderPlane( const unsigned short index, const unsigned short rindex )
 {
-//  struct Plane *ptr = (struct Plane *)renderable;
  struct Plane *ptr = planspa[index];
  struct RenderJob job;
 
@@ -88,18 +87,14 @@ void prepareRenderPlane( const unsigned short index )
 }
 
  if ( !ptr->visible ) return;
-/*
-  job.renderable = renderable;
-  job.aux[0] = 0;
-  job.aux[1] = 0;
-  job.aux[2] = 0;
-*/
-  job.z = ptr->z;
-  job.y = 0;
-  job.t = index;
-job.reg = 0;
 
-  queueRenderJob(ptr->viewport, job);
+ job.z = ptr->z;
+ job.y = 0;
+ job.t = rindex;
+ job.reg = 0;
+ job.rindex = index;
+
+ queueRenderJob(ptr->viewport, job);
 }
 
 void renderPlane( const unsigned short index, const struct RenderViewport *viewport)

@@ -15,15 +15,8 @@ struct RenderViewport {
 struct RenderJob {
  int z, y, t, aux[3];
  unsigned short reg;
+ unsigned short rindex;
 };
-
-/*
-struct RenderQueue
-{
- unsigned short size, capacity;
- struct RenderJob *queue;
-};
-*/
 
 extern int window_width;
 extern int window_height;
@@ -41,14 +34,6 @@ void ini_transition( void );
 void load_transition_image( const char *filename, const size_t filenso, const int vagueness );
 void queueRenderJob(VALUE viewport, struct RenderJob job);
 void renderSDL(void);
-/*
-void initRenderQueue(struct RenderQueue *queue);
-void clearRenderQueue(struct RenderQueue *queue);
-void deinitRenderQueue(struct RenderQueue *queue);
-void renderQueue(struct RenderQueue *queue, const struct RenderViewport *viewport);
-void registerRenderable(struct Renderable *renderable);
-void disposeRenderable(struct Renderable *renderable);
 void disposeAll(void);
-*/
 unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type );
 unsigned short NEWdisposeRenderable( const unsigned short index );
