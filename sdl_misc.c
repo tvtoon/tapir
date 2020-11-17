@@ -493,8 +493,9 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 
 void disposeAll(void)
 {
+/*
  size_t i = 0;
-/* TODO: dispose all Bitmaps too
+ TODO: dispose all Bitmaps too
  for ( ; i < registry_size; ++i)
 {
   registry[i]->disposed = true;
@@ -507,7 +508,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
 {
 /*
  struct RenderQueue *queue = &main_queue;
-/*
+
  if(viewport != Qnil)
 {
   queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
