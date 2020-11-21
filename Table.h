@@ -21,3 +21,5 @@ bool rb_table_data_p(VALUE obj);
 const struct Table *rb_table_data(VALUE obj);
 struct Table *rb_table_data_mut(VALUE obj);
 void Init_Table(void);
+
+unsigned int maxtabc;

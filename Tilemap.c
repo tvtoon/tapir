@@ -150,51 +150,64 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
  job.z = 200;
  job.aux[0] = 1;
  queueRenderJob(ptr->viewport, job);
+
+const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_ptr->ysize, map_data_ptr->zsize, map_data_ptr->size, map_data_ptr->dim );
+
 #else
  if(ptr->map_data == Qnil) return;
 
-  const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+ const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
 
-  int xsize = map_data_ptr->xsize;
-  int ysize = map_data_ptr->ysize;
-  int zsize = map_data_ptr->zsize;
+ int xsize = map_data_ptr->xsize;
+ int ysize = map_data_ptr->ysize;
+ int zsize = map_data_ptr->zsize;
 
-  const struct Table *priorities_ptr = NULL;
-  if(ptr->priorities != Qnil) rb_table_data(ptr->priorities);
+ const struct Table *priorities_ptr = NULL;
 
-  // TODO respect Viewport width
-  int x_start = ptr->ox >> 5;
-  int x_end = (ptr->ox + window_width + 31) >> 5;
-  int y_start = ptr->oy >> 5;
-  int y_end = (ptr->oy + window_height + 31) >> 5;
+ if(ptr->priorities != Qnil) rb_table_data(ptr->priorities);
+// TODO respect Viewport width
+ int x_start = ptr->ox >> 5;
+ int x_end = (ptr->ox + window_width + 31) >> 5;
+ int y_start = ptr->oy >> 5;
+ int y_end = (ptr->oy + window_height + 31) >> 5;
 
-  for(int zi = 0; zi < zsize; ++zi) {
-    for(int yi = y_start; yi <= y_end; ++yi) {
-      for(int xi = x_start; xi <= x_end; ++xi) {
-        if(zi > 3) continue;
+ for ( int zi = 0; zi < zsize; ++zi )
+{
 
-        int xii = (xi % xsize + xsize) % xsize;
-        int yii = (yi % ysize + ysize) % ysize;
-        int tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
+  for ( int yi = y_start; yi <= y_end; ++yi )
+{
 
-        int priority = 0, z = 0;
-        if(priorities_ptr && 0 <= tile_id && tile_id < priorities_ptr->size) {
-          priority = priorities_ptr->data[tile_id];
-        }
-        if(priority > 0) {
-          z = (1 + priority + yi) * 32 - ptr->oy;
-        }
+   for ( int xi = x_start; xi <= x_end; ++xi )
+{
+    if ( zi > 3 ) continue;
 
+    int xii = (xi % xsize + xsize) % xsize;
+    int yii = (yi % ysize + ysize) % ysize;
+    int tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
+    int priority = 0, z = 0;
 
-        job.z = z;
-        job.y = 0;
-        job.aux[0] = xii;
-        job.aux[1] = yii;
-        job.aux[2] = zi;
-        queueRenderJob(ptr->viewport, job);
-      }
-    }
-  }
+    if ( priorities_ptr && 0 <= tile_id && tile_id < priorities_ptr->size )
+{
+     priority = priorities_ptr->data[tile_id];
+}
+
+    if ( priority > 0 )
+{
+     z = (1 + priority + yi) * 32 - ptr->oy;
+}
+
+    job.z = z;
+    job.y = 0;
+    job.aux[0] = xii;
+    job.aux[1] = yii;
+    job.aux[2] = zi;
+    queueRenderJob(ptr->viewport, job);
+}
+
+}
+
+}
 #endif
 }
 
@@ -369,61 +382,60 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
 void renderTilemap( const unsigned short index, const struct RenderViewport *viewport )
 {
  struct Tilemap *ptr = tmapspa[index];
+ const struct Table *flags_ptr = NULL;
+ const struct Table *map_data_ptr = 0;
+ const int x_end = (viewport->ox + ptr->ox + viewport->width + 31) >> 5, x_start = (viewport->ox + ptr->ox) >> 5, y_end = (viewport->oy + ptr->oy + viewport->height + 31) >> 5, y_start = (viewport->oy + ptr->oy) >> 5;
+ int tile_id = 0, xi = 0, xii = 0, xsize = 0, yi = 0, yii = 0, ysize = 0, z = 0, zi = 0, zsize = 0;
 
-#if RGSS > 1
  if(ptr->map_data == Qnil) return;
 
- const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
-  int xsize = map_data_ptr->xsize;
-  int ysize = map_data_ptr->ysize;
-  int zsize = map_data_ptr->zsize;
+ map_data_ptr = rb_table_data(ptr->map_data);
+ xsize = map_data_ptr->xsize;
+ ysize = map_data_ptr->ysize;
+#if RGSS > 1
+ zsize = map_data_ptr->zsize;
 
- const struct Table *flags_ptr = NULL;
+ if (ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
 
- if(ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
+ for ( ; zi < zsize; ++zi )
+{
 
-  int x_start = (viewport->ox + ptr->ox) >> 5;
-  int x_end = (viewport->ox + ptr->ox + viewport->width + 31) >> 5;
-  int y_start = (viewport->oy + ptr->oy) >> 5;
-  int y_end = (viewport->oy + ptr->oy + viewport->height + 31) >> 5;
+  for ( yi = y_start; yi <= y_end; ++yi )
+{
 
-  for(int zi = 0; zi < zsize; ++zi) {
-    for(int yi = y_start; yi <= y_end; ++yi) {
-      for(int xi = x_start; xi <= x_end; ++xi) {
-        // TODO: shadow
-        if(zi == 3) continue;
+   for ( xi = x_start; xi <= x_end; ++xi )
+{
+// TODO: shadow
+    if ( zi == 3 ) continue;
 
-        int xii = (xi % xsize + xsize) % xsize;
-        int yii = (yi % ysize + ysize) % ysize;
-        int tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
-        int z = 0;
+    xii = (xi % xsize + xsize) % xsize;
+    yii = (yi % ysize + ysize) % ysize;
+    tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
 
-        if(zi == 2 && flags_ptr && 0 <= tile_id && tile_id < flags_ptr->size) {
-          z = (flags_ptr->data[tile_id] & 0x10) ? 200 : 0;
-        }
+    if ( zi == 2 && flags_ptr && 0 <= tile_id && tile_id < flags_ptr->size )
+{
+     z = (flags_ptr->data[tile_id] & 0x10) ? 200 : 0;
+}
 
-        if(z != ptr->jobz ) continue;
+    if ( z != ptr->jobz ) continue;
 
-        renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy,
-            viewport);
-      }
-    }
-  }
+    renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, viewport);
+}
 
-ptr->jobz ^= 200;
+}
+
+}
+
+ ptr->jobz ^= 200;
 #else
-  if(ptr->map_data == Qnil) return;
-  const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
-  int xsize = map_data_ptr->xsize;
-  int ysize = map_data_ptr->ysize;
+ xi = job->aux[0];
+ yi = job->aux[1];
+ zi = job->aux[2];
+ xii = (xi % xsize + xsize) % xsize;
+ yii = (yi % ysize + ysize) % ysize;
+ tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
 
-  int xi = job->aux[0];
-  int yi = job->aux[1];
-  int zi = job->aux[2];
-  int xii = (xi % xsize + xsize) % xsize;
-  int yii = (yi % ysize + ysize) % ysize;
-  int tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
-  renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, viewport);
+ renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, viewport);
 #endif
 }
 
@@ -593,10 +605,17 @@ static VALUE rb_tilemap_m_map_data(VALUE self) {
 }
 
 static VALUE rb_tilemap_m_set_map_data(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_table_data(newval);
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+ const struct Table *ptrt = NULL;
+
+ if ( ( newval != ptr->map_data ) && ( newval != Qnil ) )
+{
+  ptrt = rb_table_data(newval);
   ptr->map_data = newval;
-  return newval;
+  printf( "Tilemap map data %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
+}
+
+ return newval;
 }
 
 static VALUE rb_tilemap_m_flash_data(VALUE self) {
@@ -605,9 +624,16 @@ static VALUE rb_tilemap_m_flash_data(VALUE self) {
 }
 
 static VALUE rb_tilemap_m_set_flash_data(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_table_data(newval);
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+ const struct Table *ptrt = NULL;
+
+ if ( ( newval != ptr->flash_data ) && ( newval != Qnil ) )
+{
+  ptrt = rb_table_data(newval);
   ptr->flash_data = newval;
+  printf( "Tilemap flash data %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
+}
+
   return newval;
 }
 
@@ -660,10 +686,18 @@ static VALUE rb_tilemap_m_flags(VALUE self) {
   return ptr->flags;
 }
 
-static VALUE rb_tilemap_m_set_flags(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_table_data(newval);
+static VALUE rb_tilemap_m_set_flags(VALUE self, VALUE newval)
+{
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+ const struct Table *ptrt = NULL;
+
+ if ( ( newval != ptr->flags ) && ( newval != Qnil ) )
+{
+  ptrt = rb_table_data(newval);
   ptr->flags = newval;
+  printf( "Tilemap flags %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
+}
+
   return newval;
 }
 
@@ -697,9 +731,16 @@ static VALUE rb_tilemap_m_priorities(VALUE self) {
 }
 
 static VALUE rb_tilemap_m_set_priorities(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_table_data(newval);
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+ const struct Table *ptrt = NULL;
+
+ if ( ( newval != ptr->priorities ) && ( newval != Qnil ) )
+{
+  ptrt = rb_table_data(newval);
   ptr->priorities = newval;
+  printf( "Tilemap priorities %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
+}
+
   return newval;
 }
 #endif

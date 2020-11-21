@@ -17,6 +17,8 @@
 #define SQRT_UINT32_MAX ((uint32_t)1<<16)
 
 static VALUE rb_cTable;
+static unsigned int tabc = 0;
+unsigned int maxtabc = 0;
 
 static int32_t multiply_size(
     uint32_t xsize, uint32_t ysize, uint32_t zsize) {
@@ -86,20 +88,31 @@ static void table_mark(struct Table *ptr) {
 }
 
 static void table_free(struct Table *ptr) {
-  if(ptr->data) xfree(ptr->data);
+  if(ptr->data)
+{
+xfree(ptr->data);
+  tabc--;
+}
+
   xfree(ptr);
 }
 
-static VALUE table_alloc(VALUE klass) {
-  struct Table *ptr = ALLOC(struct Table);
-  ptr->dim = 0;
-  ptr->xsize = 0;
-  ptr->ysize = 0;
-  ptr->zsize = 0;
-  ptr->size = 0;
-  ptr->data = NULL;
-  VALUE ret = Data_Wrap_Struct(klass, table_mark, table_free, ptr);
-  return ret;
+static VALUE table_alloc(VALUE klass)
+{
+ struct Table *ptr = ALLOC(struct Table);
+ VALUE ret = Qnil;
+ ptr->dim = 0;
+ ptr->xsize = 0;
+ ptr->ysize = 0;
+ ptr->zsize = 0;
+ ptr->size = 0;
+ ptr->data = NULL;
+ ret = Data_Wrap_Struct(klass, table_mark, table_free, ptr);
+ tabc++;
+
+ if ( tabc > maxtabc ) maxtabc = tabc;
+
+ return ret;
 }
 
 /*
@@ -170,20 +183,42 @@ static VALUE rb_table_m_initialize_copy(VALUE self, VALUE orig) {
  *
  * It returns the table itself.
  */
-static VALUE rb_table_m_resize(int argc, VALUE *argv, VALUE self) {
-  struct Table *ptr = rb_table_data_mut(self);
+static VALUE rb_table_m_resize(int argc, VALUE *argv, VALUE self)
+{
+ struct Table *ptr = rb_table_data_mut(self);
+ int32_t new_dim = argc, new_xsize = 1, new_ysize = 1, new_zsize = 1;
 
-  if(1 <= argc && argc <= 3) {
-    table_resize(
-        ptr, argc,
-        0 < argc ? NUM2INT(argv[0]) : 1,
-        1 < argc ? NUM2INT(argv[1]) : 1,
-        2 < argc ? NUM2INT(argv[2]) : 1);
-  } else {
-    // Note: original RGSS has wrong messages.
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 1..3)", argc);
-  }
+ if ( ( argc == 0 ) || ( argc > 3 ) )
+{
+// Note: original RGSS has wrong messages.
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..3)", argc);
+}
+ else
+{
+/*
+ if ( argc > 1 )
+{
+*/
+  new_xsize = NUM2INT(argv[0]);
+
+  if ( argc > 1 )
+{
+   new_ysize = NUM2INT(argv[1]);
+
+   if ( argc > 2 )
+{
+    new_zsize = NUM2INT(argv[2]);
+}
+
+}
+
+//}
+// if(1 <= argc && argc <= 3)
+//  table_resize( ptr, argc, 0 < argc ? NUM2INT(argv[0]) : 1, 1 < argc ? NUM2INT(argv[1]) : 1, 2 < argc ? NUM2INT(argv[2]) : 1);
+  table_resize( ptr, new_dim, new_xsize, new_ysize, new_zsize );
+  printf( "Resize with %i:%i:%i:%i.\n", new_dim, new_xsize, new_ysize, new_zsize );
+}
+
   return self;
 }
 
@@ -312,6 +347,7 @@ static VALUE rb_table_s_old_load(VALUE klass, VALUE str) {
   (void) klass;
   VALUE ret = table_alloc(rb_cTable);
   struct Table *ptr = rb_table_data_mut(ret);
+
   StringValue(str);
   // Note: original RGSS doesn't check types.
   Check_Type(str, T_STRING);
@@ -345,6 +381,8 @@ static VALUE rb_table_s_old_load(VALUE klass, VALUE str) {
   for(int32_t i = 0; i < ptr->size; ++i) {
     ptr->data[i] = read_int16(s+sizeof(int32_t)*5+sizeof(int16_t)*i);
   }
+
+ printf( "%i*%i*%i=%i(%i) ", ptr->xsize, ptr->ysize, ptr->zsize, ptr->size, ptr->dim );
   return ret;
 }
 
