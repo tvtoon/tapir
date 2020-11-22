@@ -469,10 +469,9 @@ static VALUE rb_sprite_m_set_bitmap(VALUE self, VALUE newval)
 
   if (ptr->bitmap != newval)
 {
-// return newval;
    ptr->bitmap = newval;
 
-   if ( /*newval != Qnil &&*/ bitmap_ptr->surface )
+   if ( bitmap_ptr->surface )
 {
     rb_rect_set2(ptr->src_rect, rb_bitmap_rect(newval));
 }
@@ -489,10 +488,13 @@ static VALUE rb_sprite_m_src_rect(VALUE self) {
   return ptr->src_rect;
 }
 
-static VALUE rb_sprite_m_set_src_rect(VALUE self, VALUE newval) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-  rb_rect_set2(ptr->src_rect, newval);
-  return newval;
+static VALUE rb_sprite_m_set_src_rect(VALUE self, VALUE newval)
+{
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+
+ if ( ptr->src_rect != newval ) rb_rect_set2(ptr->src_rect, newval);
+
+ return newval;
 }
 
 static VALUE rb_sprite_m_viewport(VALUE self) {
@@ -610,11 +612,17 @@ static VALUE rb_sprite_m_height(VALUE self) {
   return INT2NUM(rb_rect_data(ptr->src_rect)->height);
 }
 
-static VALUE rb_sprite_m_set_viewport(VALUE self, VALUE newval) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-  if(newval != Qnil) rb_viewport_data(newval);
+static VALUE rb_sprite_m_set_viewport(VALUE self, VALUE newval)
+{
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+
+ if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
+{
+// rb_viewport_data(newval);
   ptr->viewport = newval;
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_sprite_m_wave_amp(VALUE self) {

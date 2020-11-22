@@ -701,11 +701,17 @@ static VALUE rb_tilemap_m_set_flags(VALUE self, VALUE newval)
   return newval;
 }
 
-static VALUE rb_tilemap_m_set_viewport(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_viewport_data(newval);
+static VALUE rb_tilemap_m_set_viewport(VALUE self, VALUE newval)
+{
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+
+ if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
+{
+// rb_viewport_data(newval);
   ptr->viewport = newval;
-  return newval;
+}
+
+ return newval;
 }
 #else
 static VALUE rb_tilemap_m_tileset(VALUE self) {
@@ -715,9 +721,14 @@ static VALUE rb_tilemap_m_tileset(VALUE self) {
 
 static VALUE rb_tilemap_m_set_tileset(VALUE self, VALUE newval) {
   struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  if(newval != Qnil) rb_bitmap_data(newval);
+
+ if ( ( newval != ptr->tileset ) && ( newval != Qnil ) )
+{
+//  if(newval != Qnil) rb_bitmap_data(newval);
   ptr->tileset = newval;
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_tilemap_m_autotiles(VALUE self) {

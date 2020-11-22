@@ -295,7 +295,12 @@ static VALUE rb_viewport_m_rect(VALUE self) {
 static VALUE rb_viewport_m_set_rect(VALUE self, VALUE newval)
 {
  struct Viewport *ptr = rb_viewport_data_mut(self);
- rb_rect_set2(ptr->rect, newval);
+
+ if ( newval != ptr->rect )
+{
+  rb_rect_set2(ptr->rect, newval);
+}
+
  return newval;
 }
 
@@ -348,10 +353,16 @@ static VALUE rb_viewport_m_color(VALUE self) {
   return ptr->color;
 }
 
-static VALUE rb_viewport_m_set_color(VALUE self, VALUE newval) {
-  struct Viewport *ptr = rb_viewport_data_mut(self);
+static VALUE rb_viewport_m_set_color(VALUE self, VALUE newval)
+{
+ struct Viewport *ptr = rb_viewport_data_mut(self);
+
+ if ( newval != ptr->color )
+{
   rb_color_set2(ptr->color, newval);
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_viewport_m_tone(VALUE self) {
@@ -359,10 +370,16 @@ static VALUE rb_viewport_m_tone(VALUE self) {
   return ptr->tone;
 }
 
-static VALUE rb_viewport_m_set_tone(VALUE self, VALUE newval) {
-  struct Viewport *ptr = rb_viewport_data_mut(self);
+static VALUE rb_viewport_m_set_tone(VALUE self, VALUE newval)
+{
+ struct Viewport *ptr = rb_viewport_data_mut(self);
+
+ if ( newval != ptr->tone )
+{
   rb_tone_set2(ptr->tone, newval);
-  return newval;
+}
+
+ return newval;
 }
 
 /* static END */

@@ -36,7 +36,7 @@ static void bitmap_mark(struct Bitmap *ptr)
 {
  rb_gc_mark(ptr->font);
  rb_gc_mark(ptr->rect);
- rb_gc_mark(ptr->pixcol);
+// rb_gc_mark(ptr->pixcol);
 }
 
 static void bitmap_free(struct Bitmap *ptr) {
@@ -68,7 +68,7 @@ static VALUE bitmap_alloc(VALUE klass)
  ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
  ptr->font = rb_font_new();
  ptr->rect = rb_rect_new(0, 0, 0, 0);
- ptr->pixcol = rb_color_new(0.0, 0.0, 0.0, 0.0);
+// ptr->pixcol = rb_color_new(0.0, 0.0, 0.0, 0.0);
  bitmapc++;
 
  if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
@@ -486,8 +486,9 @@ static VALUE rb_bitmap_m_clear_rect(int argc, VALUE *argv, VALUE self) {
 
 static VALUE rb_bitmap_m_get_pixel(VALUE self, VALUE x, VALUE y)
 {
+ VALUE color = Qnil;
  const struct Bitmap *ptr = rb_bitmap_data(self);
- struct Color *cola = rb_color_data_mut(ptr->pixcol);
+// struct Color *cola = rb_color_data_mut(ptr->pixcol);
  int xi = NUM2INT(x);
  int yi = NUM2INT(y);
  unsigned char *pixel = 0;
@@ -501,44 +502,58 @@ static VALUE rb_bitmap_m_get_pixel(VALUE self, VALUE x, VALUE y)
 
   if( ! ( ( 0 <= xi ) && ( xi < ptr->surface->w ) && ( 0 <= yi ) && ( yi < ptr->surface->h ) ) )
 {
-//   return rb_color_new2();
+   color = rb_color_new2();
+/*
    cola->red = 0.0;
    cola->green = 0.0;
    cola->blue = 0.0;
    cola->alpha = 0.0;
+*/
 }
   else
 {
-   pixel = (Uint8*)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
+   pixel = (unsigned char *)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
 /*
-   VALUE color = rb_color_new( pixel[0], pixel[1], pixel[2], pixel[3]);
  Clamping inside...
+    color_set( cola,  pixel[0], pixel[1], pixel[2], pixel[3] );
 */
-   color_set( cola,  pixel[0], pixel[1], pixel[2], pixel[3] );
-}
-// return color;
+   color = rb_color_new( pixel[0], pixel[1], pixel[2], pixel[3]);
 }
 
- return(ptr->pixcol);
 }
 
-static VALUE rb_bitmap_m_set_pixel(VALUE self, VALUE x, VALUE y, VALUE color) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  ptr->texture_invalidated = true;
-  int xi = NUM2INT(x);
-  int yi = NUM2INT(y);
-  const struct Color *color_ptr = rb_color_data(color);
-  if(!(0 <= xi && xi < ptr->surface->w && 0 <= yi && yi < ptr->surface->h)) {
-    return Qnil;
-  }
-  Uint8 *pixel =
-    (Uint8*)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
-  pixel[0] = color_ptr->red;
-  pixel[1] = color_ptr->green;
-  pixel[2] = color_ptr->blue;
-  pixel[3] = color_ptr->alpha;
-  return Qnil;
+// return(ptr->pixcol);
+ return color;
+}
+
+static VALUE rb_bitmap_m_set_pixel(VALUE self, VALUE x, VALUE y, VALUE color)
+{
+ const struct Color *color_ptr = rb_color_data(color);
+ int xi = NUM2INT(x);
+ int yi = NUM2INT(y);
+ struct Bitmap *ptr = rb_bitmap_data_mut(self);
+ unsigned char *pixel = 0;
+
+ if (!ptr->surface)
+{
+  rb_raise(rb_eRGSSError, "disposed bitmap");
+}
+ else
+{
+//  if(!(0 <= xi && xi < ptr->surface->w && 0 <= yi && yi < ptr->surface->h))
+  if ( ( 0 <= xi ) && ( xi < ptr->surface->w ) && ( 0 <= yi ) && ( yi < ptr->surface->h ) )
+{
+   ptr->texture_invalidated = true;
+   pixel = (unsigned char *)ptr->surface->pixels + yi * ptr->surface->pitch + xi * 4;
+   pixel[0] = color_ptr->red;
+   pixel[1] = color_ptr->green;
+   pixel[2] = color_ptr->blue;
+   pixel[3] = color_ptr->alpha;
+}
+
+}
+
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_hue_change(VALUE self, VALUE hue) {

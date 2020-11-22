@@ -583,15 +583,40 @@ static VALUE rb_window_m_initialize(int argc, VALUE *argv, VALUE self)
 {
  struct Window *ptr = rb_window_data_mut(self);
 
- if (argc > 4)
+ if ( ( argc == 0 ) || ( argc > 4 ) )
 {
   rb_raise(rb_eArgError, "wrong number of arguments (%d for 4)", argc);
 }
-
+ else
+{
+/*
+ This is done by allocation...
  ptr->x = argc > 0 ? NUM2INT(argv[0]) : 0;
  ptr->y = argc > 1 ? NUM2INT(argv[1]) : 0;
  ptr->width = argc > 2 ? NUM2INT(argv[2]) : 0;
  ptr->height = argc > 3 ? NUM2INT(argv[3]) : 0;
+*/
+  ptr->x = NUM2INT(argv[0]);
+
+  if ( argc > 1 )
+{
+   ptr->y = NUM2INT(argv[1]);
+
+   if ( argc > 2 )
+{
+    ptr->width = NUM2INT(argv[2]);
+
+    if ( argc > 3 )
+{
+     ptr->height = NUM2INT(argv[3]);
+}
+
+}
+
+}
+
+}
+
  return Qnil;
 }
 
@@ -708,11 +733,17 @@ static VALUE rb_window_m_windowskin(VALUE self) {
   return ptr->windowskin;
 }
 
-static VALUE rb_window_m_set_windowskin(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
-  if(newval != Qnil) rb_bitmap_data(newval);
+static VALUE rb_window_m_set_windowskin(VALUE self, VALUE newval)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+
+ if ( ( newval != ptr->windowskin ) && ( newval != Qnil ) )
+{
+// rb_bitmap_data(newval);
   ptr->windowskin = newval;
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_window_m_contents(VALUE self) {
@@ -722,9 +753,14 @@ static VALUE rb_window_m_contents(VALUE self) {
 
 static VALUE rb_window_m_set_contents(VALUE self, VALUE newval) {
   struct Window *ptr = rb_window_data_mut(self);
-  if(newval != Qnil) rb_bitmap_data(newval);
+
+ if ( ( newval != ptr->contents ) && ( newval != Qnil ) )
+{
+// rb_bitmap_data(newval);
   ptr->contents = newval;
-  return newval;
+}
+
+ return newval;
 }
 
 #if RGSS == 1
@@ -745,10 +781,16 @@ static VALUE rb_window_m_cursor_rect(VALUE self) {
   return ptr->cursor_rect;
 }
 
-static VALUE rb_window_m_set_cursor_rect(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
+static VALUE rb_window_m_set_cursor_rect(VALUE self, VALUE newval)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+
+ if ( newval != ptr->cursor_rect )
+{
   rb_rect_set2(ptr->cursor_rect, newval);
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_window_m_viewport(VALUE self) {
@@ -759,9 +801,14 @@ static VALUE rb_window_m_viewport(VALUE self) {
 #if RGSS > 1
 static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval) {
   struct Window *ptr = rb_window_data_mut(self);
-  if(newval != Qnil) rb_viewport_data(newval);
+
+ if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
+{
+// rb_viewport_data(newval);
   ptr->viewport = newval;
-  return newval;
+}
+
+ return newval;
 }
 #endif
 
@@ -805,11 +852,14 @@ static VALUE rb_window_m_pause(VALUE self) {
   return ptr->pause ? Qtrue : Qfalse;
 }
 
-static VALUE rb_window_m_set_pause(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
-  ptr->pause = RTEST(newval);
-  if(!ptr->pause) ptr->pause_tick = 0;
-  return newval;
+static VALUE rb_window_m_set_pause(VALUE self, VALUE newval)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+
+ ptr->pause = RTEST(newval);
+ if(!ptr->pause) ptr->pause_tick = 0;
+
+ return newval;
 }
 
 static VALUE rb_window_m_x(VALUE self) {
@@ -965,10 +1015,16 @@ static VALUE rb_window_m_tone(VALUE self) {
   return ptr->tone;
 }
 
-static VALUE rb_window_m_set_tone(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
+static VALUE rb_window_m_set_tone(VALUE self, VALUE newval)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+
+ if ( newval != ptr->tone )
+{
   rb_tone_set2(ptr->tone, newval);
-  return newval;
+}
+
+ return newval;
 }
 #endif
 

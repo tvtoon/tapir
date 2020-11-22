@@ -14,7 +14,7 @@ struct Bitmap
  bool texture_invalidated;
  VALUE font;
  VALUE rect;
- VALUE pixcol;
+// VALUE pixcol;
 };
 
 VALUE rb_bitmap_new(int width, int height);

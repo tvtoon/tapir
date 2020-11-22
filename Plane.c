@@ -321,11 +321,17 @@ static VALUE rb_plane_m_bitmap(VALUE self) {
   return ptr->bitmap;
 }
 
-static VALUE rb_plane_m_set_bitmap(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  if(newval != Qnil) rb_bitmap_data(newval);
+static VALUE rb_plane_m_set_bitmap(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( ( newval != ptr->bitmap ) && ( newval != Qnil ) )
+{
+// rb_bitmap_data(newval);
   ptr->bitmap = newval;
-  return newval;
+}
+
+ return newval;
 }
 
 static VALUE rb_plane_m_viewport(VALUE self) {
@@ -334,11 +340,17 @@ static VALUE rb_plane_m_viewport(VALUE self) {
 }
 
 #if RGSS > 1
-static VALUE rb_plane_m_set_viewport(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  if(newval != Qnil) rb_viewport_data(newval);
+static VALUE rb_plane_m_set_viewport(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
+{
+//  rb_viewport_data(newval);
   ptr->viewport = newval;
-  return newval;
+}
+
+ return newval;
 }
 #endif
 
