@@ -108,6 +108,7 @@ static struct Sprite *rb_sprite_data_mut(VALUE obj) {
 
 void prepareRenderSprite( const unsigned short index, const unsigned short rindex )
 {
+ const struct Viewport *vppw = 0;
  struct Sprite *ptr = spritespa[index];
  struct RenderJob job;
 
@@ -122,12 +123,23 @@ void prepareRenderSprite( const unsigned short index, const unsigned short rinde
 
  if(!ptr->visible) return;
 
- job.z = ptr->z;
- job.y = ptr->y;
+ if ( ptr->viewport != Qnil )
+{
+  vppw = rb_viewport_data(ptr->viewport);
+//  printf( "Sprite %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
+  job.z = vppw->z;
+  job.y = vppw->oy;
+}
+ else
+{
+  job.z = ptr->z;
+  job.y = ptr->y;
+}
+
  job.t = rindex;
- job.reg = 1;
+ job.reg = 2;
  job.rindex = index;
- queueRenderJob(ptr->viewport, job);
+ queueRenderJob(job);
 }
 
 void renderSprite( const unsigned short index, const struct RenderViewport *viewport )
@@ -323,7 +335,7 @@ static VALUE sprite_alloc(VALUE klass)
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
-  ptr->rendid = NEWregisterRenderable( cminindex, 1 );
+  ptr->rendid = NEWregisterRenderable( cminindex, 2 );
   spritespa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 512; cminindex++ )
@@ -532,6 +544,13 @@ static VALUE rb_sprite_m_y(VALUE self) {
 static VALUE rb_sprite_m_set_y(VALUE self, VALUE newval) {
   struct Sprite *ptr = rb_sprite_data_mut(self);
   ptr->y = NUM2INT(newval);
+/*
+ if ( ptr->y < 0 )
+{
+  ptr->y = -ptr->y;
+  newval = INT2NUM(ptr->y);
+}
+*/
   return newval;
 }
 

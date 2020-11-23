@@ -68,8 +68,8 @@ typedef struct
 
 static newqueue tnewqa[1024];
 
-static void ( *preparefuna[4])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, /*prepareRenderViewport,*/ prepareRenderWindow };
-static void ( *renderfuna[4])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, /*renderViewport,*/ renderWindow };
+static void ( *preparefuna[4])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderTilemap, prepareRenderSprite, /*prepareRenderViewport,*/ prepareRenderWindow };
+static void ( *renderfuna[4])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderTilemap, renderSprite, /*renderViewport,*/ renderWindow };
 
 static int initTransition(void) {
   static const char *vsh_source =
@@ -267,7 +267,10 @@ static int compare_jobs(const void *o1, const void *o2)
 {
  const struct RenderJob *j1 = (const struct RenderJob *)o1;
  const struct RenderJob *j2 = (const struct RenderJob *)o2;
-
+/*
+ if ( j1->reg < j2->reg ) return -1;
+ else if ( j1->reg > j2->reg ) return 1;
+*/
  if(j1->z < j2->z) return -1;
  else if(j1->z > j2->z) return 1;
 
@@ -347,6 +350,12 @@ static void renderScreen()
   else
 {
    qsort( job_queuea, mq_size, sizeof( struct RenderJob ), compare_jobs);
+
+   for ( reg = 0, regc = 1; reg < mq_size; reg++, regc++ )
+{
+    printf( "Arj %u: Z=%i, Y=%i, T=%i, R=%u, I=%u.\n", regc, job_queuea[reg].z, job_queuea[reg].y, job_queuea[reg].t, job_queuea[reg].reg, job_queuea[reg].rindex );
+}
+
 }
 
   newreg = 0;
@@ -504,7 +513,7 @@ void disposeAll(void)
  registry_size = 0;
 }
 
-void queueRenderJob(VALUE viewport, struct RenderJob job)
+void queueRenderJob( struct RenderJob job )
 {
 /*
  struct RenderQueue *queue = &main_queue;
@@ -532,7 +541,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
   job_queuea[mq_size].reg = job.reg;
   job_queuea[mq_size].rindex = job.rindex;
   mq_size++;
-  printf( "Job %u: Z=%u, Y=%u, T=%u, R=%u, I=%u.\n", mq_size, job.z, job.y, job.t, job.reg, job.rindex );
+  printf( "Job %u: Z=%i, Y=%i, T=%i, R=%u, I=%u.\n", mq_size, job.z, job.y, job.t, job.reg, job.rindex );
 }
 
 }

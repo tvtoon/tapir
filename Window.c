@@ -97,6 +97,7 @@ static struct Window *rb_window_data_mut(VALUE obj)
 
 void prepareRenderWindow( const unsigned short index, const unsigned short rindex )
 {
+ const struct Viewport *vppw = 0;
  struct Window *ptr = windowspa[index];
  struct RenderJob job;
 
@@ -111,8 +112,19 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
 
  if (!ptr->visible) return;
 
- job.z = ptr->z;
- job.y = 0;
+ if ( ptr->viewport != Qnil )
+{
+  vppw = rb_viewport_data(ptr->viewport);
+//  printf( "Window %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
+  job.z = vppw->z;
+  job.y = vppw->oy;
+}
+ else
+{
+  job.z = ptr->z;
+  job.y = 0;
+}
+
  job.t = rindex;
  job.reg = 3;
  job.rindex = index;
@@ -120,11 +132,11 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  Only for RGSS1...
 */
  job.aux[0] = 0;
- queueRenderJob(ptr->viewport, job);
+ queueRenderJob(job);
 #if RGSS == 1
  job.z = ptr->z + 2;
  job.aux[0] = 1;
- queueRenderJob(ptr->viewport, job);
+ queueRenderJob(job);
 #endif
 }
 

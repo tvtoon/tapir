@@ -32,7 +32,7 @@ void event_loop(void);
 void freeze_screen(void);
 void ini_transition( void );
 void load_transition_image( const char *filename, const size_t filenso, const int vagueness );
-void queueRenderJob(VALUE viewport, struct RenderJob job);
+void queueRenderJob(struct RenderJob job);
 void renderSDL(void);
 void disposeAll(void);
 unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type );

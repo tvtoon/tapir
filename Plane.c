@@ -26,9 +26,9 @@
 #include "gl_misc.h"
 #include "misc.h"
 
-struct Plane {
-//  struct Renderable renderable;
-  VALUE viewport, bitmap, color, tone;
+struct Plane
+{
+ VALUE viewport, bitmap, color, tone;
  VALUE bdispose;
  bool visible;
  int z, ox, oy, opacity, blend_type;
@@ -74,6 +74,7 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
 
 void prepareRenderPlane( const unsigned short index, const unsigned short rindex )
 {
+ const struct Viewport *vppw = 0;
  struct Plane *ptr = planspa[index];
  struct RenderJob job;
 
@@ -88,13 +89,24 @@ void prepareRenderPlane( const unsigned short index, const unsigned short rindex
 
  if ( !ptr->visible ) return;
 
- job.z = ptr->z;
- job.y = 0;
+ if ( ptr->viewport != Qnil )
+{
+  vppw = rb_viewport_data(ptr->viewport);
+//  printf( "Plane %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
+  job.z = vppw->z;
+  job.y = vppw->oy;
+}
+ else
+{
+  job.z = ptr->z;
+  job.y = 0;
+}
+
  job.t = rindex;
  job.reg = 0;
  job.rindex = index;
 
- queueRenderJob(ptr->viewport, job);
+ queueRenderJob(job);
 }
 
 void renderPlane( const unsigned short index, const struct RenderViewport *viewport)
@@ -370,10 +382,18 @@ static VALUE rb_plane_m_z(VALUE self) {
   return INT2NUM(ptr->z);
 }
 
-static VALUE rb_plane_m_set_z(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  ptr->z = NUM2INT(newval);
-  return newval;
+static VALUE rb_plane_m_set_z(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+ ptr->z = NUM2INT(newval);
+/*
+ if ( ptr->z < 0 )
+{
+  ptr->z = -ptr->z;
+  newval = INT2NUM(ptr->z);
+}
+*/
+ return newval;
 }
 
 static VALUE rb_plane_m_ox(VALUE self) {

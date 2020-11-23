@@ -124,6 +124,7 @@ static struct Tilemap *rb_tilemap_data_mut(VALUE obj)
 
 void prepareRenderTilemap( const unsigned short index, const unsigned short rindex )
 {
+ const struct Viewport *vppw = 0;
  struct Tilemap *ptr = tmapspa[index];
  struct RenderJob job;
 
@@ -138,18 +139,32 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 
  if(!ptr->visible) return;
 
- ptr->jobz = 0;
-
- job.reg = 2;
+ job.reg = 1;
  job.t = rindex;
  job.rindex = index;
 #if RGSS > 1
- job.z = 0;
- job.y = 0;
- queueRenderJob(ptr->viewport, job);
- job.z = 200;
- job.aux[0] = 1;
- queueRenderJob(ptr->viewport, job);
+ if ( ptr->viewport != Qnil )
+{
+  vppw = rb_viewport_data(ptr->viewport);
+//  printf( "Tilemap %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
+  ptr->jobz = vppw->z;
+  job.z = vppw->z;
+  job.y = vppw->oy;
+}
+ else
+{
+  ptr->jobz = 0;
+  job.z = 0;
+  job.y = 0;
+}
+
+ queueRenderJob(job);
+
+ if ( ptr->viewport == Qnil ) job.z = 200;
+{
+// job.aux[0] = 1;
+ queueRenderJob(job);
+}
 /*
 const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
 printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_ptr->ysize, map_data_ptr->zsize, map_data_ptr->size, map_data_ptr->dim );
@@ -202,7 +217,7 @@ printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_pt
     job.aux[0] = xii;
     job.aux[1] = yii;
     job.aux[2] = zi;
-    queueRenderJob(ptr->viewport, job);
+    queueRenderJob(job);
 }
 
 }
@@ -502,7 +517,7 @@ static VALUE tilemap_alloc(VALUE klass)
 #else
   ptr->autotiles = rb_bitmaparray_new();
 #endif
-  ptr->rendid = NEWregisterRenderable( cminindex, 2 );
+  ptr->rendid = NEWregisterRenderable( cminindex, 1 );
   tmapspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )
