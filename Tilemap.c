@@ -150,10 +150,10 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
  job.z = 200;
  job.aux[0] = 1;
  queueRenderJob(ptr->viewport, job);
-
+/*
 const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
 printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_ptr->ysize, map_data_ptr->zsize, map_data_ptr->size, map_data_ptr->dim );
-
+*/
 #else
  if(ptr->map_data == Qnil) return;
 
@@ -395,6 +395,8 @@ void renderTilemap( const unsigned short index, const struct RenderViewport *vie
 #if RGSS > 1
  zsize = map_data_ptr->zsize;
 
+ if ( zsize > 3 ) zsize = 3;
+
  if (ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
 
  for ( ; zi < zsize; ++zi )
@@ -405,9 +407,9 @@ void renderTilemap( const unsigned short index, const struct RenderViewport *vie
 
    for ( xi = x_start; xi <= x_end; ++xi )
 {
-// TODO: shadow
+/* TODO: shadow
     if ( zi == 3 ) continue;
-
+*/
     xii = (xi % xsize + xsize) % xsize;
     yii = (yi % ysize + ysize) % ysize;
     tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];

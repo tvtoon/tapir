@@ -1,5 +1,10 @@
 # en.UTF-8
 
+0.2.3
+^Reverted the pixel color stuff, it must be kept pumping color like crazy, another management is needed...
+^Only sets VALUEs from structures when they are different, it will avoid AT LEAST resets into tilemaps for no good reason.
+^Viewport is not a renderable anymore, as it was logical from the very beginning. They will get corrected some day.
+
 0.2.2
 ^This is now main again, with the job fixed. Now on to figure why the pixel color blows...
 

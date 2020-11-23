@@ -68,8 +68,8 @@ typedef struct
 
 static newqueue tnewqa[1024];
 
-static void ( *preparefuna[5])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, prepareRenderViewport, prepareRenderWindow };
-static void ( *renderfuna[5])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, renderViewport, renderWindow };
+static void ( *preparefuna[4])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderSprite, prepareRenderTilemap, /*prepareRenderViewport,*/ prepareRenderWindow };
+static void ( *renderfuna[4])( const unsigned short index, const struct RenderViewport *viewport ) = { renderPlane, renderSprite, renderTilemap, /*renderViewport,*/ renderWindow };
 
 static int initTransition(void) {
   static const char *vsh_source =
@@ -329,7 +329,7 @@ static void renderScreen()
 
   for (; ( regc < registry_size ) || ( reg < registry_capacity ); reg++ )
 {
-
+/* && ( tnewqa[reg].rendta != 3 ) */
    if ( tnewqa[reg].rendia != registry_capacity )
 {
     preparefuna[tnewqa[reg].rendta]( tnewqa[reg].rendia, reg );
@@ -532,6 +532,7 @@ void queueRenderJob(VALUE viewport, struct RenderJob job)
   job_queuea[mq_size].reg = job.reg;
   job_queuea[mq_size].rindex = job.rindex;
   mq_size++;
+  printf( "Job %u: Z=%u, Y=%u, T=%u, R=%u, I=%u.\n", mq_size, job.z, job.y, job.t, job.reg, job.rindex );
 }
 
 }

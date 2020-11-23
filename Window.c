@@ -114,7 +114,7 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  job.z = ptr->z;
  job.y = 0;
  job.t = rindex;
- job.reg = 4;
+ job.reg = 3;
  job.rindex = index;
 /*
  Only for RGSS1...
@@ -553,7 +553,7 @@ static VALUE window_alloc(VALUE klass)
 #if RGSS == 3
   ptr->tone = rb_tone_new2();
 #endif
-  ptr->rendid = NEWregisterRenderable( cminindex, 4 );
+  ptr->rendid = NEWregisterRenderable( cminindex, 3 );
   windowspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 256; cminindex++ )
