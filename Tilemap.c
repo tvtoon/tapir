@@ -160,11 +160,9 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 
  queueRenderJob(job);
 
- if ( ptr->viewport == Qnil ) job.z = 200;
-{
+ if ( ptr->viewport == Qnil )  job.z = 200;
 // job.aux[0] = 1;
  queueRenderJob(job);
-}
 /*
 const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
 printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_ptr->ysize, map_data_ptr->zsize, map_data_ptr->size, map_data_ptr->dim );
@@ -443,7 +441,7 @@ void renderTilemap( const unsigned short index, const struct RenderViewport *vie
 
 }
 
- ptr->jobz ^= 200;
+ if ( ( ptr->jobz == 0 ) || ( ptr->jobz == 200 ) ) ptr->jobz ^= 200;
 #else
  xi = job->aux[0];
  yi = job->aux[1];

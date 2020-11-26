@@ -111,72 +111,70 @@ void prepareRenderPlane( const unsigned short index, const unsigned short rindex
 
 void renderPlane( const unsigned short index, const struct RenderViewport *viewport)
 {
-//  (void) job;
-//  struct Plane *ptr = (struct Plane *)renderable;
+ SDL_Surface *surface = 0;
+ const struct Bitmap *bitmap_ptr = 0;
+ const struct Color *color = 0;
+ const struct Tone *tone = 0;
  struct Plane *ptr = planspa[index];
-  {
-    const struct Color *color = rb_color_data(ptr->color);
-    if(color->red || color->green || color->blue || color->alpha) {
-      WARN_UNIMPLEMENTED("Plane#color");
-    }
-  }
-  {
-    const struct Tone *tone = rb_tone_data(ptr->tone);
-    if(tone->red || tone->green || tone->blue || tone->gray) {
-      WARN_UNIMPLEMENTED("Plane#tone");
-    }
-  }
-  if(ptr->opacity == 0) return;
-  if(ptr->bitmap == Qnil) return;
-  const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
-  SDL_Surface *surface = bitmap_ptr->surface;
-  if(!surface) return;
 
-  glEnable(GL_BLEND);
-  if(ptr->blend_type == 1) {
-    glBlendFuncSeparate(
-        GL_ONE, GL_ONE,
-        GL_ZERO, GL_ONE);
+ if ( ( ptr->opacity != 0 ) && ( ptr->bitmap != Qnil ) )
+{
+  bitmap_ptr = rb_bitmap_data(ptr->bitmap);
+  surface = bitmap_ptr->surface;
+
+  if ( surface != 0 )
+{
+   color = rb_color_data(ptr->color);
+
+   if(color->red || color->green || color->blue || color->alpha)
+{
+    WARN_UNIMPLEMENTED("Plane#color");
+}
+
+   tone = rb_tone_data(ptr->tone);
+
+   if(tone->red || tone->green || tone->blue || tone->gray)
+{
+    WARN_UNIMPLEMENTED("Plane#tone");
+}
+
+   glEnable(GL_BLEND);
+
+   if ( ptr->blend_type == 1 )
+{
+    glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ZERO, GL_ONE );
     glBlendEquation(GL_FUNC_ADD);
-  } else if(ptr->blend_type == 2) {
-    glBlendFuncSeparate(
-        GL_ONE, GL_ONE,
-        GL_ZERO, GL_ONE);
+}
+   else if ( ptr->blend_type == 2 )
+{
+    glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
     glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_ADD);
-  } else {
+}
+   else
+{
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
-  }
+}
 
-  glUseProgram(shader);
-  glUniform1i(glGetUniformLocation(shader, "tex"), 0);
-  glUniform2f(glGetUniformLocation(shader, "resolution"),
-      viewport->width, viewport->height);
-  glUniform2f(glGetUniformLocation(shader, "src_size"),
-      surface->w, surface->h);
-  glUniform2f(glGetUniformLocation(shader, "src_translate"),
-      ptr->ox, ptr->oy);
-  glUniform2f(glGetUniformLocation(shader, "zoom"),
-      ptr->zoom_x, ptr->zoom_y);
-  glUniform1f(glGetUniformLocation(shader, "opacity"),
-      ptr->opacity / 255.0);
+   glUseProgram(shader);
+   glUniform1i(glGetUniformLocation(shader, "tex"), 0);
+   glUniform2f(glGetUniformLocation(shader, "resolution"), viewport->width, viewport->height);
+   glUniform2f(glGetUniformLocation(shader, "src_size"), surface->w, surface->h);
+   glUniform2f(glGetUniformLocation(shader, "src_translate"), ptr->ox, ptr->oy);
+   glUniform2f(glGetUniformLocation(shader, "zoom"), ptr->zoom_x, ptr->zoom_y);
+   glUniform1f(glGetUniformLocation(shader, "opacity"), ptr->opacity / 255.0);
+   glActiveTexture(GL_TEXTURE0);
+   bitmapBindTexture((struct Bitmap *)bitmap_ptr);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   gl_draw_rect( 0.0, 0.0, viewport->width, viewport->height, viewport->ox, viewport->oy, viewport->ox + viewport->width, viewport->oy + viewport->height );
+   glUseProgram(0);
+}
 
-  glActiveTexture(GL_TEXTURE0);
-  bitmapBindTexture((struct Bitmap *)bitmap_ptr);
+}
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-  gl_draw_rect(
-      0.0, 0.0, viewport->width, viewport->height,
-      viewport->ox,
-      viewport->oy,
-      viewport->ox + viewport->width,
-      viewport->oy + viewport->height);
-
-  glUseProgram(0);
 }
 
 static void plane_free(struct Plane *ptr)
@@ -371,10 +369,16 @@ static VALUE rb_plane_m_visible(VALUE self) {
   return ptr->visible ? Qtrue : Qfalse;
 }
 
-static VALUE rb_plane_m_set_visible(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+static VALUE rb_plane_m_set_visible(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+/*
+ if ( newval != ptr-> )
+{
+*/
   ptr->visible = RTEST(newval);
-  return newval;
+
+ return newval;
 }
 
 static VALUE rb_plane_m_z(VALUE self) {
@@ -385,7 +389,12 @@ static VALUE rb_plane_m_z(VALUE self) {
 static VALUE rb_plane_m_set_z(VALUE self, VALUE newval)
 {
  struct Plane *ptr = rb_plane_data_mut(self);
- ptr->z = NUM2INT(newval);
+/*
+ if ( newval != ptr-> )
+{
+*/
+  ptr->z = NUM2INT(newval);
+
 /*
  if ( ptr->z < 0 )
 {
@@ -402,9 +411,14 @@ static VALUE rb_plane_m_ox(VALUE self) {
 }
 
 static VALUE rb_plane_m_set_ox(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+ struct Plane *ptr = rb_plane_data_mut(self);
+/*
+ if ( newval != ptr-> )
+{
+*/
   ptr->ox = NUM2INT(newval);
-  return newval;
+
+ return newval;
 }
 
 static VALUE rb_plane_m_oy(VALUE self) {
@@ -414,7 +428,12 @@ static VALUE rb_plane_m_oy(VALUE self) {
 
 static VALUE rb_plane_m_set_oy(VALUE self, VALUE newval) {
   struct Plane *ptr = rb_plane_data_mut(self);
+/*
+ if ( newval != ptr-> )
+{
+*/
   ptr->oy = NUM2INT(newval);
+
   return newval;
 }
 
@@ -425,8 +444,13 @@ static VALUE rb_plane_m_zoom_x(VALUE self) {
 
 static VALUE rb_plane_m_set_zoom_x(VALUE self, VALUE newval) {
   struct Plane *ptr = rb_plane_data_mut(self);
+/*
+ if ( newval != ptr-> )
+{
+*/
   ptr->zoom_x = NUM2DBL(newval);
-  return newval;
+
+ return newval;
 }
 
 static VALUE rb_plane_m_zoom_y(VALUE self) {
@@ -434,10 +458,17 @@ static VALUE rb_plane_m_zoom_y(VALUE self) {
   return DBL2NUM(ptr->zoom_y);
 }
 
-static VALUE rb_plane_m_set_zoom_y(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+static VALUE rb_plane_m_set_zoom_y(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+/*
+ if ( newval != ptr-> )
+{
+*/
   ptr->zoom_y = NUM2DBL(newval);
-  return newval;
+
+
+ return newval;
 }
 
 static VALUE rb_plane_m_opacity(VALUE self) {
@@ -445,9 +476,16 @@ static VALUE rb_plane_m_opacity(VALUE self) {
   return INT2NUM(ptr->opacity);
 }
 
-static VALUE rb_plane_m_set_opacity(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  ptr->opacity = clamp_int32(NUM2INT(newval), 0, 255);
+static VALUE rb_plane_m_set_opacity(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+ int newi = NUM2INT(newval);
+
+ if ( newi != ptr->opacity )
+{
+  ptr->opacity = clamp_int32( newi, 0, 255);
+}
+
   return newval;
 }
 
@@ -456,11 +494,16 @@ static VALUE rb_plane_m_blend_type(VALUE self) {
   return INT2NUM(ptr->blend_type);
 }
 
-static VALUE rb_plane_m_set_blend_type(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
-  /* TODO: check range */
+static VALUE rb_plane_m_set_blend_type(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+/* TODO: check range
+ if ( newval != ptr-> )
+{
+*/
   ptr->blend_type = NUM2INT(newval);
-  return newval;
+
+ return newval;
 }
 
 static VALUE rb_plane_m_color(VALUE self) {
@@ -468,20 +511,34 @@ static VALUE rb_plane_m_color(VALUE self) {
   return ptr->color;
 }
 
-static VALUE rb_plane_m_set_color(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+static VALUE rb_plane_m_set_color(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( newval != ptr->color )
+{
   rb_color_set2(ptr->color, newval);
-  return newval;
-}
-static VALUE rb_plane_m_tone(VALUE self) {
-  const struct Plane *ptr = rb_plane_data(self);
-  return ptr->tone;
 }
 
-static VALUE rb_plane_m_set_tone(VALUE self, VALUE newval) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+ return newval;
+}
+
+static VALUE rb_plane_m_tone(VALUE self)
+{
+ const struct Plane *ptr = rb_plane_data(self);
+ return ptr->tone;
+}
+
+static VALUE rb_plane_m_set_tone(VALUE self, VALUE newval)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
+
+ if ( newval != ptr->tone )
+{
   rb_tone_set2(ptr->tone, newval);
-  return newval;
+}
+
+ return newval;
 }
 
 /* static END */
