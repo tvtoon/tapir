@@ -11,14 +11,16 @@ struct Font
 {
   VALUE name, size;
   VALUE color;
+/*
 #if RGSS == 3
+*/
   VALUE out_color;
   bool outline;
-#endif
+/*#endif RGSS == 3 */
   bool bold, italic;
-#if RGSS > 1
+/*#if RGSS > 1*/
   bool shadow;
-#endif
+/*#endif */
   TTF_Font *cache;
 };
 

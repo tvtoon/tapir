@@ -65,20 +65,32 @@ static VALUE rb_input_s_update(VALUE klass) {
   return Qnil;
 }
 
-static int convertRubyKey(VALUE key) {
-#if RGSS == 3
-  for(int i = 0; i < RGSS_KEY_MAX; ++i) {
-    if(!keynames[i]) continue;
-    if(key == INT2NUM(i)) return i;
-    if(key == ID2SYM(keyname_ids[i])) return i;
-  }
-#else
-  int i = NUM2INT(key);
-  if(0 <= i && i < RGSS_KEY_MAX && keynames[i]) {
-    return i;
-  }
-#endif
-  return -1;
+static int convertRubyKey(VALUE key)
+{
+ int i = 0;
+
+ if ( rgssver == 3 )
+{
+  for ( ; i < RGSS_KEY_MAX; i++ )
+{
+   if(!keynames[i]) continue;
+   if(key == INT2NUM(i)) return i;
+   if(key == ID2SYM(keyname_ids[i])) return i;
+}
+
+}
+ else
+{
+  i = NUM2INT(key);
+
+  if ( 0 <= i && i < RGSS_KEY_MAX && keynames[i] )
+{
+   return i;
+}
+
+}
+
+ return -1;
 }
 
 static VALUE rb_input_s_press_p(VALUE klass, VALUE key) {
@@ -167,28 +179,30 @@ static int convertSDLKey(SDL_Keycode key) {
 
 /* static END */
 
-void Init_Input() {
-  rb_mInput = rb_define_module("Input");
-  rb_define_singleton_method(rb_mInput, "update", rb_input_s_update, 0);
-  rb_define_singleton_method(rb_mInput, "press?", rb_input_s_press_p, 1);
-  rb_define_singleton_method(rb_mInput, "trigger?", rb_input_s_trigger_p, 1);
-  rb_define_singleton_method(rb_mInput, "repeat?", rb_input_s_repeat_p, 1);
-  rb_define_singleton_method(rb_mInput, "dir4", rb_input_s_dir4, 0);
-  rb_define_singleton_method(rb_mInput, "dir8", rb_input_s_dir8, 0);
+void Init_Input()
+{
+ int i = 0;
 
-  for(int i = 0; i < RGSS_KEY_MAX; ++i) {
-    if(!keynames[i]) continue;
-    keyname_ids[i] = rb_intern(keynames[i]);
-#if RGSS == 3
-    rb_const_set(rb_mInput, keyname_ids[i], ID2SYM(keyname_ids[i]));
-#else
-    rb_const_set(rb_mInput, keyname_ids[i], INT2NUM(i));
-#endif
-  }
+ rb_mInput = rb_define_module("Input");
+ rb_define_singleton_method(rb_mInput, "update", rb_input_s_update, 0);
+ rb_define_singleton_method(rb_mInput, "press?", rb_input_s_press_p, 1);
+ rb_define_singleton_method(rb_mInput, "trigger?", rb_input_s_trigger_p, 1);
+ rb_define_singleton_method(rb_mInput, "repeat?", rb_input_s_repeat_p, 1);
+ rb_define_singleton_method(rb_mInput, "dir4", rb_input_s_dir4, 0);
+ rb_define_singleton_method(rb_mInput, "dir8", rb_input_s_dir8, 0);
 
-  for(int i = 0; i < RGSS_KEY_MAX; ++i) {
-    keycount[i] = keycount2[i] = -1;
-  }
+ for ( ; i < RGSS_KEY_MAX; i++ )
+{
+  keycount[i] = keycount2[i] = -1;
+
+  if(!keynames[i]) continue;
+
+  keyname_ids[i] = rb_intern(keynames[i]);
+
+  if ( rgssver == 3 ) rb_const_set(rb_mInput, keyname_ids[i], ID2SYM(keyname_ids[i]));
+  else rb_const_set(rb_mInput, keyname_ids[i], INT2NUM(i));
+}
+
 }
 
 void keyPressed(SDL_Keycode key) {

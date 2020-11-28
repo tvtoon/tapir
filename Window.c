@@ -117,14 +117,17 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
   vppw = rb_viewport_data(ptr->viewport);
 //  printf( "Window %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   job.z = vppw->z;
-  job.y = vppw->oy;
+  job.ox = vppw->ox;
+  job.oy = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.y = 0;
+  job.ox = ptr->ox;
+  job.oy = ptr->oy;
 }
 
+ job.y = ptr->y;
  job.t = rindex;
  job.reg = 3;
  job.rindex = index;
@@ -140,7 +143,7 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
 #endif
 }
 
-void renderWindow( const unsigned short index, const struct RenderViewport *viewport )
+void renderWindow( const unsigned short index, const int vportox, const int vportoy )
 {
  struct Window *ptr = windowspa[index];
 #if RGSS > 1
@@ -217,7 +220,7 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       glUseProgram(shader1);
       glUniform1i(glGetUniformLocation(shader1, "windowskin"), 0);
       glUniform2f(glGetUniformLocation(shader1, "resolution"),
-          viewport->width, viewport->height);
+          window_width, window_height);
       glUniform1f(glGetUniformLocation(shader1, "opacity"),
           ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
 #if RGSS == 3
@@ -232,10 +235,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
 #endif
 
       gl_draw_rect(
-          -viewport->ox + ptr->x + 2,
-          -viewport->oy + open_y + 2,
-          -viewport->ox + ptr->x + ptr->width - 2,
-          -viewport->oy + open_y + open_height - 2,
+          -vportox + ptr->x + 2,
+          -vportoy + open_y + 2,
+          -vportox + ptr->x + ptr->width - 2,
+          -vportoy + open_y + open_height - 2,
           0.0, 0.0, 1.0, 1.0);
     }
 
@@ -243,7 +246,7 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       glUseProgram(shader2);
       glUniform1i(glGetUniformLocation(shader2, "windowskin"), 0);
       glUniform2f(glGetUniformLocation(shader2, "resolution"),
-          viewport->width, viewport->height);
+          window_width, window_height);
       glUniform1f(glGetUniformLocation(shader2, "opacity"),
           ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
 #if RGSS == 3
@@ -258,32 +261,32 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
 #endif
 
       gl_draw_rect(
-          -viewport->ox + ptr->x + 2,
-          -viewport->oy + open_y + 2,
-          -viewport->ox + ptr->x + ptr->width - 2,
-          -viewport->oy + open_y + open_height - 2,
+          -vportox + ptr->x + 2,
+          -vportoy + open_y + 2,
+          -vportox + ptr->x + ptr->width - 2,
+          -vportoy + open_y + open_height - 2,
           0.0, 0.0, (ptr->width - 4) / 64.0, (open_height - 4) / 64.0);
     }
 
     glUseProgram(shader3);
     glUniform1i(glGetUniformLocation(shader3, "windowskin"), 0);
     glUniform2f(glGetUniformLocation(shader3, "resolution"),
-        viewport->width, viewport->height);
+        window_width, window_height);
     glUniform1f(glGetUniformLocation(shader3, "opacity"),
         ptr->opacity / 255.0);
     glUniform2f(glGetUniformLocation(shader3, "bg_size"),
         ptr->width, open_height);
 
     gl_draw_rect(
-        -viewport->ox + ptr->x,
-        -viewport->oy + open_y,
-        -viewport->ox + ptr->x + ptr->width,
-        -viewport->oy + open_y + open_height,
+        -vportox + ptr->x,
+        -vportoy + open_y,
+        -vportox + ptr->x + ptr->width,
+        -vportoy + open_y + open_height,
         0.0, 0.0, ptr->width, open_height);
 
  glUseProgram(shader4);
  glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
- glUniform2f(glGetUniformLocation(shader4, "resolution"), viewport->width, viewport->height);
+ glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
  glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity / 255.0);
 
     if(openness == 255 && contents_bitmap_ptr != NULL && arrows_visible) {
@@ -300,10 +303,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
 #endif
       if(ptr->ox > 0) {
         gl_draw_rect(
-            -viewport->ox + ptr->x + 4,
-            -viewport->oy + ptr->y + ptr->height * 0.5 - 8,
-            -viewport->ox + ptr->x + 12,
-            -viewport->oy + ptr->y + ptr->height * 0.5 + 8,
+            -vportox + ptr->x + 4,
+            -vportoy + ptr->y + ptr->height * 0.5 - 8,
+            -vportox + ptr->x + 12,
+            -vportoy + ptr->y + ptr->height * 0.5 + 8,
             (src_center_x - 16) / src_width,
             (src_center_y - 8) / src_height,
             (src_center_x - 8) / src_width,
@@ -311,10 +314,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       }
       if(ptr->oy > 0) {
         gl_draw_rect(
-            -viewport->ox + ptr->x + ptr->width * 0.5 - 8,
-            -viewport->oy + ptr->y + 4,
-            -viewport->ox + ptr->x + ptr->width * 0.5 + 8,
-            -viewport->oy + ptr->y + 12,
+            -vportox + ptr->x + ptr->width * 0.5 - 8,
+            -vportoy + ptr->y + 4,
+            -vportox + ptr->x + ptr->width * 0.5 + 8,
+            -vportoy + ptr->y + 12,
             (src_center_x - 8) / src_width,
             (src_center_y - 16) / src_height,
             (src_center_x + 8) / src_width,
@@ -322,10 +325,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       }
       if(contents_surface->w - ptr->ox > ptr->width - padding * 2) {
         gl_draw_rect(
-            -viewport->ox + ptr->x + ptr->width - 12,
-            -viewport->oy + ptr->y + ptr->height * 0.5 - 8,
-            -viewport->ox + ptr->x + ptr->width - 4,
-            -viewport->oy + ptr->y + ptr->height * 0.5 + 8,
+            -vportox + ptr->x + ptr->width - 12,
+            -vportoy + ptr->y + ptr->height * 0.5 - 8,
+            -vportox + ptr->x + ptr->width - 4,
+            -vportoy + ptr->y + ptr->height * 0.5 + 8,
             (src_center_x + 8) / src_width,
             (src_center_y - 8) / src_height,
             (src_center_x + 16) / src_width,
@@ -333,10 +336,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       }
       if(contents_surface->h - ptr->oy > ptr->height - padding - padding_bottom) {
         gl_draw_rect(
-            -viewport->ox + ptr->x + ptr->width * 0.5 - 8,
-            -viewport->oy + ptr->y + ptr->height - 12,
-            -viewport->ox + ptr->x + ptr->width * 0.5 + 8,
-            -viewport->oy + ptr->y + ptr->height - 4,
+            -vportox + ptr->x + ptr->width * 0.5 - 8,
+            -vportoy + ptr->y + ptr->height - 12,
+            -vportox + ptr->x + ptr->width * 0.5 + 8,
+            -vportoy + ptr->y + ptr->height - 4,
             (src_center_x - 8) / src_width,
             (src_center_y + 8) / src_height,
             (src_center_x + 8) / src_width,
@@ -366,10 +369,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
       double src_y2 = pause_anim / 2 * 16;
 
       gl_draw_rect(
-          -viewport->ox + ptr->x + ptr->width * 0.5 - 8,
-          -viewport->oy + ptr->y + ptr->height - 16,
-          -viewport->ox + ptr->x + ptr->width * 0.5 + 8,
-          -viewport->oy + ptr->y + ptr->height,
+          -vportox + ptr->x + ptr->width * 0.5 - 8,
+          -vportoy + ptr->y + ptr->height - 16,
+          -vportox + ptr->x + ptr->width * 0.5 + 8,
+          -vportoy + ptr->y + ptr->height,
           (src_x + src_x2) / src_width,
           (src_y + src_y2) / src_height,
           (src_x + src_x2 + 16) / src_width,
@@ -413,17 +416,17 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
     glUseProgram(cursor_shader);
     glUniform1i(glGetUniformLocation(cursor_shader, "windowskin"), 0);
     glUniform2f(glGetUniformLocation(cursor_shader, "resolution"),
-        viewport->width, viewport->height);
+        window_width, window_height);
     glUniform1f(glGetUniformLocation(cursor_shader, "opacity"),
         ptr->contents_opacity * cursor_opacity / (255.0 * 255.0));
     glUniform2f(glGetUniformLocation(cursor_shader, "cursor_size"),
         cursor_rect_ptr->width, cursor_rect_ptr->height);
 
     gl_draw_rect(
-        -viewport->ox + adjusted_x,
-        -viewport->oy + adjusted_y,
-        -viewport->ox + adjusted_x + cursor_rect_ptr->width,
-        -viewport->oy + adjusted_y + cursor_rect_ptr->height,
+        -vportox + adjusted_x,
+        -vportoy + adjusted_y,
+        -vportox + adjusted_x + cursor_rect_ptr->width,
+        -vportoy + adjusted_y + cursor_rect_ptr->height,
         0.0, 0.0, cursor_rect_ptr->width, cursor_rect_ptr->height);
   }
 
@@ -445,7 +448,7 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
     glUseProgram(shader4);
     glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
     glUniform2f(glGetUniformLocation(shader4, "resolution"),
-        viewport->width, viewport->height);
+        window_width, window_height);
     glUniform1f(glGetUniformLocation(shader4, "opacity"),
         ptr->contents_opacity / 255.0);
 
@@ -458,10 +461,10 @@ void renderWindow( const unsigned short index, const struct RenderViewport *view
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     gl_draw_rect(
-        -viewport->ox + ptr->x + padding + (clip_left - ptr->ox),
-        -viewport->oy + ptr->y + padding + (clip_top - ptr->oy),
-        -viewport->ox + ptr->x + padding + (clip_right - ptr->ox),
-        -viewport->oy + ptr->y + padding + (clip_bottom - ptr->oy),
+        -vportox + ptr->x + padding + (clip_left - ptr->ox),
+        -vportoy + ptr->y + padding + (clip_top - ptr->oy),
+        -vportox + ptr->x + padding + (clip_right - ptr->ox),
+        -vportoy + ptr->y + padding + (clip_bottom - ptr->oy),
         (double)clip_left / content_width,
         (double)clip_top / content_height,
         (double)clip_right / content_width,

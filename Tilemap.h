@@ -12,16 +12,16 @@ extern VALUE rb_cTilemap;
 
 struct Tilemap
 {
-#if RGSS > 1
-  VALUE bitmaps, flags;
-#else
-  VALUE tileset, autotiles, priorities;
-#endif
-  VALUE map_data, flash_data, viewport;
+//#if RGSS > 1
+ VALUE bitmaps, flags;
+//#else
+ VALUE tileset, autotiles, priorities;
+//#endif
+ VALUE map_data, flash_data, viewport;
  VALUE bdispose;
-  bool visible;
-  int ox, oy;
-  int autotile_tick;
+ bool visible;
+ int ox, oy;
+ int autotile_tick;
  unsigned short rendid;
  int jobz;
 };
@@ -34,9 +34,9 @@ struct Tilemap *rb_tilemap_data_mut(VALUE obj);
 int initTilemapSDL(void);
 void Init_Tilemap(void);
 void deinitTilemapSDL(void);
-void renderTilemaps(int z_min, int z_max);
+//void renderTilemaps(int z_min, int z_max);
 
 void prepareRenderTilemap( const unsigned short index, const unsigned short rindex );
-void renderTilemap( const unsigned short index, const struct RenderViewport *viewport );
+void renderTilemap( const unsigned short index, const int vportox, const int vportoy );
 
 unsigned short maxtmapc;

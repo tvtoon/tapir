@@ -128,12 +128,16 @@ void prepareRenderSprite( const unsigned short index, const unsigned short rinde
   vppw = rb_viewport_data(ptr->viewport);
 //  printf( "Sprite %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   job.z = vppw->z;
-  job.y = vppw->oy;
+  job.ox = vppw->ox;
+  job.oy = vppw->oy;
+ job.y = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.y = ptr->y;
+  job.ox = ptr->ox;
+  job.oy = ptr->oy;
+ job.y = ptr->y;
 }
 
  job.t = rindex;
@@ -142,7 +146,7 @@ void prepareRenderSprite( const unsigned short index, const unsigned short rinde
  queueRenderJob(job);
 }
 
-void renderSprite( const unsigned short index, const struct RenderViewport *viewport )
+void renderSprite( const unsigned short index, const int vportox, const int vportoy )
 {
  struct Sprite *ptr = spritespa[index];
  const struct Color *color_ptr = rb_color_data(ptr->color);
@@ -153,13 +157,12 @@ void renderSprite( const unsigned short index, const struct RenderViewport *view
  double flash_opacity = ptr->flash_duration <= 0 ? 0.0 : 1.0 - (double)ptr->flash_count / ptr->flash_duration;
 
  const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
-#if RGSS > 1
-  if(ptr->wave_amp) WARN_UNIMPLEMENTED("Sprite#wave_amp");
-#endif
 
-  if(ptr->bush_depth) WARN_UNIMPLEMENTED("Sprite#bush_depth");
+ if ( ( rgssver > 1 ) && ( ptr->wave_amp != 0 ) ) WARN_UNIMPLEMENTED("Sprite#wave_amp");
 
-  if(ptr->bitmap == Qnil) return;
+ if (ptr->bush_depth) WARN_UNIMPLEMENTED("Sprite#bush_depth");
+
+ if ( ptr->bitmap == Qnil ) return;
 
   const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
   SDL_Surface *surface = bitmap_ptr->surface;
@@ -207,8 +210,7 @@ void renderSprite( const unsigned short index, const struct RenderViewport *view
 
   glUseProgram(shader);
   glUniform1i(glGetUniformLocation(shader, "tex"), 0);
-  glUniform2f(glGetUniformLocation(shader, "resolution"),
-      viewport->width, viewport->height);
+  glUniform2f(glGetUniformLocation(shader, "resolution"), window_width, window_height);
   glUniform2f(glGetUniformLocation(shader, "src_size"),
       surface->w, surface->h);
   glUniform2f(glGetUniformLocation(shader, "src_topleft"),
@@ -252,11 +254,11 @@ void renderSprite( const unsigned short index, const struct RenderViewport *view
   // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
   gl_draw_rect(
-      0.0, 0.0, viewport->width, viewport->height,
-      viewport->ox,
-      viewport->oy,
-      viewport->ox + viewport->width,
-      viewport->oy + viewport->height);
+      0.0, 0.0, window_width, window_height,
+      vportox,
+      vportoy,
+      vportox + window_width,
+      vportoy + window_height );
 
   glUseProgram(0);
 }
@@ -315,13 +317,13 @@ static VALUE sprite_alloc(VALUE klass)
   ptr->angle = 0.0;
   ptr->mirror = false;
   ptr->bush_depth = 0;
-#if RGSS > 1
+//#if RGSS > 1
   ptr->bush_opacity = 128;
   ptr->wave_amp = 0;
   ptr->wave_length = 0;
   ptr->wave_speed = 0;
   ptr->wave_phase = 0.0;
-#endif
+//#endif
   ptr->opacity = 255;
   ptr->blend_type = 0;
   ptr->color = Qnil;
@@ -396,13 +398,13 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->zoom_x = orig_ptr->zoom_x;
   ptr->zoom_y = orig_ptr->zoom_y;
   ptr->angle = orig_ptr->angle;
-#if RGSS > 1
+//#if RGSS > 1
   ptr->wave_amp = orig_ptr->wave_amp;
   ptr->wave_length = orig_ptr->wave_length;
   ptr->wave_speed = orig_ptr->wave_speed;
   ptr->bush_opacity = orig_ptr->bush_opacity;
   ptr->wave_phase = orig_ptr->wave_phase;
-#endif
+//#endif
   rb_color_set2(ptr->flash_color, orig_ptr->flash_color);
   ptr->flash_duration = orig_ptr->flash_duration;
   ptr->flash_count = orig_ptr->flash_count;
@@ -452,17 +454,21 @@ static VALUE rb_sprite_m_flash(VALUE self, VALUE color, VALUE duration) {
   return Qnil;
 }
 
-static VALUE rb_sprite_m_update(VALUE self) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-#if RGSS > 1
-  ptr->wave_phase += (double)ptr->wave_speed / ptr->wave_length;
-#endif
-  ++ptr->flash_count;
-  if(ptr->flash_count >= ptr->flash_duration) {
-    ptr->flash_count = 0;
-    ptr->flash_duration = 0;
-  }
-  return Qnil;
+static VALUE rb_sprite_m_update(VALUE self)
+{
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+
+ if ( rgssver > 1 ) ptr->wave_phase += (double)ptr->wave_speed / ptr->wave_length;
+
+ ++ptr->flash_count;
+
+ if(ptr->flash_count >= ptr->flash_duration)
+{
+  ptr->flash_count = 0;
+  ptr->flash_duration = 0;
+}
+
+ return Qnil;
 }
 
 static VALUE rb_sprite_m_bitmap(VALUE self) {
@@ -620,7 +626,7 @@ static VALUE rb_sprite_m_set_angle(VALUE self, VALUE newval) {
   return newval;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
 static VALUE rb_sprite_m_width(VALUE self) {
   const struct Sprite *ptr = rb_sprite_data(self);
   return INT2NUM(rb_rect_data(ptr->src_rect)->width);
@@ -698,7 +704,7 @@ static VALUE rb_sprite_m_set_bush_opacity(VALUE self, VALUE newval) {
   ptr->bush_opacity = clamp_int32(NUM2INT(newval), 0, 255);
   return newval;
 }
-#endif
+//#endif RGSS > 1
 
 static VALUE rb_sprite_m_mirror(VALUE self) {
   const struct Sprite *ptr = rb_sprite_data(self);
@@ -837,51 +843,54 @@ int initSpriteSDL()
  return(0);
 }
 
-void Init_Sprite(void) {
-  rb_cSprite = rb_define_class("Sprite", rb_cObject);
-  rb_define_alloc_func(rb_cSprite, sprite_alloc);
-  rb_define_private_method(rb_cSprite, "initialize", rb_sprite_m_initialize, -1);
-  rb_define_private_method(rb_cSprite, "initialize_copy", rb_sprite_m_initialize_copy, 1);
-  rb_define_method(rb_cSprite, "dispose", rb_sprite_m_dispose, 0);
-  rb_define_method(rb_cSprite, "disposed?", rb_sprite_m_disposed_p, 0);
-  rb_define_method(rb_cSprite, "flash", rb_sprite_m_flash, 2);
-  rb_define_method(rb_cSprite, "update", rb_sprite_m_update, 0);
-  rb_define_method(rb_cSprite, "bitmap", rb_sprite_m_bitmap, 0);
-  rb_define_method(rb_cSprite, "bitmap=", rb_sprite_m_set_bitmap, 1);
-  rb_define_method(rb_cSprite, "src_rect", rb_sprite_m_src_rect, 0);
-  rb_define_method(rb_cSprite, "src_rect=", rb_sprite_m_set_src_rect, 1);
-  rb_define_method(rb_cSprite, "viewport", rb_sprite_m_viewport, 0);
-  rb_define_method(rb_cSprite, "visible", rb_sprite_m_visible, 0);
-  rb_define_method(rb_cSprite, "visible=", rb_sprite_m_set_visible, 1);
-  rb_define_method(rb_cSprite, "x", rb_sprite_m_x, 0);
-  rb_define_method(rb_cSprite, "x=", rb_sprite_m_set_x, 1);
-  rb_define_method(rb_cSprite, "y", rb_sprite_m_y, 0);
-  rb_define_method(rb_cSprite, "y=", rb_sprite_m_set_y, 1);
-  rb_define_method(rb_cSprite, "z", rb_sprite_m_z, 0);
-  rb_define_method(rb_cSprite, "z=", rb_sprite_m_set_z, 1);
-  rb_define_method(rb_cSprite, "ox", rb_sprite_m_ox, 0);
-  rb_define_method(rb_cSprite, "ox=", rb_sprite_m_set_ox, 1);
-  rb_define_method(rb_cSprite, "oy", rb_sprite_m_oy, 0);
-  rb_define_method(rb_cSprite, "oy=", rb_sprite_m_set_oy, 1);
-  rb_define_method(rb_cSprite, "zoom_x", rb_sprite_m_zoom_x, 0);
-  rb_define_method(rb_cSprite, "zoom_x=", rb_sprite_m_set_zoom_x, 1);
-  rb_define_method(rb_cSprite, "zoom_y", rb_sprite_m_zoom_y, 0);
-  rb_define_method(rb_cSprite, "zoom_y=", rb_sprite_m_set_zoom_y, 1);
-  rb_define_method(rb_cSprite, "angle", rb_sprite_m_angle, 0);
-  rb_define_method(rb_cSprite, "angle=", rb_sprite_m_set_angle, 1);
-  rb_define_method(rb_cSprite, "mirror", rb_sprite_m_mirror, 0);
-  rb_define_method(rb_cSprite, "mirror=", rb_sprite_m_set_mirror, 1);
-  rb_define_method(rb_cSprite, "bush_depth", rb_sprite_m_bush_depth, 0);
-  rb_define_method(rb_cSprite, "bush_depth=", rb_sprite_m_set_bush_depth, 1);
-  rb_define_method(rb_cSprite, "opacity", rb_sprite_m_opacity, 0);
-  rb_define_method(rb_cSprite, "opacity=", rb_sprite_m_set_opacity, 1);
-  rb_define_method(rb_cSprite, "blend_type", rb_sprite_m_blend_type, 0);
-  rb_define_method(rb_cSprite, "blend_type=", rb_sprite_m_set_blend_type, 1);
-  rb_define_method(rb_cSprite, "color", rb_sprite_m_color, 0);
-  rb_define_method(rb_cSprite, "color=", rb_sprite_m_set_color, 1);
-  rb_define_method(rb_cSprite, "tone", rb_sprite_m_tone, 0);
-  rb_define_method(rb_cSprite, "tone=", rb_sprite_m_set_tone, 1);
-#if RGSS > 1
+void Init_Sprite(void)
+{
+ rb_cSprite = rb_define_class("Sprite", rb_cObject);
+ rb_define_alloc_func(rb_cSprite, sprite_alloc);
+ rb_define_private_method(rb_cSprite, "initialize", rb_sprite_m_initialize, -1);
+ rb_define_private_method(rb_cSprite, "initialize_copy", rb_sprite_m_initialize_copy, 1);
+ rb_define_method(rb_cSprite, "dispose", rb_sprite_m_dispose, 0);
+ rb_define_method(rb_cSprite, "disposed?", rb_sprite_m_disposed_p, 0);
+ rb_define_method(rb_cSprite, "flash", rb_sprite_m_flash, 2);
+ rb_define_method(rb_cSprite, "update", rb_sprite_m_update, 0);
+ rb_define_method(rb_cSprite, "bitmap", rb_sprite_m_bitmap, 0);
+ rb_define_method(rb_cSprite, "bitmap=", rb_sprite_m_set_bitmap, 1);
+ rb_define_method(rb_cSprite, "src_rect", rb_sprite_m_src_rect, 0);
+ rb_define_method(rb_cSprite, "src_rect=", rb_sprite_m_set_src_rect, 1);
+ rb_define_method(rb_cSprite, "viewport", rb_sprite_m_viewport, 0);
+ rb_define_method(rb_cSprite, "visible", rb_sprite_m_visible, 0);
+ rb_define_method(rb_cSprite, "visible=", rb_sprite_m_set_visible, 1);
+ rb_define_method(rb_cSprite, "x", rb_sprite_m_x, 0);
+ rb_define_method(rb_cSprite, "x=", rb_sprite_m_set_x, 1);
+ rb_define_method(rb_cSprite, "y", rb_sprite_m_y, 0);
+ rb_define_method(rb_cSprite, "y=", rb_sprite_m_set_y, 1);
+ rb_define_method(rb_cSprite, "z", rb_sprite_m_z, 0);
+ rb_define_method(rb_cSprite, "z=", rb_sprite_m_set_z, 1);
+ rb_define_method(rb_cSprite, "ox", rb_sprite_m_ox, 0);
+ rb_define_method(rb_cSprite, "ox=", rb_sprite_m_set_ox, 1);
+ rb_define_method(rb_cSprite, "oy", rb_sprite_m_oy, 0);
+ rb_define_method(rb_cSprite, "oy=", rb_sprite_m_set_oy, 1);
+ rb_define_method(rb_cSprite, "zoom_x", rb_sprite_m_zoom_x, 0);
+ rb_define_method(rb_cSprite, "zoom_x=", rb_sprite_m_set_zoom_x, 1);
+ rb_define_method(rb_cSprite, "zoom_y", rb_sprite_m_zoom_y, 0);
+ rb_define_method(rb_cSprite, "zoom_y=", rb_sprite_m_set_zoom_y, 1);
+ rb_define_method(rb_cSprite, "angle", rb_sprite_m_angle, 0);
+ rb_define_method(rb_cSprite, "angle=", rb_sprite_m_set_angle, 1);
+ rb_define_method(rb_cSprite, "mirror", rb_sprite_m_mirror, 0);
+ rb_define_method(rb_cSprite, "mirror=", rb_sprite_m_set_mirror, 1);
+ rb_define_method(rb_cSprite, "bush_depth", rb_sprite_m_bush_depth, 0);
+ rb_define_method(rb_cSprite, "bush_depth=", rb_sprite_m_set_bush_depth, 1);
+ rb_define_method(rb_cSprite, "opacity", rb_sprite_m_opacity, 0);
+ rb_define_method(rb_cSprite, "opacity=", rb_sprite_m_set_opacity, 1);
+ rb_define_method(rb_cSprite, "blend_type", rb_sprite_m_blend_type, 0);
+ rb_define_method(rb_cSprite, "blend_type=", rb_sprite_m_set_blend_type, 1);
+ rb_define_method(rb_cSprite, "color", rb_sprite_m_color, 0);
+ rb_define_method(rb_cSprite, "color=", rb_sprite_m_set_color, 1);
+ rb_define_method(rb_cSprite, "tone", rb_sprite_m_tone, 0);
+ rb_define_method(rb_cSprite, "tone=", rb_sprite_m_set_tone, 1);
+
+ if ( rgssver > 1 )
+{
   rb_define_method(rb_cSprite, "bush_opacity", rb_sprite_m_bush_opacity, 0);
   rb_define_method(rb_cSprite, "bush_opacity=", rb_sprite_m_set_bush_opacity, 1);
   rb_define_method(rb_cSprite, "wave_amp", rb_sprite_m_wave_amp, 0);
@@ -895,7 +904,8 @@ void Init_Sprite(void) {
   rb_define_method(rb_cSprite, "width", rb_sprite_m_width, 0);
   rb_define_method(rb_cSprite, "height", rb_sprite_m_height, 0);
   rb_define_method(rb_cSprite, "viewport=", rb_sprite_m_set_viewport, 1);
-#endif
+}
+
 }
 
 void deinitSpriteSDL() {

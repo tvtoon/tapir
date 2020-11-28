@@ -22,14 +22,15 @@
 
 static VALUE rb_mGraphics;
 
-#if RGSS > 1
+//#if RGSS > 1
 static int frame_rate = 60;
-static const int durdefault = 10;
+static int durdefault = 10;
+/*
 #else
 static int frame_rate = 40;
 static const int durdefault = 8;
 #endif
-
+*/
 static long frame_count = 0;
 static int performance_frame_count = 0;
 static Uint32 performance_last_ticks = 0;
@@ -153,11 +154,6 @@ static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
  window_brightness = 255;
  defreeze_screen();
  ini_transition();
-/*
- load_transition_image(NULL, 255);
- (void) vague;
- (void) filename;
-*/
  filename = '\0';
  return Qnil;
 }
@@ -168,7 +164,7 @@ static VALUE rb_graphics_s_frame_reset(VALUE klass) {
   return Qnil;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
 static VALUE rb_graphics_s_wait(VALUE klass, VALUE duration) {
   int duration_i = NUM2INT(duration);
   for(int i = 0; i < duration_i; ++i) {
@@ -237,16 +233,16 @@ static VALUE rb_graphics_s_set_brightness(VALUE klass, VALUE newval) {
   window_brightness = NUM2INT(newval);
   return newval;
 }
-#endif
+//#endif RGSS > 1
 
-#if RGSS == 3
+//#if RGSS == 3
 static VALUE rb_graphics_s_play_movie(VALUE klass, VALUE filename) {
   (void) klass;
   (void) filename;
   WARN_UNIMPLEMENTED("Graphics.play_movie");
   return Qnil;
 }
-#endif
+//#endif
 
 static VALUE rb_graphics_s_frame_rate(VALUE klass) {
   (void) klass;
@@ -272,18 +268,20 @@ static VALUE rb_graphics_s_set_frame_count(VALUE klass, VALUE newval) {
 
 /* static END */
 
-void Init_Graphics() {
-  rb_mGraphics = rb_define_module("Graphics");
-  rb_define_singleton_method(rb_mGraphics, "update", rb_graphics_s_update, 0);
-  rb_define_singleton_method(rb_mGraphics, "freeze", rb_graphics_s_freeze, 0);
-  rb_define_singleton_method(rb_mGraphics, "transition",  rb_graphics_s_transition, -1);
-  rb_define_singleton_method(rb_mGraphics, "frame_reset", rb_graphics_s_frame_reset, 0);
-  rb_define_singleton_method(rb_mGraphics, "frame_rate", rb_graphics_s_frame_rate, 0);
-  rb_define_singleton_method(rb_mGraphics, "frame_rate=", rb_graphics_s_set_frame_rate, 1);
-  rb_define_singleton_method(rb_mGraphics, "frame_count", rb_graphics_s_frame_count, 0);
-  rb_define_singleton_method(rb_mGraphics, "frame_count=", rb_graphics_s_set_frame_count, 1);
+void Init_Graphics()
+{
+ rb_mGraphics = rb_define_module("Graphics");
+ rb_define_singleton_method(rb_mGraphics, "update", rb_graphics_s_update, 0);
+ rb_define_singleton_method(rb_mGraphics, "freeze", rb_graphics_s_freeze, 0);
+ rb_define_singleton_method(rb_mGraphics, "transition",  rb_graphics_s_transition, -1);
+ rb_define_singleton_method(rb_mGraphics, "frame_reset", rb_graphics_s_frame_reset, 0);
+ rb_define_singleton_method(rb_mGraphics, "frame_rate", rb_graphics_s_frame_rate, 0);
+ rb_define_singleton_method(rb_mGraphics, "frame_rate=", rb_graphics_s_set_frame_rate, 1);
+ rb_define_singleton_method(rb_mGraphics, "frame_count", rb_graphics_s_frame_count, 0);
+ rb_define_singleton_method(rb_mGraphics, "frame_count=", rb_graphics_s_set_frame_count, 1);
 
-#if RGSS > 1
+ if ( rgssver > 1 )
+{
   rb_define_singleton_method(rb_mGraphics, "wait", rb_graphics_s_wait, 1);
   rb_define_singleton_method(rb_mGraphics, "fadeout", rb_graphics_s_fadeout, 1);
   rb_define_singleton_method(rb_mGraphics, "fadein", rb_graphics_s_fadein, 1);
@@ -293,8 +291,13 @@ void Init_Graphics() {
   rb_define_singleton_method(rb_mGraphics, "resize_screen", rb_graphics_s_resize_screen, 2);
   rb_define_singleton_method(rb_mGraphics, "brightness", rb_graphics_s_brightness, 0);
   rb_define_singleton_method(rb_mGraphics, "brightness=", rb_graphics_s_set_brightness, 1);
-#endif
-#if RGSS == 3
-  rb_define_singleton_method(rb_mGraphics, "play_movie", rb_graphics_s_play_movie, 1);
-#endif
+
+  if ( rgssver == 3 ) rb_define_singleton_method(rb_mGraphics, "play_movie", rb_graphics_s_play_movie, 1);
+}
+ else
+{
+  frame_rate = 40;
+  durdefault = 8;
+}
+
 }

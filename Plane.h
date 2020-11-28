@@ -13,6 +13,6 @@ void Init_Plane(void);
 void deinitPlaneSDL(void);
 
 void prepareRenderPlane( const unsigned short index, const unsigned short rindex );
-void renderPlane( const unsigned short index, const struct RenderViewport *viewport);
+void renderPlane( const unsigned short index, const int vportox, const int vportoy );
 
 unsigned short maxplanec;

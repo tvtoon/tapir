@@ -390,100 +390,6 @@ static VALUE rb_bitmap_m_fill_rect(int argc, VALUE *argv, VALUE self) {
   return Qnil;
 }
 
-#if RGSS > 1
-static VALUE rb_bitmap_m_gradient_fill_rect(
-    int argc, VALUE *argv, VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  ptr->texture_invalidated = true;
-
-  SDL_Rect sdl_rect;
-  const struct Color *color1_ptr, *color2_ptr;
-  bool vertical = false;
-  if(argc == 3 || argc == 4) {
-    const struct Rect *rect_ptr = rb_rect_data(argv[0]);
-    sdl_rect.x = rect_ptr->x;
-    sdl_rect.y = rect_ptr->y;
-    sdl_rect.w = rect_ptr->width;
-    sdl_rect.h = rect_ptr->height;
-    color1_ptr = rb_color_data(argv[1]);
-    color2_ptr = rb_color_data(argv[2]);
-    if(argc == 4) vertical = RTEST(argv[3]);
-  } else if(argc == 6 || argc == 7) {
-    sdl_rect.x = NUM2INT(argv[0]);
-    sdl_rect.y = NUM2INT(argv[1]);
-    sdl_rect.w = NUM2INT(argv[2]);
-    sdl_rect.h = NUM2INT(argv[3]);
-    color1_ptr = rb_color_data(argv[4]);
-    color2_ptr = rb_color_data(argv[5]);
-    // Note: this should be RTEST(argv[6]),
-    // but original RGSS wrongly uses RTEST(argv[3]);
-    if(argc == 7) vertical = RTEST(argv[3]);
-  } else {
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 3..4 or 6..7)", argc);
-  }
-  Uint32 red1 = (Uint8)color1_ptr->red;
-  Uint32 green1 = (Uint8)color1_ptr->green;
-  Uint32 blue1 = (Uint8)color1_ptr->blue;
-  Uint32 alpha1 = (Uint8)color1_ptr->alpha;
-  Uint32 red2 = (Uint8)color2_ptr->red;
-  Uint32 green2 = (Uint8)color2_ptr->green;
-  Uint32 blue2 = (Uint8)color2_ptr->blue;
-  Uint32 alpha2 = (Uint8)color2_ptr->alpha;
-  Uint32 *pixels = ptr->surface->pixels;
-  int pitch = ptr->surface->pitch / 4;
-  int width = ptr->surface->w;
-  int height = ptr->surface->h;
-  int l = vertical ? sdl_rect.h : sdl_rect.w;
-  if(l > 1) --l;
-  for(int yi = 0; yi < sdl_rect.h; ++yi) {
-    for(int xi = 0; xi < sdl_rect.w; ++xi) {
-      int y = sdl_rect.y + yi;
-      int x = sdl_rect.x + xi;
-      if(!(0 <= x && x < width && 0 <= y && y < height)) {
-        continue;
-      }
-      int i = vertical ? yi : xi;
-      Uint32 red = red1 + (int)(red2 - red1) * i / l;
-      Uint32 green = green1 + (int)(green2 - green1) * i / l;
-      Uint32 blue = blue1 + (int)(blue2 - blue1) * i / l;
-      Uint32 alpha = alpha1 + (int)(alpha2 - alpha1) * i / l;
-      Uint32 color = RGBA32(red, green, blue, alpha);
-      pixels[y * pitch + x] = color;
-    }
-  }
-  return Qnil;
-}
-#endif
-
-#if RGSS > 1
-static VALUE rb_bitmap_m_clear_rect(int argc, VALUE *argv, VALUE self) {
-  struct Bitmap *ptr = rb_bitmap_data_mut(self);
-  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-  ptr->texture_invalidated = true;
-
-  SDL_Rect sdl_rect;
-  if(argc == 1) {
-    const struct Rect *rect_ptr = rb_rect_data(argv[0]);
-    sdl_rect.x = rect_ptr->x;
-    sdl_rect.y = rect_ptr->y;
-    sdl_rect.w = rect_ptr->width;
-    sdl_rect.h = rect_ptr->height;
-  } else if(argc == 4) {
-    sdl_rect.x = NUM2INT(argv[0]);
-    sdl_rect.y = NUM2INT(argv[1]);
-    sdl_rect.w = NUM2INT(argv[2]);
-    sdl_rect.h = NUM2INT(argv[3]);
-  } else {
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 1 or 4)", argc);
-  }
-  SDL_FillRect(ptr->surface, &sdl_rect, 0x00000000);
-  return Qnil;
-}
-#endif
-
 static VALUE rb_bitmap_m_get_pixel(VALUE self, VALUE x, VALUE y)
 {
  VALUE color = Qnil;
@@ -636,7 +542,97 @@ static VALUE rb_bitmap_m_hue_change(VALUE self, VALUE hue) {
   return Qnil;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
+static VALUE rb_bitmap_m_gradient_fill_rect(
+    int argc, VALUE *argv, VALUE self) {
+  struct Bitmap *ptr = rb_bitmap_data_mut(self);
+  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+  ptr->texture_invalidated = true;
+
+  SDL_Rect sdl_rect;
+  const struct Color *color1_ptr, *color2_ptr;
+  bool vertical = false;
+  if(argc == 3 || argc == 4) {
+    const struct Rect *rect_ptr = rb_rect_data(argv[0]);
+    sdl_rect.x = rect_ptr->x;
+    sdl_rect.y = rect_ptr->y;
+    sdl_rect.w = rect_ptr->width;
+    sdl_rect.h = rect_ptr->height;
+    color1_ptr = rb_color_data(argv[1]);
+    color2_ptr = rb_color_data(argv[2]);
+    if(argc == 4) vertical = RTEST(argv[3]);
+  } else if(argc == 6 || argc == 7) {
+    sdl_rect.x = NUM2INT(argv[0]);
+    sdl_rect.y = NUM2INT(argv[1]);
+    sdl_rect.w = NUM2INT(argv[2]);
+    sdl_rect.h = NUM2INT(argv[3]);
+    color1_ptr = rb_color_data(argv[4]);
+    color2_ptr = rb_color_data(argv[5]);
+    // Note: this should be RTEST(argv[6]),
+    // but original RGSS wrongly uses RTEST(argv[3]);
+    if(argc == 7) vertical = RTEST(argv[3]);
+  } else {
+    rb_raise(rb_eArgError,
+        "wrong number of arguments (%d for 3..4 or 6..7)", argc);
+  }
+  Uint32 red1 = (Uint8)color1_ptr->red;
+  Uint32 green1 = (Uint8)color1_ptr->green;
+  Uint32 blue1 = (Uint8)color1_ptr->blue;
+  Uint32 alpha1 = (Uint8)color1_ptr->alpha;
+  Uint32 red2 = (Uint8)color2_ptr->red;
+  Uint32 green2 = (Uint8)color2_ptr->green;
+  Uint32 blue2 = (Uint8)color2_ptr->blue;
+  Uint32 alpha2 = (Uint8)color2_ptr->alpha;
+  Uint32 *pixels = ptr->surface->pixels;
+  int pitch = ptr->surface->pitch / 4;
+  int width = ptr->surface->w;
+  int height = ptr->surface->h;
+  int l = vertical ? sdl_rect.h : sdl_rect.w;
+  if(l > 1) --l;
+  for(int yi = 0; yi < sdl_rect.h; ++yi) {
+    for(int xi = 0; xi < sdl_rect.w; ++xi) {
+      int y = sdl_rect.y + yi;
+      int x = sdl_rect.x + xi;
+      if(!(0 <= x && x < width && 0 <= y && y < height)) {
+        continue;
+      }
+      int i = vertical ? yi : xi;
+      Uint32 red = red1 + (int)(red2 - red1) * i / l;
+      Uint32 green = green1 + (int)(green2 - green1) * i / l;
+      Uint32 blue = blue1 + (int)(blue2 - blue1) * i / l;
+      Uint32 alpha = alpha1 + (int)(alpha2 - alpha1) * i / l;
+      Uint32 color = RGBA32(red, green, blue, alpha);
+      pixels[y * pitch + x] = color;
+    }
+  }
+  return Qnil;
+}
+
+static VALUE rb_bitmap_m_clear_rect(int argc, VALUE *argv, VALUE self) {
+  struct Bitmap *ptr = rb_bitmap_data_mut(self);
+  if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
+  ptr->texture_invalidated = true;
+
+  SDL_Rect sdl_rect;
+  if(argc == 1) {
+    const struct Rect *rect_ptr = rb_rect_data(argv[0]);
+    sdl_rect.x = rect_ptr->x;
+    sdl_rect.y = rect_ptr->y;
+    sdl_rect.w = rect_ptr->width;
+    sdl_rect.h = rect_ptr->height;
+  } else if(argc == 4) {
+    sdl_rect.x = NUM2INT(argv[0]);
+    sdl_rect.y = NUM2INT(argv[1]);
+    sdl_rect.w = NUM2INT(argv[2]);
+    sdl_rect.h = NUM2INT(argv[3]);
+  } else {
+    rb_raise(rb_eArgError,
+        "wrong number of arguments (%d for 1 or 4)", argc);
+  }
+  SDL_FillRect(ptr->surface, &sdl_rect, 0x00000000);
+  return Qnil;
+}
+
 static VALUE rb_bitmap_m_blur(VALUE self) {
   struct Bitmap *ptr = rb_bitmap_data_mut(self);
   if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
@@ -744,7 +740,7 @@ static VALUE rb_bitmap_m_radial_blur(VALUE self, VALUE angle, VALUE division) {
   SDL_FreeSurface(orig);
   return Qnil;
 }
-#endif
+//#endif RGSS > 1
 
 static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
  SDL_Rect rect;
@@ -783,12 +779,16 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
   rb_raise(rb_eArgError, "wrong number of arguments (%d for 2..3 or 5..6)", argc);
 }
 
-#if RGSS > 1
- if (TYPE(str) != T_STRING)
+ if ( rgssver > 1 )
 {
-  str = rb_funcall(str, rb_intern("to_s"), 0);
+
+  if (TYPE(str) != T_STRING)
+{
+   str = rb_funcall(str, rb_intern("to_s"), 0);
 }
-#endif
+
+}
+
  cstr = StringValueCStr(str);
 
  if (cstr[0] == '\0')
@@ -840,7 +840,8 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
   rect.w = fg_stretch_width;
   rect.h = fg_height;
 
-#if RGSS == 3
+ if ( rgssver == 3 )
+{
   if(font_ptr->outline) {
     TTF_SetFontOutline(sdl_font, 1);
 
@@ -879,9 +880,12 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
 
     TTF_SetFontOutline(sdl_font, 0);
   }
-#endif
 
-#if RGSS >= 2
+}
+
+ if ( rgssver > 1 )
+{
+
   if(font_ptr->shadow) {
     SDL_Color shadow_color = { 0, 0, 0, 255 };
     SDL_Surface *shadow_rendered =
@@ -902,35 +906,46 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
         0, 0, fg_width, fg_height, font_color_ptr->alpha);
     SDL_FreeSurface(shadow_rendered);
   }
-#endif
 
-  blt(ptr->surface, fg_rendered,
-      rect.x, rect.y, rect.w, rect.h,
-      0, 0, fg_width, fg_height, font_color_ptr->alpha);
-  SDL_FreeSurface(fg_rendered);
-  return Qnil;
+}
+
+ blt(ptr->surface, fg_rendered, rect.x, rect.y, rect.w, rect.h, 0, 0, fg_width, fg_height, font_color_ptr->alpha );
+ SDL_FreeSurface(fg_rendered);
+ return Qnil;
 }
 
 static VALUE rb_bitmap_m_text_size(VALUE self, VALUE str)
 {
  TTF_Font *font = 0;
+ VALUE retv = Qnil;
  const char *cstr = 0;
  const struct Bitmap *ptr = rb_bitmap_data(self);
  int width = 0, height = 0;
 
- if(!ptr->surface) rb_raise(rb_eRGSSError, "disposed bitmap");
-#if RGSS >= 2
-  if(TYPE(str) != T_STRING) {
-    str = rb_funcall(str, rb_intern("to_s"), 0);
-  }
-#endif
- cstr = StringValueCStr(str);
- font = rb_font_to_sdl(ptr->font);
+ if(!ptr->surface)
+{
+  rb_raise(rb_eRGSSError, "disposed bitmap");
+}
+ else
+{
 
- if ( font == 0 ) return(Qnil);
+  if ( rgssver > 1 )
+{
+   if(TYPE(str) != T_STRING) str = rb_funcall(str, rb_intern("to_s"), 0);
+}
 
- TTF_SizeUTF8(font, cstr, &width, &height);
- return rb_rect_new(0, 0, width, height);
+  cstr = StringValueCStr(str);
+  font = rb_font_to_sdl(ptr->font);
+
+  if ( font != 0 )
+{
+   TTF_SizeUTF8(font, cstr, &width, &height);
+   retv = rb_rect_new(0, 0, width, height);
+}
+
+}
+
+ return(retv);
 }
 
 static VALUE rb_bitmap_m_font(VALUE self) {
@@ -1014,12 +1029,14 @@ void Init_Bitmap(void) {
   rb_define_method(rb_cBitmap, "font", rb_bitmap_m_font, 0);
   rb_define_method(rb_cBitmap, "font=", rb_bitmap_m_set_font, 1);
 
-#if RGSS > 1
+ if ( rgssver > 1 )
+{
   rb_define_method(rb_cBitmap, "gradient_fill_rect", rb_bitmap_m_gradient_fill_rect, -1);
   rb_define_method(rb_cBitmap, "clear_rect", rb_bitmap_m_clear_rect, -1);
   rb_define_method(rb_cBitmap, "blur", rb_bitmap_m_blur, 0);
   rb_define_method(rb_cBitmap, "radial_blur", rb_bitmap_m_radial_blur, 2);
-#endif
+}
+
 }
 
 void bitmapBindTexture(struct Bitmap *ptr) {

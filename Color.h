@@ -13,7 +13,7 @@ struct Color { double red, green, blue, alpha; };
 
 VALUE rb_color_new(double red, double green, double blue, double alpha);
 VALUE rb_color_new2(void);
-bool rb_color_data_p(VALUE obj);
+//bool rb_color_data_p(VALUE obj);
 const struct Color *rb_color_data(VALUE obj);
 struct Color *rb_color_data_mut(VALUE obj);
 void Init_Color(void);

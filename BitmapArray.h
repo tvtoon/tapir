@@ -7,26 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-/*
-#include <stdbool.h>
-#include <ruby.h>
-
-#include "sdl_misc.h"
-*/
-
-#if RGSS > 1
-#define BITMAP_ARRAY_LENGTH 9
-#define BITMAP_ARRAY_CLASS "Tilemap::BitmapArray"
-#else
-#define BITMAP_ARRAY_LENGTH 7
-#define BITMAP_ARRAY_CLASS "TilemapAutotiles"
-#endif
-
-/*extern VALUE rb_cBitmapArray;*/
-
-struct BitmapArray {
-  VALUE data[BITMAP_ARRAY_LENGTH];
-};
+struct BitmapArray { VALUE data[9]; };
 
 VALUE rb_bitmaparray_new(void);
 

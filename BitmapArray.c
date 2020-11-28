@@ -18,8 +18,19 @@
 #include "BitmapArray.h"
 #include "Tilemap.h"
 #include "misc.h"
-
+/*
+#if RGSS > 1
+#define BITMAP_ARRAY_LENGTH 9
+#define BITMAP_ARRAY_CLASS "Tilemap::BitmapArray"
+#else
+#define BITMAP_ARRAY_LENGTH 7
+#define BITMAP_ARRAY_CLASS "TilemapAutotiles"
+#endif
+*/
+static const char bitmapastrv[4][22] = { "TilemapAutotiles", "TilemapAutotiles", "Tilemap::BitmapArray", "Tilemap::BitmapArray" };
 static VALUE rb_cBitmapArray;
+static unsigned char bitmapalen = 9;
+
 /*
  * Document-class:  Tilemap::BitmapArray
  *
@@ -37,19 +48,26 @@ static VALUE rb_cBitmapArray;
 
 static void bitmaparray_mark(struct BitmapArray *ptr)
 {
-  int i = 0;
-  for( ; i < BITMAP_ARRAY_LENGTH; ++i) {
-    rb_gc_mark(ptr->data[i]);
-  }
+ int i = 0;
+
+ for( ; i < bitmapalen; ++i)
+{
+  rb_gc_mark(ptr->data[i]);
 }
 
-static VALUE bitmaparray_alloc(VALUE klass) {
-  struct BitmapArray *ptr = ALLOC(struct BitmapArray);
-  for(int i = 0; i < BITMAP_ARRAY_LENGTH; ++i) {
-    ptr->data[i] = Qnil;
-  }
-  VALUE ret = Data_Wrap_Struct(klass, bitmaparray_mark, -1, ptr);
-  return ret;
+}
+
+static VALUE bitmaparray_alloc(VALUE klass)
+{
+ struct BitmapArray *ptr = ALLOC(struct BitmapArray);
+
+ for(int i = 0; i < bitmapalen; ++i)
+{
+  ptr->data[i] = Qnil;
+}
+
+ VALUE ret = Data_Wrap_Struct(klass, bitmaparray_mark, -1, ptr);
+ return ret;
 }
 
 /* call-seq:
@@ -57,11 +75,14 @@ static VALUE bitmaparray_alloc(VALUE klass) {
  *
  * Returns the <code>index</code>-th element of the BitmapArray, or <code>nil</code> when the index is out of bounds.
  */
-static VALUE rb_bitmaparray_m_aref(VALUE self, VALUE index) {
-  const struct BitmapArray *ptr = rb_bitmaparray_data(self);
-  int iindex = NUM2INT(index);
-  if(iindex < 0 || BITMAP_ARRAY_LENGTH <= iindex) return Qnil;
-  return ptr->data[iindex];
+static VALUE rb_bitmaparray_m_aref(VALUE self, VALUE index)
+{
+ const struct BitmapArray *ptr = rb_bitmaparray_data(self);
+ int iindex = NUM2INT(index);
+
+ if(iindex < 0 || bitmapalen <= iindex) return Qnil;
+
+ return ptr->data[iindex];
 }
 
 /* call-seq:
@@ -71,47 +92,57 @@ static VALUE rb_bitmaparray_m_aref(VALUE self, VALUE index) {
  *
  * An element must be an instance of Bitmap or +nil+.
  */
-static VALUE rb_bitmaparray_m_aset(VALUE self, VALUE index, VALUE newval) {
-  struct BitmapArray *ptr = rb_bitmaparray_data_mut(self);
-  int iindex = NUM2INT(index);
-  if(iindex < 0 || BITMAP_ARRAY_LENGTH <= iindex) return Qnil;
-  if(newval != Qnil) rb_bitmap_data(newval);
-  ptr->data[iindex] = newval;
-  return newval;
+static VALUE rb_bitmaparray_m_aset(VALUE self, VALUE index, VALUE newval)
+{
+ struct BitmapArray *ptr = rb_bitmaparray_data_mut(self);
+ int iindex = NUM2INT(index);
+
+ if(iindex < 0 || bitmapalen <= iindex) return Qnil;
+ if(newval != Qnil) rb_bitmap_data(newval);
+ ptr->data[iindex] = newval;
+ return newval;
 }
 
 /* static END */
 
-VALUE rb_bitmaparray_new() {
-  VALUE ret = bitmaparray_alloc(rb_cBitmapArray);
-  return ret;
+VALUE rb_bitmaparray_new()
+{
+ VALUE ret = bitmaparray_alloc(rb_cBitmapArray);
+ return ret;
 }
 
-bool rb_bitmaparray_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))bitmaparray_mark;
+bool rb_bitmaparray_data_p(VALUE obj)
+{
+ if(TYPE(obj) != T_DATA) return false;
+
+ return RDATA(obj)->dmark == (void(*)(void*))bitmaparray_mark;
 }
 
-const struct BitmapArray *rb_bitmaparray_data(VALUE obj) {
-  Check_Type(obj, T_DATA);
-  // Note: original RGSS doesn't check types.
-  if(RDATA(obj)->dmark != (void(*)(void*))bitmaparray_mark) {
-    rb_raise(rb_eTypeError,
-        "can't convert %s into "BITMAP_ARRAY_CLASS,
-        rb_class2name(rb_obj_class(obj)));
-  }
-  struct BitmapArray *ret;
-  Data_Get_Struct(obj, struct BitmapArray, ret);
-  return ret;
+const struct BitmapArray *rb_bitmaparray_data(VALUE obj)
+{
+ Check_Type(obj, T_DATA);
+// Note: original RGSS doesn't check types.
+ if(RDATA(obj)->dmark != (void(*)(void*))bitmaparray_mark)
+{
+  rb_raise(rb_eTypeError, "can't convert %s into %s", rb_class2name(rb_obj_class(obj)), bitmapastrv[rgssver] );
 }
 
-struct BitmapArray *rb_bitmaparray_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen(BITMAP_ARRAY_CLASS);
-  return (struct BitmapArray *)rb_bitmaparray_data(obj);
+ struct BitmapArray *ret;
+ Data_Get_Struct(obj, struct BitmapArray, ret);
+ return ret;
 }
 
-void Init_BitmapArray(void) {
+struct BitmapArray *rb_bitmaparray_data_mut(VALUE obj)
+{
+// Note: original RGSS doesn't check frozen.
+ if(OBJ_FROZEN(obj)) rb_error_frozen( bitmapastrv[rgssver] );
+
+ return (struct BitmapArray *)rb_bitmaparray_data(obj);
+}
+
+void Init_BitmapArray(void)
+{
+/*
 #if 0
   // To fake rdoc
   rb_cTilemap = rb_define_class("Tilemap", rb_cObject);
@@ -119,20 +150,31 @@ void Init_BitmapArray(void) {
   rb_define_method(rb_cTilemapAutotiles, "[]", rb_bitmaparray_m_aref, 1);
   rb_define_method(rb_cTilemapAutotiles, "[]=", rb_bitmaparray_m_aset, 2);
 #endif
+*/
 
-#if RGSS > 1
+ if ( rgssver > 1 )
+{
   rb_cBitmapArray = rb_define_class_under( rb_cTilemap, "BitmapArray", rb_cObject);
-#else
+}
+ else
+{
   rb_cBitmapArray = rb_define_class("TilemapAutotiles", rb_cObject);
-#endif
-  rb_define_method(rb_cBitmapArray, "[]", rb_bitmaparray_m_aref, 1);
-  rb_define_method(rb_cBitmapArray, "[]=", rb_bitmaparray_m_aset, 2);
+  bitmapalen = 7;
 }
 
-void rb_bitmaparray_set2(VALUE self, VALUE other) {
-  struct BitmapArray *ptr = rb_bitmaparray_data_mut(self);
-  const struct BitmapArray *other_ptr = rb_bitmaparray_data(other);
-  for(int i = 0; i < BITMAP_ARRAY_LENGTH; ++i) {
-    ptr->data[i] = other_ptr->data[i];
-  }
+ rb_define_method(rb_cBitmapArray, "[]", rb_bitmaparray_m_aref, 1);
+ rb_define_method(rb_cBitmapArray, "[]=", rb_bitmaparray_m_aset, 2);
+}
+
+void rb_bitmaparray_set2(VALUE self, VALUE other)
+{
+ const struct BitmapArray *other_ptr = rb_bitmaparray_data(other);
+ struct BitmapArray *ptr = rb_bitmaparray_data_mut(self);
+ int i = 0;
+
+ for ( ; i < bitmapalen; i++ )
+{
+  ptr->data[i] = other_ptr->data[i];
+}
+
 }

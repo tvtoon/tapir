@@ -49,9 +49,14 @@ unsigned int maxcolorc = 0;
  *   when objects other than Color is given.
  * - Tone#set with 0 arguments is not on the official documentation.
  */
-
 static void color_mark(struct Color *ptr) {
   (void) ptr;
+}
+
+static bool rb_color_data_p(VALUE obj)
+{
+  if(TYPE(obj) != T_DATA) return false;
+  return RDATA(obj)->dmark == (void(*)(void*))color_mark;
 }
 
 static VALUE color_alloc(VALUE klass) {
@@ -78,41 +83,34 @@ static VALUE color_alloc(VALUE klass) {
  *
  * Returns a new color. In the second form, it initializes all fields by 0.0.
  */
-static VALUE rb_color_m_initialize(int argc, VALUE *argv, VALUE self) {
-  switch(argc) {
-    case 3:
-      color_set(
-          rb_color_data_mut(self),
-          NUM2DBL(argv[0]),
-          NUM2DBL(argv[1]),
-          NUM2DBL(argv[2]),
-          255.0);
-      break;
-    case 4:
-      color_set(
-          rb_color_data_mut(self),
-          NUM2DBL(argv[0]),
-          NUM2DBL(argv[1]),
-          NUM2DBL(argv[2]),
-          NUM2DBL(argv[3]));
-      break;
-#if RGSS == 3
-    case 0:
-      color_set(rb_color_data_mut(self), 0.0, 0.0, 0.0, 0.0);
-      break;
-#endif
-    default:
-      // Note: original RGSS has wrong messages.
-#if RGSS == 3
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0 or 3..4)", argc);
-#else
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 3..4)", argc);
-#endif
-      break;
-  }
-  return Qnil;
+static VALUE rb_color_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+// struct Color *coloro = rb_color_data_mut(self);
+
+ if ( argc == 3 )
+{
+  color_set( rb_color_data_mut(self), NUM2DBL(argv[0]), NUM2DBL(argv[1]), NUM2DBL(argv[2]), 255.0);
+}
+ else if ( argc == 4 )
+{
+  color_set( rb_color_data_mut(self), NUM2DBL(argv[0]), NUM2DBL(argv[1]), NUM2DBL(argv[2]), NUM2DBL(argv[3]));
+}
+ else
+{
+
+  if ( rgssver == 3 )
+{
+   if ( argc == 0 ) color_set(rb_color_data_mut(self), 0.0, 0.0, 0.0, 0.0);
+   else rb_raise(rb_eArgError, "wrong number of arguments (%d for 0 or 3..4)", argc);
+}
+  else
+{
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 3..4)", argc);
+}
+
+}
+
+ return Qnil;
 }
 
 static VALUE rb_color_m_initialize_copy(VALUE self, VALUE orig) {
@@ -132,21 +130,18 @@ static VALUE rb_color_m_initialize_copy(VALUE self, VALUE orig) {
  * Compares it with another color, using exact comparison of IEEE754 floating
  * point numbers.
  */
-static VALUE rb_color_m_equal(VALUE self, VALUE other) {
-#if RGSS == 3
-  if(!rb_color_data_p(other)) return Qfalse;
-#else
-  // RGSS <= 2 fails comparison when different objects are given.
-  rb_color_data(other);
-#endif
-  const struct Color *ptr = rb_color_data(self);
-  const struct Color *other_ptr = rb_color_data(other);
-  bool equal =
-    ptr->red == other_ptr->red &&
-    ptr->green == other_ptr->green &&
-    ptr->blue == other_ptr->blue &&
-    ptr->alpha == other_ptr->alpha;
-  return equal ? Qtrue : Qfalse;
+static VALUE rb_color_m_equal(VALUE self, VALUE other)
+{
+ bool equal = 0;
+ const struct Color *ptr = rb_color_data(self);
+ const struct Color *other_ptr = rb_color_data(other);
+
+ if ( ( rgssver == 3 ) && ( !rb_color_data_p(other) ) ) return Qfalse;
+/* RGSS <= 2 fails comparison when different objects are given.
+ rb_color_data(other);
+*/
+ equal = ptr->red == other_ptr->red && ptr->green == other_ptr->green && ptr->blue == other_ptr->blue && ptr->alpha == other_ptr->alpha;
+ return equal ? Qtrue : Qfalse;
 }
 
 /*
@@ -160,47 +155,49 @@ static VALUE rb_color_m_equal(VALUE self, VALUE other) {
  *
  * It returns the color itself.
  */
-static VALUE rb_color_m_set(int argc, VALUE *argv, VALUE self) {
-  switch(argc) {
-    // Note: original RGSS wrongly accepts empty argument list.
-    // In this case, it works as set(0.0, 0.0, 0.0, 0.0).
-    case 3:
-      color_set(
-          rb_color_data_mut(self),
-          NUM2DBL(argv[0]),
-          NUM2DBL(argv[1]),
-          NUM2DBL(argv[2]),
-          255.0);
-      break;
-    case 4:
-      color_set(
-          rb_color_data_mut(self),
-          NUM2DBL(argv[0]),
-          NUM2DBL(argv[1]),
-          NUM2DBL(argv[2]),
-          NUM2DBL(argv[3]));
-      break;
-#if RGSS == 3
-    case 0:
-      // Undocumented, but implemented in RGSS.
-      color_set(rb_color_data_mut(self), 0.0, 0.0, 0.0, 0.0);
-      break;
-    case 1:
-      rb_color_set2(self, argv[0]);
-      break;
-#endif
-    default:
-      // Note: original RGSS has wrong messages.
-#if RGSS == 3
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0..1, 3..4)", argc);
-#else
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 3..4)", argc);
-#endif
-      break;
-  }
-  return self;
+static VALUE rb_color_m_set(int argc, VALUE *argv, VALUE self)
+{
+
+// Note: original RGSS wrongly accepts empty argument list.
+// In this case, it works as set(0.0, 0.0, 0.0, 0.0).
+ if ( argc == 3 )
+{
+  color_set( rb_color_data_mut(self), NUM2DBL(argv[0]), NUM2DBL(argv[1]), NUM2DBL(argv[2]), 255.0 );
+}
+ else if ( argc == 4 )
+{
+  color_set( rb_color_data_mut(self), NUM2DBL(argv[0]), NUM2DBL(argv[1]), NUM2DBL(argv[2]), NUM2DBL(argv[3]));
+}
+ else
+{
+
+  if ( rgssver == 3 )
+{
+
+   if ( argc == 0 )
+{
+// Undocumented, but implemented in RGSS.
+    color_set(rb_color_data_mut(self), 0.0, 0.0, 0.0, 0.0);
+}
+   else if ( argc == 1 )
+{
+    rb_color_set2(self, argv[0]);
+}
+   else
+{
+// Note: original RGSS has wrong messages.
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1, 3..4)", argc);
+}
+
+}
+  else
+{
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 3..4)", argc);
+}
+
+}
+
+ return self;
 }
 
 /*
@@ -392,11 +389,6 @@ VALUE rb_color_new(double red, double green, double blue, double alpha) {
 
 VALUE rb_color_new2(void) {
   return rb_color_new(0.0, 0.0, 0.0, 0.0);
-}
-
-bool rb_color_data_p(VALUE obj) {
-  if(TYPE(obj) != T_DATA) return false;
-  return RDATA(obj)->dmark == (void(*)(void*))color_mark;
 }
 
 const struct Color *rb_color_data(VALUE obj) {

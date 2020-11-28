@@ -11,23 +11,23 @@ struct Window
 {
  VALUE viewport, windowskin, contents, cursor_rect;
  VALUE bdispose;
-  bool visible, active, pause;
-#if RGSS == 1
-  bool stretch;
-#endif
-  int x, y, z, width, height;
-  int ox, oy;
-  int opacity, back_opacity, contents_opacity;
-#if RGSS == 3
-  VALUE tone;
-  bool arrows_visible;
-  int padding, padding_bottom;
-#endif
-#if RGSS > 1
-  int openness;
-#endif
-  int cursor_tick;
-  int pause_tick;
+ bool visible, active, pause;
+//#if RGSS == 1
+ bool stretch;
+//#endif
+ int x, y, z, width, height;
+ int ox, oy;
+ int opacity, back_opacity, contents_opacity;
+//#if RGSS == 3
+ VALUE tone;
+ bool arrows_visible;
+ int padding, padding_bottom;
+//#endif
+//#if RGSS > 1
+ int openness;
+//#endif
+ int cursor_tick;
+ int pause_tick;
  unsigned short rendid;
 };
 /*
@@ -40,6 +40,6 @@ void Init_Window(void);
 void deinitWindowSDL(void);
 
 void prepareRenderWindow( const unsigned short index, const unsigned short rindex );
-void renderWindow( const unsigned short index, const struct RenderViewport *viewport );
+void renderWindow( const unsigned short index, const int vportox, const int vportoy );
 
 unsigned short maxwindowc;

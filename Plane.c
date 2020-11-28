@@ -94,22 +94,24 @@ void prepareRenderPlane( const unsigned short index, const unsigned short rindex
   vppw = rb_viewport_data(ptr->viewport);
 //  printf( "Plane %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   job.z = vppw->z;
-  job.y = vppw->oy;
+  job.ox = vppw->ox;
+  job.oy = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.y = 0;
+  job.ox = ptr->ox;
+  job.oy = ptr->oy;
 }
 
+ job.y = 0;
  job.t = rindex;
  job.reg = 0;
  job.rindex = index;
-
  queueRenderJob(job);
 }
 
-void renderPlane( const unsigned short index, const struct RenderViewport *viewport)
+void renderPlane( const unsigned short index, const int vportox, const int vportoy )
 {
  SDL_Surface *surface = 0;
  const struct Bitmap *bitmap_ptr = 0;
@@ -158,7 +160,7 @@ void renderPlane( const unsigned short index, const struct RenderViewport *viewp
 
    glUseProgram(shader);
    glUniform1i(glGetUniformLocation(shader, "tex"), 0);
-   glUniform2f(glGetUniformLocation(shader, "resolution"), viewport->width, viewport->height);
+   glUniform2f(glGetUniformLocation(shader, "resolution"), window_width, window_height);
    glUniform2f(glGetUniformLocation(shader, "src_size"), surface->w, surface->h);
    glUniform2f(glGetUniformLocation(shader, "src_translate"), ptr->ox, ptr->oy);
    glUniform2f(glGetUniformLocation(shader, "zoom"), ptr->zoom_x, ptr->zoom_y);
@@ -169,7 +171,7 @@ void renderPlane( const unsigned short index, const struct RenderViewport *viewp
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-   gl_draw_rect( 0.0, 0.0, viewport->width, viewport->height, viewport->ox, viewport->oy, viewport->ox + viewport->width, viewport->oy + viewport->height );
+   gl_draw_rect( 0.0, 0.0, window_width, window_height, vportox, vportoy, vportox + window_width, vportoy + window_height );
    glUseProgram(0);
 }
 

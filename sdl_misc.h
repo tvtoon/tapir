@@ -6,14 +6,15 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-
+/*
 struct RenderViewport {
   int width, height;
   int ox, oy;
 };
-
+*/
 struct RenderJob {
  int z, y, t, aux[3];
+ int ox, oy;
  unsigned short reg;
  unsigned short rindex;
 };

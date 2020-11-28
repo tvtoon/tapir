@@ -51,6 +51,8 @@ static bool is_test_mode = false;
 static bool is_btest_mode = false;
 static bool is_console_mode = false;
 
+unsigned char rgssver = 3;
+
 void Init_zlib(void);
 #if RGSS == 3
 void Init_single_byte(void);

@@ -21,11 +21,13 @@
 #include "openres.h"
 #include "sdl_misc.h"
 
+/*
 #if RGSS == 3
 #define ARGCMAX 4
 #else
 #define ARGCMAX 3
 #endif
+*/
 
 struct chunk_cache_entry {
   char name[PATH_MAX + 1];
@@ -39,16 +41,11 @@ static VALUE rb_mAudio;
 static const size_t cachesize = 64;
 static size_t chunki = 0;
 static struct chunk_cache_entry *chunk_cache = 0;
+static unsigned char argcmax = 4;
 
 static const char extensions[6][5] = { ".ogg", ".mid", ".wma", ".mp3", ".wav", "\0" };
-/*
-#if RGSS == 3
-static VALUE rb_audio_s_setup_midi(VALUE klass);
-static VALUE rb_audio_s_bgm_pos(VALUE klass);
-static VALUE rb_audio_s_bgs_pos(VALUE klass);
-#endif
-*/
-#if RGSS == 3
+
+//#if RGSS == 3
 static VALUE rb_audio_s_bgm_pos(VALUE klass) {
   (void) klass;
   WARN_UNIMPLEMENTED("Audio.bgm_pos");
@@ -66,7 +63,7 @@ static VALUE rb_audio_s_setup_midi(VALUE klass) {
   WARN_UNIMPLEMENTED("Audio.setup_midi");
   return Qnil;
 }
-#endif
+//#endif RGSS == 3
 
 static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
 {
@@ -74,14 +71,14 @@ static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
  VALUE filename = 0;
 */
  char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
- int pitch = 0, pos = 0, volume = 0;
+ int pitch = 100, pos = 0, volume = 100;
  size_t filens = 0;
 
  (void) klass;
 
- if(argc <= 0 || argc > ARGCMAX)
+ if ( argc <= 0 || argc > argcmax )
 {
-  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, ARGCMAX );
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, argcmax );
   return(Qnil);
 }
 
@@ -95,9 +92,18 @@ static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
 
  strncpy( filen, RSTRING_PTR(argv[0]), filens );
 // filename = rb_str_new( filen, filens );
- volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 100;
- pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
- pos = argc > 3 ? NUM2INT(argv[3]) : 0;
+ if ( argc > 1 )
+{
+  volume = clamp_int32(NUM2INT(argv[1]), 0, 100);
+
+  if ( argc > 2 )
+{
+   pitch = clamp_int32(NUM2INT(argv[2]), 50, 150);
+
+   if ( argc > 3 ) pos = NUM2INT(argv[3]);
+}
+
+}
 
  if (pitch != 100)
 {
@@ -142,38 +148,47 @@ static VALUE rb_audio_s_bgm_play(int argc, VALUE *argv, VALUE klass)
  return Qnil;
 }
 
-static VALUE rb_audio_s_bgm_stop(VALUE klass) {
-  (void) klass;
-  if(bgm) {
-    Mix_HaltMusic();
-    Mix_FreeMusic(bgm);
-    bgm = NULL;
-  }
-  return Qnil;
+static VALUE rb_audio_s_bgm_stop(VALUE klass)
+{
+(void) klass;
+
+ if(bgm)
+{
+  Mix_HaltMusic();
+  Mix_FreeMusic(bgm);
+  bgm = NULL;
 }
 
-static VALUE rb_audio_s_bgm_fade(VALUE klass, VALUE time) {
-  (void) klass;
-  int time_i = NUM2INT(time);
-  if(bgm) {
-    Mix_FadeOutMusic(time_i);
-    Mix_FreeMusic(bgm);
-    bgm = NULL;
-  }
-  return Qnil;
+ return Qnil;
 }
 
-static VALUE rb_audio_s_bgs_play(int argc, VALUE *argv, VALUE klass) {
-  (void) klass;
+static VALUE rb_audio_s_bgm_fade(VALUE klass, VALUE time)
+{
+(void) klass;
+ int time_i = NUM2INT(time);
 
-  if(argc <= 0 || argc > ARGCMAX)
-  {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, ARGCMAX );
-  }
+ if(bgm)
+{
+  Mix_FadeOutMusic(time_i);
+  Mix_FreeMusic(bgm);
+  bgm = NULL;
+}
 
-  (void) argv;
-  WARN_UNIMPLEMENTED("Audio.bgs_play");
-  return Qnil;
+ return Qnil;
+}
+
+static VALUE rb_audio_s_bgs_play(int argc, VALUE *argv, VALUE klass)
+{
+ (void) klass;
+
+ if ( argc <= 0 || argc > argcmax )
+{
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..%i)", argc, argcmax );
+}
+
+ (void) argv;
+ WARN_UNIMPLEMENTED("Audio.bgs_play");
+ return Qnil;
 }
 
 static VALUE rb_audio_s_bgs_stop(VALUE klass) {
@@ -218,7 +233,7 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 */
  Mix_Chunk *chunk = 0;
  char filen[PATH_MAX + 1] = "\0", pato[PATH_MAX + 1] = "\0";
- int pitch = 0, volume = 0;
+ int pitch = 100, volume = 80;
  size_t filens = 0, paths = 0, ui = 0;
 
  (void) klass;
@@ -239,8 +254,12 @@ static VALUE rb_audio_s_se_play(int argc, VALUE *argv, VALUE klass) {
 
  strncpy( filen, RSTRING_PTR(argv[0]), filens );
 // filename = rb_str_new( filen, filens );
- volume = argc > 1 ? clamp_int32(NUM2INT(argv[1]), 0, 100) : 80;
- pitch = argc > 2 ? clamp_int32(NUM2INT(argv[2]), 50, 150) : 100;
+ if ( argc > 1 )
+{
+  volume = clamp_int32(NUM2INT(argv[1]), 0, 100);
+
+  if ( argc > 2 ) pitch = clamp_int32(NUM2INT(argv[2]), 50, 150);
+}
 
  if (pitch != 100)
 {
@@ -311,24 +330,32 @@ static VALUE rb_audio_s_se_stop(VALUE klass) {
 
 /* static END */
 
-void Init_Audio() {
-  rb_mAudio = rb_define_module("Audio");
-#if RGSS == 3
+void Init_Audio()
+{
+ rb_mAudio = rb_define_module("Audio");
+
+ if ( rgssver == 3 )
+{
   rb_define_singleton_method(rb_mAudio, "setup_midi", rb_audio_s_setup_midi, 0);
   rb_define_singleton_method(rb_mAudio, "bgm_pos", rb_audio_s_bgm_pos, 0);
   rb_define_singleton_method(rb_mAudio, "bgs_pos", rb_audio_s_bgs_pos, 0);
-#endif
-  rb_define_singleton_method(rb_mAudio, "bgm_play", rb_audio_s_bgm_play, -1);
-  rb_define_singleton_method(rb_mAudio, "bgm_stop", rb_audio_s_bgm_stop, 0);
-  rb_define_singleton_method(rb_mAudio, "bgm_fade", rb_audio_s_bgm_fade, 1);
-  rb_define_singleton_method(rb_mAudio, "bgs_play", rb_audio_s_bgs_play, -1);
-  rb_define_singleton_method(rb_mAudio, "bgs_stop", rb_audio_s_bgs_stop, 0);
-  rb_define_singleton_method(rb_mAudio, "bgs_fade", rb_audio_s_bgs_fade, 1);
-  rb_define_singleton_method(rb_mAudio, "me_play", rb_audio_s_me_play, -1);
-  rb_define_singleton_method(rb_mAudio, "me_stop", rb_audio_s_me_stop, 0);
-  rb_define_singleton_method(rb_mAudio, "me_fade", rb_audio_s_me_fade, 1);
-  rb_define_singleton_method(rb_mAudio, "se_play", rb_audio_s_se_play, -1);
-  rb_define_singleton_method(rb_mAudio, "se_stop", rb_audio_s_se_stop, 0);
+}
+ else
+{
+  argcmax = 3;
+}
+
+ rb_define_singleton_method(rb_mAudio, "bgm_play", rb_audio_s_bgm_play, -1);
+ rb_define_singleton_method(rb_mAudio, "bgm_stop", rb_audio_s_bgm_stop, 0);
+ rb_define_singleton_method(rb_mAudio, "bgm_fade", rb_audio_s_bgm_fade, 1);
+ rb_define_singleton_method(rb_mAudio, "bgs_play", rb_audio_s_bgs_play, -1);
+ rb_define_singleton_method(rb_mAudio, "bgs_stop", rb_audio_s_bgs_stop, 0);
+ rb_define_singleton_method(rb_mAudio, "bgs_fade", rb_audio_s_bgs_fade, 1);
+ rb_define_singleton_method(rb_mAudio, "me_play", rb_audio_s_me_play, -1);
+ rb_define_singleton_method(rb_mAudio, "me_stop", rb_audio_s_me_stop, 0);
+ rb_define_singleton_method(rb_mAudio, "me_fade", rb_audio_s_me_fade, 1);
+ rb_define_singleton_method(rb_mAudio, "se_play", rb_audio_s_se_play, -1);
+ rb_define_singleton_method(rb_mAudio, "se_stop", rb_audio_s_se_stop, 0);
 }
 
 void initAudioSDL(void) {

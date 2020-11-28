@@ -149,15 +149,18 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 //  printf( "Tilemap %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   ptr->jobz = vppw->z;
   job.z = vppw->z;
-  job.y = vppw->oy;
+  job.ox = vppw->ox;
+  job.oy = vppw->oy;
 }
  else
 {
   ptr->jobz = 0;
   job.z = 0;
-  job.y = 0;
+  job.ox = ptr->ox;
+  job.oy = ptr->oy;
 }
 
+ job.y = 0;
  queueRenderJob(job);
 
  if ( ptr->viewport == Qnil )  job.z = 200;
@@ -224,7 +227,7 @@ printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_pt
 #endif
 }
 
-static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, const struct RenderViewport *viewport )
+static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, const int vportox, const int vportoy )
 {
   VALUE tileset = Qnil;
   int autotile_shape_id = -1;
@@ -344,7 +347,7 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
   glUseProgram(shader);
   glUniform1i(glGetUniformLocation(shader, "tex"), 0);
   glUniform2f(glGetUniformLocation(shader, "resolution"),
-      viewport->width, viewport->height);
+      window_width, window_height);
 
   glActiveTexture(GL_TEXTURE0);
   bitmapBindTexture((struct Bitmap *)tileset_ptr);
@@ -371,20 +374,20 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
         int dst_x = x + (i % 2) * 16;
         int dst_y = y + (i / 2) * 16;
         gl_draw_rect(
-            -viewport->ox + dst_x, dst_y + j * 8,
-            -viewport->oy + dst_x + 16, dst_y + 16 + j * 8,
-            -viewport->ox + src_xi / (double)tileset_surface->w,
-            -viewport->oy + src_yi / (double)tileset_surface->h,
+            -vportox + dst_x, dst_y + j * 8,
+            -vportoy + dst_x + 16, dst_y + 16 + j * 8,
+            -vportox + src_xi / (double)tileset_surface->w,
+            -vportoy + src_yi / (double)tileset_surface->h,
             (src_xi + 16) / (double)tileset_surface->w,
             (src_yi + 16) / (double)tileset_surface->h);
       }
     }
   } else {
     gl_draw_rect(
-        -viewport->ox + x,
-        -viewport->oy + y,
-        -viewport->ox + x + 32,
-        -viewport->oy + y + 32,
+        -vportox + x,
+        -vportoy + y,
+        -vportox + x + 32,
+        -vportoy + y + 32,
         src_x / (double)tileset_surface->w,
         src_y / (double)tileset_surface->h,
         (src_x + 32) / (double)tileset_surface->w,
@@ -392,12 +395,12 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
   }
 }
 
-void renderTilemap( const unsigned short index, const struct RenderViewport *viewport )
+void renderTilemap( const unsigned short index, const int vportox, const int vportoy )
 {
  struct Tilemap *ptr = tmapspa[index];
  const struct Table *flags_ptr = NULL;
  const struct Table *map_data_ptr = 0;
- const int x_end = (viewport->ox + ptr->ox + viewport->width + 31) >> 5, x_start = (viewport->ox + ptr->ox) >> 5, y_end = (viewport->oy + ptr->oy + viewport->height + 31) >> 5, y_start = (viewport->oy + ptr->oy) >> 5;
+ const int x_end = (vportox + ptr->ox + window_width + 31) >> 5, x_start = (vportox + ptr->ox) >> 5, y_end = (vportoy + ptr->oy + window_height + 31) >> 5, y_start = (vportoy + ptr->oy) >> 5;
  int tile_id = 0, xi = 0, xii = 0, xsize = 0, yi = 0, yii = 0, ysize = 0, z = 0, zi = 0, zsize = 0;
 
  if(ptr->map_data == Qnil) return;
@@ -434,7 +437,7 @@ void renderTilemap( const unsigned short index, const struct RenderViewport *vie
 
     if ( z != ptr->jobz ) continue;
 
-    renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, viewport);
+    renderTile( ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, vportox, vportoy );
 }
 
 }
@@ -450,7 +453,7 @@ void renderTilemap( const unsigned short index, const struct RenderViewport *vie
  yii = (yi % ysize + ysize) % ysize;
  tile_id = map_data_ptr->data[(zi * ysize + yii) * xsize + xii];
 
- renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, viewport);
+ renderTile(ptr, tile_id, xi * 32 - ptr->ox, yi * 32 - ptr->oy, vportox, vportoy );
 #endif
 }
 

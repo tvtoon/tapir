@@ -21,3 +21,5 @@ int32_t read_int32(const char *ptr);
 void write_double(char *ptr, double val);
 void write_int16(char *ptr, int16_t val);
 void write_int32(char *ptr, int32_t val);
+
+unsigned char rgssver;
