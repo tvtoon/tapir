@@ -37,13 +37,8 @@
 #include "openres.h"
 #include "surface_misc.h"
 
-#if RGSS > 1
 int window_width = 544;
 int window_height = 416;
-#else
-int window_width = 640;
-int window_height = 480;
-#endif
 int window_brightness = 255;
 
 SDL_Window *window = NULL;
@@ -133,8 +128,12 @@ int initSDL(const char *window_title)
  int img_flags = IMG_INIT_JPG|IMG_INIT_PNG|IMG_INIT_TIF, mix_init_flags = 0, shaderrc = 0;
  unsigned short ui = 0;
 
-// initRenderQueue(&main_queue);
-// main_queue.queue = malloc(sizeof(*queue->queue) * mq_capacity);
+ if ( rgssver == 1 )
+{
+  window_width = 640;
+  window_height = 480;
+}
+
  for ( ; ui < registry_capacity; ui++ )
 {
   tnewqa[ui].rendta = 0;

@@ -64,26 +64,30 @@ static VALUE rect_alloc(VALUE klass) {
  *
  * Returns a new rectangle. In the second form, it initializes all fields by 0.
  */
-static VALUE rb_rect_m_initialize(int argc, VALUE *argv, VALUE self) {
-  switch(argc) {
-    case 4:
-      rect_set(
-          rb_rect_data_mut(self),
-          NUM2INT(argv[0]), NUM2INT(argv[1]),
-          NUM2INT(argv[2]), NUM2INT(argv[3]));
-      break;
-#if RGSS == 3
-    case 0:
-      rect_set(rb_rect_data_mut(self), 0, 0, 0, 0);
-      break;
-#endif
-    default:
-      // Note: original RGSS flips numbers.
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 4)", argc);
-      break;
-  }
-  return Qnil;
+static VALUE rb_rect_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+
+ if ( argc == 4 )
+{
+  rect_set( rb_rect_data_mut(self), NUM2INT(argv[0]), NUM2INT(argv[1]), NUM2INT(argv[2]), NUM2INT(argv[3]));
+}
+ else
+{
+
+  if ( rgssver == 3 )
+{
+   if ( argc == 0 ) rect_set(rb_rect_data_mut(self), 0, 0, 0, 0);
+   else rb_raise(rb_eArgError, "wrong number of arguments (%d for 0 or 4)", argc);
+}
+  else
+{
+// Note: original RGSS flips numbers.
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 4)", argc);
+}
+
+}
+
+ return Qnil;
 }
 
 static VALUE rb_rect_m_initialize_copy(VALUE self, VALUE orig) {
@@ -102,21 +106,19 @@ static VALUE rb_rect_m_initialize_copy(VALUE self, VALUE orig) {
  *
  * Compares it with another rectangle.
  */
-static VALUE rb_rect_m_equal(VALUE self, VALUE other) {
-#if RGSS == 3
-  if(!rb_rect_data_p(other)) return Qfalse;
-#else
+static VALUE rb_rect_m_equal(VALUE self, VALUE other)
+{
+ bool equal = 0;
+ const struct Rect *ptr = rb_rect_data(self);
+ const struct Rect *other_ptr = rb_rect_data(other);
+
+ if ( ( rgssver == 3 ) && ( rb_rect_data_p(other) == 0 ) ) return Qfalse;
+/*
   // RGSS <= 2 fails comparison when different objects are given.
   rb_rect_data(other);
-#endif
-  const struct Rect *ptr = rb_rect_data(self);
-  const struct Rect *other_ptr = rb_rect_data(other);
-  bool equal =
-    ptr->x == other_ptr->x &&
-    ptr->y == other_ptr->y &&
-    ptr->width == other_ptr->width &&
-    ptr->height == other_ptr->height;
-  return equal ? Qtrue : Qfalse;
+*/
+ equal = ptr->x == other_ptr->x && ptr->y == other_ptr->y && ptr->width == other_ptr->width && ptr->height == other_ptr->height;
+ return equal ? Qtrue : Qfalse;
 }
 
 /*
@@ -129,26 +131,29 @@ static VALUE rb_rect_m_equal(VALUE self, VALUE other) {
  *
  * It returns the rectangle itself.
  */
-static VALUE rb_rect_m_set(int argc, VALUE *argv, VALUE self) {
-  switch(argc) {
-    case 4:
-      rect_set(
-          rb_rect_data_mut(self),
-          NUM2INT(argv[0]), NUM2INT(argv[1]),
-          NUM2INT(argv[2]), NUM2INT(argv[3]));
-      break;
-#if RGSS == 3
-    case 1:
-      rb_rect_set2(self, argv[0]);
-      break;
-#endif
-    default:
-      // Note: original RGSS flips numbers.
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 4)", argc);
-      break;
-  }
-  return self;
+static VALUE rb_rect_m_set(int argc, VALUE *argv, VALUE self)
+{
+
+ if ( argc == 4 )
+{
+  rect_set( rb_rect_data_mut(self), NUM2INT(argv[0]), NUM2INT(argv[1]), NUM2INT(argv[2]), NUM2INT(argv[3]));
+}
+ else
+{
+
+  if ( rgssver == 3 )
+{
+   if ( argc == 1 ) rb_rect_set2(self, argv[0]);
+   else rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 4)", argc);
+}
+  else
+{
+   rb_raise(rb_eArgError, "wrong number of arguments (%d for 4)", argc);
+}
+
+}
+
+ return self;
 }
 
 /*

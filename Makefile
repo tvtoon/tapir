@@ -1,20 +1,27 @@
 PROJECT = tapir
-MAJVER = 0.1
-MINVER = 4
+MAJVER = 0.3
+MINVER = 0
 LIBS = ${PROJECT}
-PROGS = tapir-x
+PROGS = tapir
 
 include make/conf
+include make/fontconfig.mk
+include make/gl.mk
+include make/libconfig.mk
 include make/libdl.mk
 include make/libmath.mk
 include make/librt.mk
+include make/libruby.mk
 include make/pthread.mk
+include make/sdl2
+include make/sdl2_image
+include make/sdl2_mixer
+include make/sdl2_ttf
 include make/zlib.mk
 
 #-lcrypt $(SDL_LIBS) $(GL_LIBS) $(FONTCONFIG_LIBS) $(LIBCONFIG_LIBS)
-ELIBFLAGS += -lruby181 `pkg-config --libs --static sdl2 SDL2_image SDL2_mixer SDL2_ttf fontconfig gl libconfig`
 CFLAGS = `pkg-config --cflags sdl2 SDL2_image SDL2_mixer SDL2_ttf fontconfig gl libconfig`
-CFLAGS += -DRGSS=1 -D_VERSION_=\"${VERSION}\" -O2 -Wall -Wextra -Wno-unused-parameter -g -o
+CFLAGS += -D_VERSION_=\"${VERSION}\" -O2 -Wall -Wextra -Wno-unused-parameter -g -o
 DOCS = 
 INFOS =
 INCLUDES = 

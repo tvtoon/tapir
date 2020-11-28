@@ -351,7 +351,7 @@ static VALUE rb_plane_m_viewport(VALUE self) {
   return ptr->viewport;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
 static VALUE rb_plane_m_set_viewport(VALUE self, VALUE newval)
 {
  struct Plane *ptr = rb_plane_data_mut(self);
@@ -364,7 +364,7 @@ static VALUE rb_plane_m_set_viewport(VALUE self, VALUE newval)
 
  return newval;
 }
-#endif
+//#endif
 
 static VALUE rb_plane_m_visible(VALUE self) {
   const struct Plane *ptr = rb_plane_data(self);
@@ -607,9 +607,12 @@ void Init_Plane(void) {
   rb_define_method(rb_cPlane, "bitmap", rb_plane_m_bitmap, 0);
   rb_define_method(rb_cPlane, "bitmap=", rb_plane_m_set_bitmap, 1);
   rb_define_method(rb_cPlane, "viewport", rb_plane_m_viewport, 0);
-#if RGSS > 1
+
+ if ( rgssver > 1 )
+{
   rb_define_method(rb_cPlane, "viewport=", rb_plane_m_set_viewport, 1);
-#endif
+}
+
   rb_define_method(rb_cPlane, "visible", rb_plane_m_visible, 0);
   rb_define_method(rb_cPlane, "visible=", rb_plane_m_set_visible, 1);
   rb_define_method(rb_cPlane, "z", rb_plane_m_z, 0);

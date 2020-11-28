@@ -1,5 +1,10 @@
 # en.UTF-8
 
+0.2.4
+^Cleaned up more settings, to avoid resets.
+^Trashed RenderViewport, viewport values are more correct but there is still a way to go...
+^Only the most complicated parts remain for the unification (Tilemap, Window, wild guesses).
+
 0.2.3
 ^Reverted the pixel color stuff, it must be kept pumping color like crazy, another management is needed...
 ^Only sets VALUEs from structures when they are different, it will avoid AT LEAST resets into tilemaps for no good reason.

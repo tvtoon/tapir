@@ -13,6 +13,6 @@
 extern int key_config[KEYCONFIG_LEN];
 
 const char *get_rtp_base_config(void);
-const char *get_rtp_config(const char *rtp_name);
+//const char *get_rtp_config(const char *rtp_name);
 void deinit_tapir_config(void);
 void init_tapir_config(void);

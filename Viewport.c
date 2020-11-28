@@ -130,27 +130,27 @@ static VALUE rb_viewport_m_initialize(int argc, VALUE *argv, VALUE self)
 {
  struct Viewport *ptr = rb_viewport_data_mut(self);
 
- switch(argc)
+ if ( argc == 1 )
 {
-  case 1:
-   rb_rect_set2(ptr->rect, argv[0]);
-   break;
+  rb_rect_set2(ptr->rect, argv[0]);
+}
+ else if ( argc == 4 )
+{
+  rect_set( rb_rect_data_mut(ptr->rect), NUM2INT(argv[0]), NUM2INT(argv[1]), NUM2INT(argv[2]), NUM2INT(argv[3]) );
+}
+ else
+{
 
-  case 4:
-   rect_set(rb_rect_data_mut(ptr->rect), NUM2INT(argv[0]), NUM2INT(argv[1]), NUM2INT(argv[2]), NUM2INT(argv[3]));
-   break;
-#if RGSS == 3
-  case 0:
-   rect_set(rb_rect_data_mut(ptr->rect), 0, 0, window_width, window_height);
-   break;
-#endif
-  default:
-#if RGSS == 3
-   rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1 or 4)", argc);
-#else
+  if ( rgssver == 3 )
+{
+   if ( argc == 0 ) rect_set(rb_rect_data_mut(ptr->rect), 0, 0, window_width, window_height);
+   else rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1 or 4)", argc);
+}
+  else
+{
    rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 4)", argc);
-#endif
-   break;
+}
+
 }
 
  return Qnil;
