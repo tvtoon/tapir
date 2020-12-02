@@ -66,19 +66,8 @@ static newqueue tnewqa[1024];
 static void ( *preparefuna[4])( const unsigned short index, const unsigned short rindex ) = { prepareRenderPlane, prepareRenderTilemap, prepareRenderSprite, /*prepareRenderViewport,*/ prepareRenderWindow };
 static void ( *renderfuna[4])( const unsigned short index, const int vportox, const int vportoy ) = { renderPlane, renderTilemap, renderSprite, /*renderViewport,*/ renderWindow };
 
-static int initTransition(void) {
-  static const char *vsh_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
-
+static int initTransition(void)
+{
   static const char *fsh_source =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
@@ -103,7 +92,7 @@ static int initTransition(void) {
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
- transition_shader = compileShaders(vsh_source, fsh_source);
+ transition_shader = compileShaders(fsh_source);
 
  if ( transition_shader == 0 ) return(1);
 
@@ -132,6 +121,7 @@ int initSDL(const char *window_title)
 {
   window_width = 640;
   window_height = 480;
+  renderfuna[3] = renderWindowRGSS1;
 }
 
  for ( ; ui < registry_capacity; ui++ )

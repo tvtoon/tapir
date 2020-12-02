@@ -1,5 +1,9 @@
 # en.UTF-8
 
+0.2.5
+^Window should be ready enough for unification, missing shader strings that will probably go the easy way out...
+^The "vsh_source", used to initialize shaders everywhere, is actually the same string.
+
 0.2.4
 ^Cleaned up more settings, to avoid resets.
 ^Trashed RenderViewport, viewport values are more correct but there is still a way to go...

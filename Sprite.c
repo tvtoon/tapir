@@ -776,17 +776,6 @@ static VALUE rb_sprite_m_set_tone(VALUE self, VALUE newval) {
 
 int initSpriteSDL()
 {
-  static const char *vsh_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
 
   static const char *fsh_source =
     "#version 120\n"
@@ -837,7 +826,8 @@ int initSpriteSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
- shader = compileShaders(vsh_source, fsh_source);
+ shader = compileShaders(fsh_source);
+
  if (shader == 0) return(1);
 
  return(0);

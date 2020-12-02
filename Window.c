@@ -54,6 +54,19 @@ static struct Window *windowspa[256] =
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
+/*
+ Width is always "x + 32", while height is "y * 4".
+*/
+static struct Tplan
+{
+ double x;
+ double y;
+ double width;
+ double height;
+} plandim = { 96, 32, 128, 128 };
+
+/* Inside the pause rendering, always "y * 2" for some reason... */
+static const double pdpausey = 64;
 static unsigned short cminindex = 0;
 static unsigned short windowc = 0;
 unsigned short maxwindowc = 0;
@@ -68,9 +81,7 @@ static void window_mark(struct Window *ptr)
   rb_gc_mark(ptr->windowskin);
   rb_gc_mark(ptr->contents);
   rb_gc_mark(ptr->cursor_rect);
-#if RGSS == 3
   rb_gc_mark(ptr->tone);
-#endif
   rb_gc_mark(ptr->bdispose);
 }
 
@@ -115,7 +126,7 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  if ( ptr->viewport != Qnil )
 {
   vppw = rb_viewport_data(ptr->viewport);
-//  printf( "Window %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
+  printf( "Window %u vport %i:%i:%i.\nPosition %i:%i (%i:%i).\n", index, vppw->ox, vppw->oy, vppw->z, ptr->x, ptr->y, ptr->ox, ptr->oy );
   job.z = vppw->z;
   job.ox = vppw->ox;
   job.oy = vppw->oy;
@@ -133,347 +144,210 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  job.rindex = index;
 /*
  Only for RGSS1...
-*/
  job.aux[0] = 0;
+*/
  queueRenderJob(job);
-#if RGSS == 1
- job.z = ptr->z + 2;
- job.aux[0] = 1;
- queueRenderJob(job);
-#endif
+
+ if ( rgssver == 1 )
+{
+  job.z = ptr->z + 2;
+// job.aux[0] = 1;
+  queueRenderJob(job);
+}
+
 }
 
 void renderWindow( const unsigned short index, const int vportox, const int vportoy )
 {
- struct Window *ptr = windowspa[index];
-#if RGSS > 1
-// const int content_job_no = 0;
- const int openness = ptr->openness;
-#else
- const int content_job_no = 1;
- const int openness = 255;
-#endif
- if(openness == 0) return;
+// SDL_Surface *contents_surface = 0;
+ const SDL_Surface *skinsurf = 0;
+ const struct Rect *cursor_rect_ptr = 0;
+ const struct Tone *tone_ptr = 0;
+ const struct Window *ptr = windowspa[index];
+ struct Bitmap *contents_bitmap_ptr = 0, *skin_bitmap_ptr = 0;
+ struct Tone tonela = { 0.0, 0.0, 0.0, 0.0 };
+ const int xrpos = -vportox + ptr->x, yrpos = -vportoy + ptr->y;
+ int adjusted_x = 0, adjusted_y = 0, cursor_opacity = 128, open_height = 0, open_y = 0;
 
- int open_height = ptr->height * openness / 255;
- int open_y = ptr->y + (ptr->height - open_height) / 2;
+ if ( ptr->openness != 0 )
+{
+  cursor_rect_ptr = rb_rect_data(ptr->cursor_rect);
 
-#if RGSS == 3
-  int padding = ptr->padding;
-  int padding_bottom = ptr->padding_bottom;
-#else
-  // TODO: is the padding correct?
-  int padding = 16;
-  int padding_bottom = 16;
-#endif
+  if ( rgssver == 3 )
+{
+   adjusted_x = ptr->x + cursor_rect_ptr->x + ptr->padding - ptr->ox;
+   adjusted_y = ptr->y + cursor_rect_ptr->y + ptr->padding - ptr->oy;
+   tone_ptr = rb_tone_data(ptr->tone);
+   tonela.red = tone_ptr->red / 255.0;
+   tonela.green = tone_ptr->green / 255.0;
+   tonela.blue = tone_ptr->blue / 255.0;
+   tonela.gray = tone_ptr->gray / 255.0;
+}
+  else
+{
+   adjusted_x = ptr->x + cursor_rect_ptr->x + ptr->padding;
+   adjusted_y = ptr->y + cursor_rect_ptr->y + ptr->padding;
+}
 
-#if RGSS == 3
-  bool arrows_visible = ptr->arrows_visible;
-#else
-  bool arrows_visible = true;
-#endif
+  open_height = ptr->height * ptr->openness / 255;
+  open_y = ptr->y + (ptr->height - open_height) / 2;
 
-  const struct Bitmap *skin_bitmap_ptr = NULL;
-  SDL_Surface *skin_surface = NULL;
-  if(ptr->windowskin != Qnil) {
-    skin_bitmap_ptr = rb_bitmap_data(ptr->windowskin);
-    skin_surface = skin_bitmap_ptr->surface;
-  }
-
-  const struct Bitmap *contents_bitmap_ptr = NULL;
-  SDL_Surface *contents_surface = NULL;
-  if(ptr->windowskin != Qnil) {
-    contents_bitmap_ptr = rb_bitmap_data(ptr->contents);
-    contents_surface = contents_bitmap_ptr->surface;
-  }
+  if ( ptr->windowskin != Qnil )
+{
+   skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
+   contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
+/*
+ GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
+*/
+   skinsurf = skin_bitmap_ptr->surface;
+}
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   glBlendEquation(GL_FUNC_ADD);
 
-  if(skin_surface
-#if RGSS == 1
-&& job->aux[0] == 0
-#endif
-) {
-#if RGSS == 3
-    const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
-#endif
+  if ( skinsurf != 0 )
+{
+   glActiveTexture(GL_TEXTURE0);
+   bitmapBindTexture(skin_bitmap_ptr);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//   if ( stretchback )
+   glUseProgram(shader1);
+   glUniform1i(glGetUniformLocation(shader1, "windowskin"), 0);
+   glUniform2f(glGetUniformLocation(shader1, "resolution"), window_width, window_height);
+   glUniform1f(glGetUniformLocation(shader1, "opacity"), ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
+   glUniform4f( glGetUniformLocation(shader1, "window_tone"), tonela.red, tonela.green, tonela.blue, tonela.gray );
+   gl_draw_rect( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0.0, 0.0, 1.0, 1.0);
+//    gl_draw_recti( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0, 0, 1, 1 );
+
+//   if ( tiledback )
+   glUseProgram(shader2);
+   glUniform1i(glGetUniformLocation(shader2, "windowskin"), 0);
+   glUniform2f(glGetUniformLocation(shader2, "resolution"), window_width, window_height);
+   glUniform1f(glGetUniformLocation(shader2, "opacity"), ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
+   glUniform4f( glGetUniformLocation(shader2, "window_tone"), tonela.red, tonela.green, tonela.blue, tonela.gray );
+   gl_draw_rect( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0.0, 0.0, (ptr->width - 4) / 64.0, (open_height - 4) / 64.0);
+//    gl_draw_recti( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0, 0, (ptr->width - 4) / 64, (open_height - 4) / 64 );
+
+   glUseProgram(shader3);
+   glUniform1i(glGetUniformLocation(shader3, "windowskin"), 0);
+   glUniform2f(glGetUniformLocation(shader3, "resolution"), window_width, window_height);
+   glUniform1f(glGetUniformLocation(shader3, "opacity"), ptr->opacity / 255.0);
+   glUniform2f(glGetUniformLocation(shader3, "bg_size"), ptr->width, open_height);
+   gl_draw_rect( -vportox + ptr->x, -vportoy + open_y, xrpos + ptr->width, -vportoy + open_y + open_height, 0.0, 0.0, ptr->width, open_height);
+//   gl_draw_recti( -vportox + ptr->x, -vportoy + open_y, xrpos + ptr->width, -vportoy + open_y + open_height, 0, 0, ptr->width, open_height);
+
+   if ( ptr->openness == 255 )
+{
+
+    if ( ( cursor_rect_ptr->width > 0 ) && ( cursor_rect_ptr->height > 0 ) )
+{
+// TODO: clipping?
+    if (ptr->active) cursor_opacity = 255 - (20 - abs(ptr->cursor_tick - 20)) * 8;
 
     glActiveTexture(GL_TEXTURE0);
-    bitmapBindTexture((struct Bitmap *)skin_bitmap_ptr);
-
+    bitmapBindTexture(skin_bitmap_ptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-#if RGSS > 1
-    bool use_stretched_background = true;
-    bool use_tiled_background = true;
-#else
-    bool use_stretched_background = ptr->stretch;
-    bool use_tiled_background = !ptr->stretch;
-#endif
-
-    if(use_stretched_background) {
-      glUseProgram(shader1);
-      glUniform1i(glGetUniformLocation(shader1, "windowskin"), 0);
-      glUniform2f(glGetUniformLocation(shader1, "resolution"),
-          window_width, window_height);
-      glUniform1f(glGetUniformLocation(shader1, "opacity"),
-          ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
-#if RGSS == 3
-      glUniform4f(glGetUniformLocation(shader1, "window_tone"),
-          tone_ptr->red / 255.0,
-          tone_ptr->green / 255.0,
-          tone_ptr->blue / 255.0,
-          tone_ptr->gray / 255.0);
-#else
-      glUniform4f(glGetUniformLocation(shader1, "window_tone"),
-          0.0, 0.0, 0.0, 0.0);
-#endif
-
-      gl_draw_rect(
-          -vportox + ptr->x + 2,
-          -vportoy + open_y + 2,
-          -vportox + ptr->x + ptr->width - 2,
-          -vportoy + open_y + open_height - 2,
-          0.0, 0.0, 1.0, 1.0);
-    }
-
-    if(use_tiled_background) {
-      glUseProgram(shader2);
-      glUniform1i(glGetUniformLocation(shader2, "windowskin"), 0);
-      glUniform2f(glGetUniformLocation(shader2, "resolution"),
-          window_width, window_height);
-      glUniform1f(glGetUniformLocation(shader2, "opacity"),
-          ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
-#if RGSS == 3
-      glUniform4f(glGetUniformLocation(shader2, "window_tone"),
-          tone_ptr->red / 255.0,
-          tone_ptr->green / 255.0,
-          tone_ptr->blue / 255.0,
-          tone_ptr->gray / 255.0);
-#else
-      glUniform4f(glGetUniformLocation(shader2, "window_tone"),
-          0.0, 0.0, 0.0, 0.0);
-#endif
-
-      gl_draw_rect(
-          -vportox + ptr->x + 2,
-          -vportoy + open_y + 2,
-          -vportox + ptr->x + ptr->width - 2,
-          -vportoy + open_y + open_height - 2,
-          0.0, 0.0, (ptr->width - 4) / 64.0, (open_height - 4) / 64.0);
-    }
-
-    glUseProgram(shader3);
-    glUniform1i(glGetUniformLocation(shader3, "windowskin"), 0);
-    glUniform2f(glGetUniformLocation(shader3, "resolution"),
-        window_width, window_height);
-    glUniform1f(glGetUniformLocation(shader3, "opacity"),
-        ptr->opacity / 255.0);
-    glUniform2f(glGetUniformLocation(shader3, "bg_size"),
-        ptr->width, open_height);
-
-    gl_draw_rect(
-        -vportox + ptr->x,
-        -vportoy + open_y,
-        -vportox + ptr->x + ptr->width,
-        -vportoy + open_y + open_height,
-        0.0, 0.0, ptr->width, open_height);
-
- glUseProgram(shader4);
- glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
- glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
- glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity / 255.0);
-
-    if(openness == 255 && contents_bitmap_ptr != NULL && arrows_visible) {
-#if RGSS > 1
-      double src_center_x = 64 + 32;
-      double src_center_y = 32;
-      double src_width = 128;
-      double src_height = 128;
-#else
-      double src_center_x = 128 + 32;
-      double src_center_y = 32;
-      double src_width = 192;
-      double src_height = 128;
-#endif
-      if(ptr->ox > 0) {
-        gl_draw_rect(
-            -vportox + ptr->x + 4,
-            -vportoy + ptr->y + ptr->height * 0.5 - 8,
-            -vportox + ptr->x + 12,
-            -vportoy + ptr->y + ptr->height * 0.5 + 8,
-            (src_center_x - 16) / src_width,
-            (src_center_y - 8) / src_height,
-            (src_center_x - 8) / src_width,
-            (src_center_y + 8) / src_height);
-      }
-      if(ptr->oy > 0) {
-        gl_draw_rect(
-            -vportox + ptr->x + ptr->width * 0.5 - 8,
-            -vportoy + ptr->y + 4,
-            -vportox + ptr->x + ptr->width * 0.5 + 8,
-            -vportoy + ptr->y + 12,
-            (src_center_x - 8) / src_width,
-            (src_center_y - 16) / src_height,
-            (src_center_x + 8) / src_width,
-            (src_center_y - 8) / src_height);
-      }
-      if(contents_surface->w - ptr->ox > ptr->width - padding * 2) {
-        gl_draw_rect(
-            -vportox + ptr->x + ptr->width - 12,
-            -vportoy + ptr->y + ptr->height * 0.5 - 8,
-            -vportox + ptr->x + ptr->width - 4,
-            -vportoy + ptr->y + ptr->height * 0.5 + 8,
-            (src_center_x + 8) / src_width,
-            (src_center_y - 8) / src_height,
-            (src_center_x + 16) / src_width,
-            (src_center_y + 8) / src_height);
-      }
-      if(contents_surface->h - ptr->oy > ptr->height - padding - padding_bottom) {
-        gl_draw_rect(
-            -vportox + ptr->x + ptr->width * 0.5 - 8,
-            -vportoy + ptr->y + ptr->height - 12,
-            -vportox + ptr->x + ptr->width * 0.5 + 8,
-            -vportoy + ptr->y + ptr->height - 4,
-            (src_center_x - 8) / src_width,
-            (src_center_y + 8) / src_height,
-            (src_center_x + 8) / src_width,
-            (src_center_y + 16) / src_height);
-      }
-    }
-
-    if(openness == 255 && ptr->pause) {
-#if RGSS > 1
-      double src_x = 64 + 32;
-      double src_y = 64;
-      double src_width = 128;
-      double src_height = 128;
-#else
-      double src_x = 128 + 32;
-      double src_y = 64;
-      double src_width = 192;
-      double src_height = 128;
-#endif
-
-      int pause_opacity = ptr->pause_tick > 16 ? 16 : ptr->pause_tick;
-      glUniform1f(glGetUniformLocation(shader4, "opacity"),
-          ptr->opacity * pause_opacity / (255.0 * 16.0));
-
-      int pause_anim = ptr->pause_tick % 64 / 16;
-      double src_x2 = pause_anim % 2 * 16;
-      double src_y2 = pause_anim / 2 * 16;
-
-      gl_draw_rect(
-          -vportox + ptr->x + ptr->width * 0.5 - 8,
-          -vportoy + ptr->y + ptr->height - 16,
-          -vportox + ptr->x + ptr->width * 0.5 + 8,
-          -vportoy + ptr->y + ptr->height,
-          (src_x + src_x2) / src_width,
-          (src_y + src_y2) / src_height,
-          (src_x + src_x2 + 16) / src_width,
-          (src_y + src_y2 + 16) / src_height);
-    }
-  }
-
-  const struct Rect *cursor_rect_ptr = rb_rect_data(ptr->cursor_rect);
-
- if ( openness == 255 
-#if RGSS == 1
-&& job->aux[0] == content_job_no
-#endif
-)
-{
-
-  if ( skin_surface && cursor_rect_ptr->width > 0 && cursor_rect_ptr->height > 0)
-{
-    glActiveTexture(GL_TEXTURE0);
-    bitmapBindTexture((struct Bitmap *)skin_bitmap_ptr);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // TODO: clipping?
-#if RGSS == 3
-    int adjusted_x = ptr->x + cursor_rect_ptr->x + padding - ptr->ox;
-    int adjusted_y = ptr->y + cursor_rect_ptr->y + padding - ptr->oy;
-#else
-    int adjusted_x = ptr->x + cursor_rect_ptr->x + padding;
-    int adjusted_y = ptr->y + cursor_rect_ptr->y + padding;
-#endif
-
-    int cursor_opacity = 128;
-    if(ptr->active) {
-      cursor_opacity = 255 - (20 - abs(ptr->cursor_tick - 20)) * 8;
-    }
-
     glUseProgram(cursor_shader);
     glUniform1i(glGetUniformLocation(cursor_shader, "windowskin"), 0);
-    glUniform2f(glGetUniformLocation(cursor_shader, "resolution"),
-        window_width, window_height);
-    glUniform1f(glGetUniformLocation(cursor_shader, "opacity"),
-        ptr->contents_opacity * cursor_opacity / (255.0 * 255.0));
-    glUniform2f(glGetUniformLocation(cursor_shader, "cursor_size"),
-        cursor_rect_ptr->width, cursor_rect_ptr->height);
-
-    gl_draw_rect(
-        -vportox + adjusted_x,
-        -vportoy + adjusted_y,
-        -vportox + adjusted_x + cursor_rect_ptr->width,
-        -vportoy + adjusted_y + cursor_rect_ptr->height,
-        0.0, 0.0, cursor_rect_ptr->width, cursor_rect_ptr->height);
-  }
-
-  if(contents_surface)
-{
-    int wcontent_width = ptr->width - padding * 2;
-    int wcontent_height = ptr->height - padding - padding_bottom;
-    int content_width = contents_surface->w;
-    int content_height = contents_surface->h;
-    int clip_left = ptr->ox;
-    if(clip_left < 0) clip_left = 0;
-    int clip_top = ptr->oy;
-    if(clip_top < 0) clip_top = 0;
-    int clip_right = ptr->ox + wcontent_width;
-    if(clip_right > content_width) clip_right = content_width;
-    int clip_bottom = ptr->oy + wcontent_height;
-    if(clip_bottom > content_height) clip_bottom = content_height;
+    glUniform2f(glGetUniformLocation(cursor_shader, "resolution"), window_width, window_height);
+    glUniform1f(glGetUniformLocation(cursor_shader, "opacity"), ptr->contents_opacity * cursor_opacity / (255.0 * 255.0));
+    glUniform2f(glGetUniformLocation(cursor_shader, "cursor_size"), cursor_rect_ptr->width, cursor_rect_ptr->height);
+    gl_draw_rect( -vportox + adjusted_x, -vportoy + adjusted_y, -vportox + adjusted_x + cursor_rect_ptr->width, -vportoy + adjusted_y + cursor_rect_ptr->height, 0.0, 0.0, cursor_rect_ptr->width, cursor_rect_ptr->height);
+//    gl_draw_recti( -vportox + adjusted_x, -vportoy + adjusted_y, -vportox + adjusted_x + cursor_rect_ptr->width, -vportoy + adjusted_y + cursor_rect_ptr->height, 0, 0, cursor_rect_ptr->width, cursor_rect_ptr->height );
+}
 
     glUseProgram(shader4);
     glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
-    glUniform2f(glGetUniformLocation(shader4, "resolution"),
-        window_width, window_height);
-    glUniform1f(glGetUniformLocation(shader4, "opacity"),
-        ptr->contents_opacity / 255.0);
+    glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
+    glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity / 255.0);
 
+    if ( ( contents_bitmap_ptr != 0 ) && ptr->arrows_visible )
+{
+
+     if ( ptr->ox > 0 )
+{
+      gl_draw_rect( xrpos + 4, yrpos + ptr->height * 0.5 - 8, xrpos + 12, yrpos + ptr->height * 0.5 + 8, (plandim.x - 16) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height);
+//      gl_draw_recti( xrpos + 4, yrpos + ptr->height / 2 - 8, xrpos + 12, yrpos + ptr->height / 2 + 8, (plandim.x - 16) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height );
+}
+
+     if ( ptr->oy > 0 )
+{
+      gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + 4, xrpos + ptr->width * 0.5 + 8, yrpos + 12, (plandim.x - 8) / plandim.width, (plandim.y - 16) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height);
+//      gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + 4, xrpos + ptr->width / 2 + 8, yrpos + 12, (plandim.x - 8) / plandim.width, (plandim.y - 16) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height );
+}
+
+     if ( contents_bitmap_ptr->surface->w - ptr->ox > ptr->width - ptr->padding * 2 )
+{
+      gl_draw_rect( xrpos + ptr->width - 12, yrpos + ptr->height * 0.5 - 8, xrpos + ptr->width - 4, yrpos + ptr->height * 0.5 + 8, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x + 16) / plandim.width, (plandim.y + 8) / plandim.height);
+//      gl_draw_recti( xrpos + ptr->width - 12, yrpos + ptr->height / 2 - 8, xrpos + ptr->width - 4, yrpos + ptr->height / 2 + 8, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x + 16) / plandim.width, (plandim.y + 8) / plandim.height );
+}
+
+     if ( contents_bitmap_ptr->surface->h - ptr->oy > ptr->height - ptr->padding - ptr->padding_bottom )
+{
+      gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + ptr->height - 12, xrpos + ptr->width * 0.5 + 8, yrpos + ptr->height - 4, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y + 16) / plandim.height);
+//      gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + ptr->height - 12, xrpos + ptr->width / 2 + 8, yrpos + ptr->height - 4, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y + 16) / plandim.height);
+}
+
+}
+
+    if ( ptr->pause )
+{
+     int pause_opacity = ptr->pause_tick > 16 ? 16 : ptr->pause_tick;
+     int pause_anim = ptr->pause_tick % 64 / 16;
+     double src_x2 = pause_anim % 2 * 16;
+     double src_y2 = pause_anim / 2 * 16;
+
+     glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity * pause_opacity / (255.0 * 16.0));
+     gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + ptr->height - 16, xrpos + ptr->width * 0.5 + 8, yrpos + ptr->height, (plandim.x + src_x2) / plandim.width, (pdpausey + src_y2) / plandim.height, (plandim.x + src_x2 + 16) / plandim.width, (pdpausey + src_y2 + 16) / plandim.height);
+//     gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + ptr->height - 16, xrpos + ptr->width / 2 + 8, yrpos + ptr->height, (plandim.x + src_x2) / plandim.width, (pdpausey + src_y2) / plandim.height, (plandim.x + src_x2 + 16) / plandim.width, (pdpausey + src_y2 + 16) / plandim.height );
+}
+
+   if ( contents_bitmap_ptr->surface )
+{
+    int wcontent_width = ptr->width - ptr->padding * 2;
+    int wcontent_height = ptr->height - ptr->padding - ptr->padding_bottom;
+    int content_width = contents_bitmap_ptr->surface->w;
+    int content_height = contents_bitmap_ptr->surface->h;
+    int clip_left = ptr->ox;
+    int clip_top = ptr->oy;
+    int clip_right = ptr->ox + wcontent_width;
+    int clip_bottom = ptr->oy + wcontent_height;
+
+    if(clip_left < 0) clip_left = 0;
+    if(clip_top < 0) clip_top = 0;
+    if(clip_right > content_width) clip_right = content_width;
+    if(clip_bottom > content_height) clip_bottom = content_height;
+/*
+    glUseProgram(shader4);
+    glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
+    glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
+*/
+    glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->contents_opacity / 255.0);
     glActiveTexture(GL_TEXTURE0);
-    bitmapBindTexture((struct Bitmap *)contents_bitmap_ptr);
-
+    bitmapBindTexture(contents_bitmap_ptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    gl_draw_rect(
-        -vportox + ptr->x + padding + (clip_left - ptr->ox),
-        -vportoy + ptr->y + padding + (clip_top - ptr->oy),
-        -vportox + ptr->x + padding + (clip_right - ptr->ox),
-        -vportoy + ptr->y + padding + (clip_bottom - ptr->oy),
-        (double)clip_left / content_width,
-        (double)clip_top / content_height,
-        (double)clip_right / content_width,
-        (double)clip_bottom / content_height);
-  }
+    gl_draw_rect( xrpos + ptr->padding + (clip_left - ptr->ox), yrpos + ptr->padding + (clip_top - ptr->oy), xrpos + ptr->padding + (clip_right - ptr->ox), yrpos + ptr->padding + (clip_bottom - ptr->oy), (double)clip_left / content_width, (double)clip_top / content_height, (double)clip_right / content_width, (double)clip_bottom / content_height);
+//    gl_draw_recti( xrpos + ptr->padding + (clip_left - ptr->ox), yrpos + ptr->padding + (clip_top - ptr->oy), xrpos + ptr->padding + (clip_right - ptr->ox), yrpos + ptr->padding + (clip_bottom - ptr->oy), clip_left / content_width, clip_top / content_height, clip_right / content_width, clip_bottom / content_height );
 }
 
+}
 
- glUseProgram(0);
+}
+
+  glUseProgram(0);
+}
+
 }
 
 static void window_free(struct Window *ptr)
@@ -517,58 +391,48 @@ static VALUE window_alloc(VALUE klass)
   ptr = ALLOC(struct Window);
   ptr->windowskin = Qnil;
   ptr->contents = Qnil;
-#if RGSS == 1
   ptr->stretch = true;
-#endif
   ptr->cursor_rect = Qnil;
   ptr->viewport = Qnil;
   ptr->active = true;
   ptr->visible = true;
-#if RGSS == 3
-  ptr->arrows_visible = true;
-#endif
   ptr->pause = false;
   ptr->x = 0;
   ptr->y = 0;
   ptr->width = 0;
   ptr->height = 0;
-  // TODO: In RGSS1, content Z and background Z differ.
-#if RGSS == 3
-  ptr->z = 100;
-#else
-  ptr->z = 0;
-#endif
   ptr->ox = 0;
   ptr->oy = 0;
-#if RGSS == 3
-  ptr->padding = 12;
-  ptr->padding_bottom = 12;
-#endif
+  ptr->arrows_visible = true;
+// TODO: In RGSS1, content Z and background Z differ.
+  if ( rgssver == 3 )
+{
+   ptr->back_opacity = 192;
+   ptr->padding = 12;
+   ptr->padding_bottom = 12;
+   ptr->tone = rb_tone_new2();
+   ptr->z = 100;
+}
+  else
+{
+   ptr->back_opacity = 255;
+   ptr->padding = 16;
+   ptr->padding_bottom = 16;
+   ptr->tone = Qnil;
+   ptr->z = 0;
+}
+
   ptr->opacity = 255;
-#if RGSS == 3
-  ptr->back_opacity = 192;
-#else
-  ptr->back_opacity = 255;
-#endif
   ptr->contents_opacity = 255;
-
-#if RGSS > 1
   ptr->openness = 255;
-#endif
-
-#if RGSS == 3
-  ptr->tone = Qnil;
-#endif
   ptr->cursor_tick = 0;
   ptr->pause_tick = 0;
   ptr->bdispose = Qfalse;
   ret = Data_Wrap_Struct(klass, window_mark, window_free, ptr);
   ptr->contents = rb_bitmap_new(1, 1);
   ptr->cursor_rect = rb_rect_new2();
-#if RGSS == 3
-  ptr->tone = rb_tone_new2();
-#endif
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
+  ptr->task = 0;
   windowspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 256; cminindex++ )
@@ -640,16 +504,12 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   const struct Window *orig_ptr = rb_window_data(orig);
   ptr->windowskin = orig_ptr->windowskin;
   ptr->contents = orig_ptr->contents;
-#if RGSS == 1
   ptr->stretch = orig_ptr->stretch;
-#endif
   rb_rect_set2(ptr->cursor_rect, orig_ptr->cursor_rect);
   ptr->viewport = orig_ptr->viewport;
   ptr->active = orig_ptr->active;
   ptr->visible = orig_ptr->visible;
-#if RGSS == 3
   ptr->arrows_visible = orig_ptr->arrows_visible;
-#endif
   ptr->pause = orig_ptr->pause;
   ptr->x = orig_ptr->x;
   ptr->y = orig_ptr->y;
@@ -658,20 +518,13 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->z = orig_ptr->z;
   ptr->ox = orig_ptr->ox;
   ptr->oy = orig_ptr->oy;
-#if RGSS == 3
   ptr->padding = orig_ptr->padding;
   ptr->padding_bottom = orig_ptr->padding_bottom;
-#endif
   ptr->opacity = orig_ptr->opacity;
   ptr->back_opacity = orig_ptr->back_opacity;
   ptr->contents_opacity = orig_ptr->contents_opacity;
-#if RGSS > 1
   ptr->openness = orig_ptr->openness;
-#endif
-
-#if RGSS == 3
   ptr->tone = orig_ptr->tone;
-#endif
   ptr->cursor_tick = orig_ptr->cursor_tick;
   ptr->pause_tick = orig_ptr->pause_tick;
   return Qnil;
@@ -721,27 +574,29 @@ static VALUE rb_window_m_update(VALUE self)
  return Qnil;
 }
 
-#if RGSS == 3
-static VALUE rb_window_m_move(
-    VALUE self, VALUE x, VALUE y, VALUE width, VALUE height) {
-  struct Window *ptr = rb_window_data_mut(self);
-  ptr->x = NUM2INT(x);
-  ptr->y = NUM2INT(y);
-  ptr->width = NUM2INT(width);
-  ptr->height = NUM2INT(height);
-  return Qnil;
+//#if RGSS == 3
+static VALUE rb_window_m_move( VALUE self, VALUE x, VALUE y, VALUE width, VALUE height)
+{
+ struct Window *ptr = rb_window_data_mut(self);
+ ptr->x = NUM2INT(x);
+ ptr->y = NUM2INT(y);
+ ptr->width = NUM2INT(width);
+ ptr->height = NUM2INT(height);
+ return Qnil;
 }
 
-static VALUE rb_window_m_open_p(VALUE self) {
-  const struct Window *ptr = rb_window_data(self);
-  return ptr->openness == 255 ? Qtrue : Qfalse;
+static VALUE rb_window_m_open_p(VALUE self)
+{
+ const struct Window *ptr = rb_window_data(self);
+ return ptr->openness == 255 ? Qtrue : Qfalse;
 }
 
-static VALUE rb_window_m_close_p(VALUE self) {
-  const struct Window *ptr = rb_window_data(self);
-  return ptr->openness == 0 ? Qtrue : Qfalse;
+static VALUE rb_window_m_close_p(VALUE self)
+{
+ const struct Window *ptr = rb_window_data(self);
+ return ptr->openness == 0 ? Qtrue : Qfalse;
 }
-#endif
+//#endif
 
 static VALUE rb_window_m_windowskin(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
@@ -778,7 +633,7 @@ static VALUE rb_window_m_set_contents(VALUE self, VALUE newval) {
  return newval;
 }
 
-#if RGSS == 1
+//#if RGSS == 1
 static VALUE rb_window_m_stretch(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
   return ptr->stretch ? Qtrue : Qfalse;
@@ -789,7 +644,7 @@ static VALUE rb_window_m_set_stretch(VALUE self, VALUE newval) {
   ptr->stretch = RTEST(newval);
   return newval;
 }
-#endif
+//#endif
 
 static VALUE rb_window_m_cursor_rect(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
@@ -813,7 +668,7 @@ static VALUE rb_window_m_viewport(VALUE self) {
   return ptr->viewport;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
 static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval) {
   struct Window *ptr = rb_window_data_mut(self);
 
@@ -825,7 +680,7 @@ static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval) {
 
  return newval;
 }
-#endif
+//#endif
 
 static VALUE rb_window_m_active(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
@@ -849,7 +704,7 @@ static VALUE rb_window_m_set_visible(VALUE self, VALUE newval) {
   return newval;
 }
 
-#if RGSS == 3
+//#if RGSS == 3
 static VALUE rb_window_m_arrows_visible(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
   return ptr->arrows_visible ? Qtrue : Qfalse;
@@ -860,7 +715,7 @@ static VALUE rb_window_m_set_arrows_visible(VALUE self, VALUE newval) {
   ptr->arrows_visible = RTEST(newval);
   return newval;
 }
-#endif
+//#endif
 
 static VALUE rb_window_m_pause(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
@@ -954,7 +809,7 @@ static VALUE rb_window_m_set_oy(VALUE self, VALUE newval) {
   return newval;
 }
 
-#if RGSS == 3
+//#if RGSS == 3
 static VALUE rb_window_m_padding(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
   return INT2NUM(ptr->padding);
@@ -976,7 +831,7 @@ static VALUE rb_window_m_set_padding_bottom(VALUE self, VALUE newval) {
   ptr->padding_bottom = NUM2INT(newval);
   return newval;
 }
-#endif
+//#endif
 
 static VALUE rb_window_m_opacity(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
@@ -1011,7 +866,7 @@ static VALUE rb_window_m_set_contents_opacity(VALUE self, VALUE newval) {
   return newval;
 }
 
-#if RGSS > 1
+//#if RGSS > 1
 static VALUE rb_window_m_openness(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
   return INT2NUM(ptr->openness);
@@ -1022,9 +877,9 @@ static VALUE rb_window_m_set_openness(VALUE self, VALUE newval) {
   ptr->openness = clamp_int32(NUM2INT(newval), 0, 255);
   return newval;
 }
-#endif
+//#endif
 
-#if RGSS == 3
+//#if RGSS == 3
 static VALUE rb_window_m_tone(VALUE self) {
   const struct Window *ptr = rb_window_data(self);
   return ptr->tone;
@@ -1041,23 +896,12 @@ static VALUE rb_window_m_set_tone(VALUE self, VALUE newval)
 
  return newval;
 }
-#endif
+//#endif
 
 /* static END */
 
 int initWindowSDL()
 {
-  static const char *vsh1_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
 
   static const char *fsh1_source =
     "#version 120\n"
@@ -1088,21 +932,6 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  shader1 = compileShaders(vsh1_source, fsh1_source);
-  if ( shader1 == 0 ) return(1);
-
-  static const char *vsh2_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
-
   static const char *fsh2_source =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
@@ -1131,21 +960,6 @@ int initWindowSDL()
     "    gl_FragColor = color;\n"
     "    /* premultiplication */\n"
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
-    "}\n";
-
-  shader2 = compileShaders(vsh2_source, fsh2_source);
-  if ( shader2 == 0 ) return(1);
-
-  static const char *vsh3_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
     "}\n";
 
   static const char *fsh3_source =
@@ -1199,21 +1013,6 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  shader3 = compileShaders(vsh3_source, fsh3_source);
-  if ( shader3 == 0 ) return(1);
-
-  static const char *vsh4_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
-    "}\n";
-
   static const char *fsh4_source =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
@@ -1230,21 +1029,6 @@ int initWindowSDL()
     "    gl_FragColor = color;\n"
     "    /* premultiplication */\n"
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
-    "}\n";
-
-  shader4 = compileShaders(vsh4_source, fsh4_source);
-  if ( shader4 == 0 ) return(1);
-
-  static const char *cursor_vsh_source =
-    "#version 120\n"
-    "\n"
-    "uniform vec2 resolution;\n"
-    "\n"
-    "void main(void) {\n"
-    "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_Position.x = gl_Vertex.x / resolution.x * 2.0 - 1.0;\n"
-    "    gl_Position.y = 1.0 - gl_Vertex.y / resolution.y * 2.0;\n"
-    "    gl_Position.zw = vec2(0.0, 1.0);\n"
     "}\n";
 
   static const char *cursor_fsh_source =
@@ -1289,7 +1073,19 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  cursor_shader = compileShaders(cursor_vsh_source, cursor_fsh_source);
+  shader1 = compileShaders( fsh1_source);
+  if ( shader1 == 0 ) return(1);
+
+  shader2 = compileShaders( fsh2_source);
+  if ( shader2 == 0 ) return(1);
+
+  shader3 = compileShaders( fsh3_source);
+  if ( shader3 == 0 ) return(1);
+
+  shader4 = compileShaders( fsh4_source);
+  if ( shader4 == 0 ) return(1);
+
+  cursor_shader = compileShaders(cursor_fsh_source);
   if ( cursor_shader == 0 ) return(1);
 
   return(0);
@@ -1303,23 +1099,10 @@ void Init_Window(void) {
   rb_define_method(rb_cWindow, "dispose", rb_window_m_dispose, 0);
   rb_define_method(rb_cWindow, "disposed?", rb_window_m_disposed_p, 0);
   rb_define_method(rb_cWindow, "update", rb_window_m_update, 0);
-#if RGSS == 3
-  rb_define_method(rb_cWindow, "move", rb_window_m_move, 4);
-  rb_define_method(rb_cWindow, "open?", rb_window_m_open_p, 0);
-  rb_define_method(rb_cWindow, "close?", rb_window_m_close_p, 0);
-#endif
   rb_define_method(rb_cWindow, "windowskin", rb_window_m_windowskin, 0);
   rb_define_method(rb_cWindow, "windowskin=", rb_window_m_set_windowskin, 1);
   rb_define_method(rb_cWindow, "contents", rb_window_m_contents, 0);
   rb_define_method(rb_cWindow, "contents=", rb_window_m_set_contents, 1);
-#if RGSS == 1
-  rb_define_method(rb_cWindow, "stretch", rb_window_m_stretch, 0);
-  rb_define_method(rb_cWindow, "stretch=", rb_window_m_set_stretch, 1);
-#else
-  rb_define_method(rb_cWindow, "viewport=", rb_window_m_set_viewport, 1);
-  rb_define_method(rb_cWindow, "openness", rb_window_m_openness, 0);
-  rb_define_method(rb_cWindow, "openness=", rb_window_m_set_openness, 1);
-#endif
   rb_define_method(rb_cWindow, "cursor_rect", rb_window_m_cursor_rect, 0);
   rb_define_method(rb_cWindow, "cursor_rect=", rb_window_m_set_cursor_rect, 1);
   rb_define_method(rb_cWindow, "viewport", rb_window_m_viewport, 0);
@@ -1343,22 +1126,43 @@ void Init_Window(void) {
   rb_define_method(rb_cWindow, "ox=", rb_window_m_set_ox, 1);
   rb_define_method(rb_cWindow, "oy", rb_window_m_oy, 0);
   rb_define_method(rb_cWindow, "oy=", rb_window_m_set_oy, 1);
-#if RGSS == 3
-  rb_define_method(rb_cWindow, "arrows_visible", rb_window_m_arrows_visible, 0);
-  rb_define_method(rb_cWindow, "arrows_visible=", rb_window_m_set_arrows_visible, 1);
-  rb_define_method(rb_cWindow, "padding", rb_window_m_padding, 0);
-  rb_define_method(rb_cWindow, "padding=", rb_window_m_set_padding, 1);
-  rb_define_method(rb_cWindow, "padding_bottom", rb_window_m_padding_bottom, 0);
-  rb_define_method(rb_cWindow, "padding_bottom=", rb_window_m_set_padding_bottom, 1);
-  rb_define_method(rb_cWindow, "tone", rb_window_m_tone, 0);
-  rb_define_method(rb_cWindow, "tone=", rb_window_m_set_tone, 1);
-#endif
   rb_define_method(rb_cWindow, "opacity", rb_window_m_opacity, 0);
   rb_define_method(rb_cWindow, "opacity=", rb_window_m_set_opacity, 1);
   rb_define_method(rb_cWindow, "back_opacity", rb_window_m_back_opacity, 0);
   rb_define_method(rb_cWindow, "back_opacity=", rb_window_m_set_back_opacity, 1);
   rb_define_method(rb_cWindow, "contents_opacity", rb_window_m_contents_opacity, 0);
   rb_define_method(rb_cWindow, "contents_opacity=", rb_window_m_set_contents_opacity, 1);
+
+ if ( rgssver > 1 )
+{
+  rb_define_method(rb_cWindow, "viewport=", rb_window_m_set_viewport, 1);
+  rb_define_method(rb_cWindow, "openness", rb_window_m_openness, 0);
+  rb_define_method(rb_cWindow, "openness=", rb_window_m_set_openness, 1);
+
+  if ( rgssver == 3 )
+{
+   rb_define_method(rb_cWindow, "move", rb_window_m_move, 4);
+   rb_define_method(rb_cWindow, "open?", rb_window_m_open_p, 0);
+   rb_define_method(rb_cWindow, "close?", rb_window_m_close_p, 0);
+   rb_define_method(rb_cWindow, "arrows_visible", rb_window_m_arrows_visible, 0);
+   rb_define_method(rb_cWindow, "arrows_visible=", rb_window_m_set_arrows_visible, 1);
+   rb_define_method(rb_cWindow, "padding", rb_window_m_padding, 0);
+   rb_define_method(rb_cWindow, "padding=", rb_window_m_set_padding, 1);
+   rb_define_method(rb_cWindow, "padding_bottom", rb_window_m_padding_bottom, 0);
+   rb_define_method(rb_cWindow, "padding_bottom=", rb_window_m_set_padding_bottom, 1);
+   rb_define_method(rb_cWindow, "tone", rb_window_m_tone, 0);
+   rb_define_method(rb_cWindow, "tone=", rb_window_m_set_tone, 1);
+}
+
+}
+ else
+{
+  plandim.x = 160;
+  plandim.width = 192;
+  rb_define_method(rb_cWindow, "stretch", rb_window_m_stretch, 0);
+  rb_define_method(rb_cWindow, "stretch=", rb_window_m_set_stretch, 1);
+}
+
 }
 
 void deinitWindowSDL() {
@@ -1367,4 +1171,180 @@ void deinitWindowSDL() {
   if(shader3) glDeleteProgram(shader3);
   if(shader2) glDeleteProgram(shader2);
   if(shader1) glDeleteProgram(shader1);
+}
+
+void renderWindowRGSS1( const unsigned short index, const int vportox, const int vportoy )
+{
+// SDL_Surface *contents_surface = 0;
+ const SDL_Surface *skinsurf = 0;
+ const struct Rect *cursor_rect_ptr = 0;
+ struct Bitmap *contents_bitmap_ptr = 0, *skin_bitmap_ptr = 0;
+ struct Tone tonela = { 0.0, 0.0, 0.0, 0.0 };
+ struct Window *ptr = windowspa[index];
+ const int xrpos = -vportox + ptr->x, yrpos = -vportoy + ptr->y;
+ int adjusted_x = 0, adjusted_y = 0, cursor_opacity = 128, open_height = 0, open_y = 0;
+
+ cursor_rect_ptr = rb_rect_data(ptr->cursor_rect);
+ adjusted_x = ptr->x + cursor_rect_ptr->x + ptr->padding;
+ adjusted_y = ptr->y + cursor_rect_ptr->y + ptr->padding;
+ open_height = ptr->height;
+ open_y = ptr->y / 2;
+
+ if ( ptr->windowskin != Qnil )
+{
+  skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
+  contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
+/*
+ GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
+*/
+  skinsurf = skin_bitmap_ptr->surface;
+}
+
+ glEnable(GL_BLEND);
+ glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+ glBlendEquation(GL_FUNC_ADD);
+
+ if ( skinsurf != 0 )
+{
+
+  if ( ptr->task == 0 )
+{
+   glActiveTexture(GL_TEXTURE0);
+   bitmapBindTexture(skin_bitmap_ptr);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   if ( ptr->stretch )
+{
+    glUseProgram(shader1);
+    glUniform1i(glGetUniformLocation(shader1, "windowskin"), 0);
+    glUniform2f(glGetUniformLocation(shader1, "resolution"), window_width, window_height);
+    glUniform1f(glGetUniformLocation(shader1, "opacity"), ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
+    glUniform4f( glGetUniformLocation(shader1, "window_tone"), tonela.red, tonela.green, tonela.blue, tonela.gray );
+    gl_draw_rect( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0.0, 0.0, 1.0, 1.0);
+//    gl_draw_recti( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0, 0, 1, 1 );
+}
+   else
+{
+    glUseProgram(shader2);
+    glUniform1i(glGetUniformLocation(shader2, "windowskin"), 0);
+    glUniform2f(glGetUniformLocation(shader2, "resolution"), window_width, window_height);
+    glUniform1f(glGetUniformLocation(shader2, "opacity"), ptr->opacity * ptr->back_opacity / (255.0 * 255.0));
+    glUniform4f( glGetUniformLocation(shader2, "window_tone"), tonela.red, tonela.green, tonela.blue, tonela.gray );
+    gl_draw_rect( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0.0, 0.0, (ptr->width - 4) / 64.0, (open_height - 4) / 64.0);
+//    gl_draw_recti( xrpos + 2, -vportoy + open_y + 2, xrpos + ptr->width - 2, -vportoy + open_y + open_height - 2, 0, 0, (ptr->width - 4) / 64, (open_height - 4) / 64 );
+}
+
+   glUseProgram(shader3);
+   glUniform1i(glGetUniformLocation(shader3, "windowskin"), 0);
+   glUniform2f(glGetUniformLocation(shader3, "resolution"), window_width, window_height);
+   glUniform1f(glGetUniformLocation(shader3, "opacity"), ptr->opacity / 255.0);
+   glUniform2f(glGetUniformLocation(shader3, "bg_size"), ptr->width, open_height);
+   gl_draw_rect( -vportox + ptr->x, -vportoy + open_y, xrpos + ptr->width, -vportoy + open_y + open_height, 0.0, 0.0, ptr->width, open_height);
+//   gl_draw_recti( -vportox + ptr->x, -vportoy + open_y, xrpos + ptr->width, -vportoy + open_y + open_height, 0, 0, ptr->width, open_height);
+}
+
+  if ( ( ptr->task == 1 ) && ( cursor_rect_ptr->width > 0 ) && ( cursor_rect_ptr->height > 0 ) )
+{
+// TODO: clipping?
+   if (ptr->active) cursor_opacity = 255 - (20 - abs(ptr->cursor_tick - 20)) * 8;
+
+   glActiveTexture(GL_TEXTURE0);
+   bitmapBindTexture(skin_bitmap_ptr);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   glUseProgram(cursor_shader);
+   glUniform1i(glGetUniformLocation(cursor_shader, "windowskin"), 0);
+   glUniform2f(glGetUniformLocation(cursor_shader, "resolution"), window_width, window_height);
+   glUniform1f(glGetUniformLocation(cursor_shader, "opacity"), ptr->contents_opacity * cursor_opacity / (255.0 * 255.0));
+   glUniform2f(glGetUniformLocation(cursor_shader, "cursor_size"), cursor_rect_ptr->width, cursor_rect_ptr->height);
+   gl_draw_rect( -vportox + adjusted_x, -vportoy + adjusted_y, -vportox + adjusted_x + cursor_rect_ptr->width, -vportoy + adjusted_y + cursor_rect_ptr->height, 0.0, 0.0, cursor_rect_ptr->width, cursor_rect_ptr->height);
+//    gl_draw_recti( -vportox + adjusted_x, -vportoy + adjusted_y, -vportox + adjusted_x + cursor_rect_ptr->width, -vportoy + adjusted_y + cursor_rect_ptr->height, 0, 0, cursor_rect_ptr->width, cursor_rect_ptr->height );
+}
+
+  glUseProgram(shader4);
+  glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
+  glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
+  glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity / 255.0);
+
+  if ( contents_bitmap_ptr != 0 )
+{
+
+   if ( ptr->ox > 0 )
+{
+    gl_draw_rect( xrpos + 4, yrpos + ptr->height * 0.5 - 8, xrpos + 12, yrpos + ptr->height * 0.5 + 8, (plandim.x - 16) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height);
+//     gl_draw_recti( xrpos + 4, yrpos + ptr->height / 2 - 8, xrpos + 12, yrpos + ptr->height / 2 + 8, (plandim.x - 16) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height );
+}
+
+   if ( ptr->oy > 0 )
+{
+    gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + 4, xrpos + ptr->width * 0.5 + 8, yrpos + 12, (plandim.x - 8) / plandim.width, (plandim.y - 16) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height);
+//      gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + 4, xrpos + ptr->width / 2 + 8, yrpos + 12, (plandim.x - 8) / plandim.width, (plandim.y - 16) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height );
+}
+
+   if ( contents_bitmap_ptr->surface->w - ptr->ox > ptr->width - ptr->padding * 2 )
+{
+    gl_draw_rect( xrpos + ptr->width - 12, yrpos + ptr->height * 0.5 - 8, xrpos + ptr->width - 4, yrpos + ptr->height * 0.5 + 8, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x + 16) / plandim.width, (plandim.y + 8) / plandim.height);
+//      gl_draw_recti( xrpos + ptr->width - 12, yrpos + ptr->height / 2 - 8, xrpos + ptr->width - 4, yrpos + ptr->height / 2 + 8, (plandim.x + 8) / plandim.width, (plandim.y - 8) / plandim.height, (plandim.x + 16) / plandim.width, (plandim.y + 8) / plandim.height );
+}
+
+   if ( contents_bitmap_ptr->surface->h - ptr->oy > ptr->height - ptr->padding - ptr->padding_bottom )
+{
+    gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + ptr->height - 12, xrpos + ptr->width * 0.5 + 8, yrpos + ptr->height - 4, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y + 16) / plandim.height);
+//    gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + ptr->height - 12, xrpos + ptr->width / 2 + 8, yrpos + ptr->height - 4, (plandim.x - 8) / plandim.width, (plandim.y + 8) / plandim.height, (plandim.x + 8) / plandim.width, (plandim.y + 16) / plandim.height);
+}
+
+}
+
+  if ( ptr->pause )
+{
+   int pause_opacity = ptr->pause_tick > 16 ? 16 : ptr->pause_tick;
+   int pause_anim = ptr->pause_tick % 64 / 16;
+   double src_x2 = pause_anim % 2 * 16;
+   double src_y2 = pause_anim / 2 * 16;
+
+   glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->opacity * pause_opacity / (255.0 * 16.0));
+   gl_draw_rect( xrpos + ptr->width * 0.5 - 8, yrpos + ptr->height - 16, xrpos + ptr->width * 0.5 + 8, yrpos + ptr->height, (plandim.x + src_x2) / plandim.width, (pdpausey + src_y2) / plandim.height, (plandim.x + src_x2 + 16) / plandim.width, (pdpausey + src_y2 + 16) / plandim.height);
+//   gl_draw_recti( xrpos + ptr->width / 2 - 8, yrpos + ptr->height - 16, xrpos + ptr->width / 2 + 8, yrpos + ptr->height, (plandim.x + src_x2) / plandim.width, (pdpausey + src_y2) / plandim.height, (plandim.x + src_x2 + 16) / plandim.width, (pdpausey + src_y2 + 16) / plandim.height );
+}
+
+  if ( contents_bitmap_ptr->surface )
+{
+   int wcontent_width = ptr->width - ptr->padding * 2;
+   int wcontent_height = ptr->height - ptr->padding - ptr->padding_bottom;
+   int content_width = contents_bitmap_ptr->surface->w;
+   int content_height = contents_bitmap_ptr->surface->h;
+   int clip_left = ptr->ox;
+   int clip_top = ptr->oy;
+   int clip_right = ptr->ox + wcontent_width;
+   int clip_bottom = ptr->oy + wcontent_height;
+
+   if(clip_left < 0) clip_left = 0;
+   if(clip_top < 0) clip_top = 0;
+   if(clip_right > content_width) clip_right = content_width;
+   if(clip_bottom > content_height) clip_bottom = content_height;
+/*
+    glUseProgram(shader4);
+    glUniform1i(glGetUniformLocation(shader4, "contents"), 0);
+    glUniform2f(glGetUniformLocation(shader4, "resolution"), window_width, window_height);
+*/
+   glUniform1f(glGetUniformLocation(shader4, "opacity"), ptr->contents_opacity / 255.0);
+   glActiveTexture(GL_TEXTURE0);
+   bitmapBindTexture(contents_bitmap_ptr);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+   gl_draw_rect( xrpos + ptr->padding + (clip_left - ptr->ox), yrpos + ptr->padding + (clip_top - ptr->oy), xrpos + ptr->padding + (clip_right - ptr->ox), yrpos + ptr->padding + (clip_bottom - ptr->oy), (double)clip_left / content_width, (double)clip_top / content_height, (double)clip_right / content_width, (double)clip_bottom / content_height);
+//    gl_draw_recti( xrpos + ptr->padding + (clip_left - ptr->ox), yrpos + ptr->padding + (clip_top - ptr->oy), xrpos + ptr->padding + (clip_right - ptr->ox), yrpos + ptr->padding + (clip_bottom - ptr->oy), clip_left / content_width, clip_top / content_height, clip_right / content_width, clip_bottom / content_height );
+}
+
+}
+
+ ptr->task ^= 1;
+ glUseProgram(0);
 }

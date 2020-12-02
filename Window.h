@@ -12,9 +12,6 @@ struct Window
  VALUE viewport, windowskin, contents, cursor_rect;
  VALUE bdispose;
  bool visible, active, pause;
-//#if RGSS == 1
- bool stretch;
-//#endif
  int x, y, z, width, height;
  int ox, oy;
  int opacity, back_opacity, contents_opacity;
@@ -29,6 +26,9 @@ struct Window
  int cursor_tick;
  int pause_tick;
  unsigned short rendid;
+/* RGSS1 */
+ unsigned char task;
+ unsigned char stretch;
 };
 /*
 bool rb_window_data_p(VALUE obj);
@@ -41,5 +41,6 @@ void deinitWindowSDL(void);
 
 void prepareRenderWindow( const unsigned short index, const unsigned short rindex );
 void renderWindow( const unsigned short index, const int vportox, const int vportoy );
+void renderWindowRGSS1( const unsigned short index, const int vportox, const int vportoy );
 
 unsigned short maxwindowc;
