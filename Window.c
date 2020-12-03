@@ -108,7 +108,6 @@ static struct Window *rb_window_data_mut(VALUE obj)
 
 void prepareRenderWindow( const unsigned short index, const unsigned short rindex )
 {
- const struct Viewport *vppw = 0;
  struct Window *ptr = windowspa[index];
  struct RenderJob job;
 
@@ -122,22 +121,18 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
 }
 
  if (!ptr->visible) return;
-
+/*
  if ( ptr->viewport != Qnil )
 {
-  vppw = rb_viewport_data(ptr->viewport);
-  printf( "Window %u vport %i:%i:%i.\nPosition %i:%i (%i:%i).\n", index, vppw->ox, vppw->oy, vppw->z, ptr->x, ptr->y, ptr->ox, ptr->oy );
   job.z = vppw->z;
-  job.ox = vppw->ox;
-  job.oy = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.ox = 0;
-  job.oy = 0;
 }
+*/
 
+ job.z = ptr->z;
  job.y = ptr->y;
  job.t = rindex;
  job.reg = 3;
@@ -146,13 +141,13 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  Only for RGSS1...
  job.aux[0] = 0;
 */
- queueRenderJob(job);
+ queueRenderJob( job, ptr->vportid );
 
  if ( rgssver == 1 )
 {
   job.z = ptr->z + 2;
 // job.aux[0] = 1;
-  queueRenderJob(job);
+  queueRenderJob(job, ptr->vportid );
 }
 
 }
@@ -432,6 +427,7 @@ static VALUE window_alloc(VALUE klass)
   ptr->contents = rb_bitmap_new(1, 1);
   ptr->cursor_rect = rb_rect_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
+  ptr->vportid = 255;
   ptr->task = 0;
   windowspa[cminindex] = ptr;
 
@@ -507,6 +503,7 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->stretch = orig_ptr->stretch;
   rb_rect_set2(ptr->cursor_rect, orig_ptr->cursor_rect);
   ptr->viewport = orig_ptr->viewport;
+  ptr->vportid = orig_ptr->vportid;
   ptr->active = orig_ptr->active;
   ptr->visible = orig_ptr->visible;
   ptr->arrows_visible = orig_ptr->arrows_visible;
@@ -675,6 +672,7 @@ static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval) {
  if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
 {
 // rb_viewport_data(newval);
+  ptr->vportid = rb_viewport_data(newval)->ownid;
   ptr->viewport = newval;
 }
 

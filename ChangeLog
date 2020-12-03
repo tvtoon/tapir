@@ -1,5 +1,10 @@
 # en.UTF-8
 
+0.2.6
+^Lots of testing later, Viewport seems correct now. It always changes values, the right way is by pointer, but to do it correctly we have to give up the ruby way.
+^Rect and priorities are still way off, it will take some time to build every other class the way Viewport was done.
+^The resolution is not correct now that Viewport is always applied on RenderScreen.
+
 0.2.5
 ^Window should be ready enough for unification, missing shader strings that will probably go the easy way out...
 ^The "vsh_source", used to initialize shaders everywhere, is actually the same string.

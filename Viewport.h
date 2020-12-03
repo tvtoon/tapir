@@ -8,19 +8,15 @@
 // except according to those terms.
 struct Viewport
 {
-//  struct RenderQueue viewport_queue;
-  VALUE rect, color, tone;
+ VALUE rect, color, tone;
  VALUE bdispose;
-  bool visible;
-  int ox, oy, z;
+ int ox, oy, z;
+ unsigned char visible;
+ unsigned short ownid;
  unsigned short rendid;
 };
+
 const struct Viewport *rb_viewport_data(VALUE obj);
 void Init_Viewport(void);
-/*
-bool rb_viewport_data_p(VALUE obj);
-struct Viewport *rb_viewport_data_mut(VALUE obj);
-void prepareRenderViewport( const unsigned short index, const unsigned short rindex );
-void renderViewport( const unsigned short index, const struct RenderViewport *viewport );
-*/
 unsigned short maxvportqc;
+struct Viewport *rb_getvports( const unsigned short id );

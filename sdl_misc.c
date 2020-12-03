@@ -21,12 +21,12 @@
 #include <SDL_ttf.h>
 
 #include "rubyfill.h"
-#include "sdl_misc.h"
 #include "Audio.h"
 #include "Input.h"
 #include "Plane.h"
 #include "RGSSError.h"
 #include "RGSSReset.h"
+#include "Rect.h"
 #include "Sprite.h"
 #include "Tilemap.h"
 #include "Viewport.h"
@@ -35,6 +35,7 @@
 #include "ini.h"
 #include "misc.h"
 #include "openres.h"
+#include "sdl_misc.h"
 #include "surface_misc.h"
 
 int window_width = 544;
@@ -49,6 +50,7 @@ static GLuint transition_texture2;
 static SDL_GLContext glcontext = NULL;
 //static struct RenderQueue main_queue;
 static const unsigned short mq_capacity = 512, registry_capacity = 1024;
+static struct Rect nullrect = { 0, 0, 0, 0 };
 static struct RenderJob job_queuea[512];
 static int transition_vagueness = 255;
 static unsigned char newreg = 1;
@@ -119,10 +121,13 @@ int initSDL(const char *window_title)
 
  if ( rgssver == 1 )
 {
-  window_width = 640;
-  window_height = 480;
+  nullrect.width = window_width = 640;
+  nullrect.height = window_height = 480;
   renderfuna[3] = renderWindowRGSS1;
 }
+
+ nullrect.width = window_width;
+ nullrect.height = window_height;
 
  for ( ; ui < registry_capacity; ui++ )
 {
@@ -312,6 +317,7 @@ void event_loop()
 
 static void renderScreen()
 {
+ int recy = 0;
  unsigned short reg = 0, regc = 0;
 // const struct RenderViewport viewport = { window_width, window_height, 0, 0 };
 
@@ -350,12 +356,21 @@ static void renderScreen()
   newreg = 0;
 }
 
+ glEnable(GL_SCISSOR_TEST);
+
  for ( reg = 0; reg < mq_size; reg++ )
 {
-//  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].t, &viewport );
-  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].rindex, job_queuea[reg].ox, job_queuea[reg].oy );
+  recy = window_height - ( job_queuea[reg].recy[0] + job_queuea[reg].rech[0] );
+/*
+  glScissor( 0, 0, window_width, window_height );
+  glViewport( 0, 0, window_width, window_height );
+*/
+  glScissor( job_queuea[reg].recx[0], recy, job_queuea[reg].recw[0], job_queuea[reg].rech[0] );
+  glViewport( job_queuea[reg].recx[0], recy, job_queuea[reg].recw[0], job_queuea[reg].rech[0] );
+  renderfuna[ job_queuea[reg].reg ]( job_queuea[reg].rindex, job_queuea[reg].ox[0], job_queuea[reg].oy[0] );
 }
 
+ glDisable(GL_SCISSOR_TEST);
 }
 
 void renderSDL()
@@ -502,18 +517,12 @@ void disposeAll(void)
  registry_size = 0;
 }
 
-void queueRenderJob( struct RenderJob job )
+void queueRenderJob( struct RenderJob job, const unsigned short vportid )
 {
-/*
- struct RenderQueue *queue = &main_queue;
+ struct Rect *recto = &nullrect;
+ struct Viewport *vppw = 0;
+// ptr->vportid = rb_viewport_data(newval)->ownid;
 
- if(viewport != Qnil)
-{
-  queue = &((struct Viewport *)rb_viewport_data(viewport))->viewport_queue;
-}
-
- if ( queue->size == queue->capacity )
-*/
  if ( mq_size == mq_capacity )
 {
   fprintf( stderr, "Hopeless queue %u!\n", mq_capacity );
@@ -521,18 +530,43 @@ void queueRenderJob( struct RenderJob job )
 }
  else
 {
+//  if ( vport != 0 ) ( job.ox == 0 ) && ( job.oy == 0 )
+  if ( vportid != 255 )
+{
+   vppw = rb_getvports( vportid );
+   job.ox = &vppw->ox;
+   job.oy = &vppw->oy;
+   job.z = vppw->z;
+/*
+  if ( ( recto != 0 ) || ( recto->width > 0 ) || ( recto->height > 0 ) )
+{
+   recto = &rect;
+   job_queuea[mq_size].recx = &recto->x;
+   job_queuea[mq_size].recy = &recto->y;
+   job_queuea[mq_size].recw = &recto->width;
+   job_queuea[mq_size].rech = &recto->height;
+}
+*/
+}
+  else
+{
+   job.ox = &nullrect.x;
+   job.oy = &nullrect.y;
+}
+
+  job_queuea[mq_size].ox = job.ox;
+  job_queuea[mq_size].oy = job.oy;
+  job_queuea[mq_size].recx = &recto->x;
+  job_queuea[mq_size].recy = &recto->y;
+  job_queuea[mq_size].recw = &recto->width;
+  job_queuea[mq_size].rech = &recto->height;
   job_queuea[mq_size].z = job.z;
   job_queuea[mq_size].y = job.y;
   job_queuea[mq_size].t = job.t;
-  job_queuea[mq_size].aux[0] = job.aux[0];
-  job_queuea[mq_size].aux[1] = job.aux[1];
-  job_queuea[mq_size].aux[2] = job.aux[2];
-  job_queuea[mq_size].ox = job.ox;
-  job_queuea[mq_size].oy = job.oy;
   job_queuea[mq_size].reg = job.reg;
   job_queuea[mq_size].rindex = job.rindex;
   mq_size++;
-  printf( "Job %u: Z=%i, Y=%i, T=%i, R=%u, I=%u.\n", mq_size, job.z, job.y, job.t, job.reg, job.rindex );
+  printf( "Job %u: Z=%i, Y=%i, T=%i, R=%u, I=%u. Rec %i:%i, %i:%i, %i:%i.\n", mq_size, job.z, job.y, job.t, job.reg, job.rindex, job.ox[0], job.oy[0], recto->x, recto->y, recto->width,  recto->height );
 }
 
 }

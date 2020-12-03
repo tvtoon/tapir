@@ -26,6 +26,7 @@ struct Window
  int cursor_tick;
  int pause_tick;
  unsigned short rendid;
+ unsigned short vportid;
 /* RGSS1 */
  unsigned char task;
  unsigned char stretch;

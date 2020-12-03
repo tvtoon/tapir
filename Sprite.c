@@ -108,7 +108,6 @@ static struct Sprite *rb_sprite_data_mut(VALUE obj) {
 
 void prepareRenderSprite( const unsigned short index, const unsigned short rindex )
 {
- const struct Viewport *vppw = 0;
  struct Sprite *ptr = spritespa[index];
  struct RenderJob job;
 
@@ -122,28 +121,22 @@ void prepareRenderSprite( const unsigned short index, const unsigned short rinde
 }
 
  if(!ptr->visible) return;
-
+/*
  if ( ptr->viewport != Qnil )
 {
-  vppw = rb_viewport_data(ptr->viewport);
-//  printf( "Sprite %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   job.z = vppw->z;
-  job.ox = vppw->ox;
-  job.oy = vppw->oy;
- job.y = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.ox = 0;
-  job.oy = 0;
- job.y = ptr->y;
 }
-
+*/
+ job.z = ptr->z;
+ job.y = ptr->y;
  job.t = rindex;
  job.reg = 2;
  job.rindex = index;
- queueRenderJob(job);
+ queueRenderJob( job, ptr->vportid );
 }
 
 void renderSprite( const unsigned short index, const int vportox, const int vportoy )
@@ -337,6 +330,7 @@ static VALUE sprite_alloc(VALUE klass)
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
+  ptr->vportid = 255;
   ptr->rendid = NEWregisterRenderable( cminindex, 2 );
   spritespa[cminindex] = ptr;
 
@@ -360,21 +354,26 @@ static VALUE sprite_alloc(VALUE klass)
  *
  * Creates new sprite object, possibly with viewport.
  */
-static VALUE rb_sprite_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Sprite *ptr = rb_sprite_data_mut(self);
-  switch(argc) {
-    case 0:
-      break;
-    case 1:
-      if(argv[0] != Qnil) rb_viewport_data(argv[0]);
-      ptr->viewport = argv[0];
-      break;
-    default:
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0..1)", argc);
-      break;
-  }
-  return Qnil;
+static VALUE rb_sprite_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ struct Sprite *ptr = rb_sprite_data_mut(self);
+
+ if ( argc == 1 )
+{
+// rb_viewport_data(argv[0]);
+  if ( argv[0] != Qnil )
+{
+   ptr->vportid = rb_viewport_data(argv[0])->ownid;
+   ptr->viewport = argv[0];
+}
+
+}
+ else
+{
+  if ( argc != 0 ) rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1)", argc);
+}
+
+ return Qnil;
 }
 
 static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
@@ -382,6 +381,7 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
   const struct Sprite *orig_ptr = rb_sprite_data(orig);
   ptr->z = orig_ptr->z;
   ptr->viewport = orig_ptr->viewport;
+  ptr->vportid = orig_ptr->vportid;
   ptr->bitmap = orig_ptr->bitmap;
   rb_rect_set2(ptr->src_rect, orig_ptr->src_rect);
   rb_color_set2(ptr->color, orig_ptr->color);
@@ -644,6 +644,7 @@ static VALUE rb_sprite_m_set_viewport(VALUE self, VALUE newval)
  if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
 {
 // rb_viewport_data(newval);
+  ptr->vportid = rb_viewport_data(newval)->ownid;
   ptr->viewport = newval;
 }
 

@@ -124,7 +124,6 @@ static struct Tilemap *rb_tilemap_data_mut(VALUE obj)
 
 void prepareRenderTilemap( const unsigned short index, const unsigned short rindex )
 {
- const struct Viewport *vppw = 0;
  struct Tilemap *ptr = tmapspa[index];
  struct RenderJob job;
 
@@ -143,33 +142,26 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
  job.t = rindex;
  job.rindex = index;
 #if RGSS > 1
+/*
  if ( ptr->viewport != Qnil )
 {
-  vppw = rb_viewport_data(ptr->viewport);
-//  printf( "Tilemap %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   ptr->jobz = vppw->z;
   job.z = vppw->z;
-  job.ox = vppw->ox;
-  job.oy = vppw->oy;
 }
  else
 {
   ptr->jobz = 0;
   job.z = 0;
-  job.ox = 0;
-  job.oy = 0;
 }
-
- job.y = 0;
- queueRenderJob(job);
-
- if ( ptr->viewport == Qnil )  job.z = 200;
-// job.aux[0] = 1;
- queueRenderJob(job);
-/*
-const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
-printf( "Tilemap dimension %i*%i*%i=%i(%i).\n", map_data_ptr->xsize, map_data_ptr->ysize, map_data_ptr->zsize, map_data_ptr->size, map_data_ptr->dim );
 */
+ ptr->jobz = 0;
+ job.z = 0;
+ job.y = 0;
+ queueRenderJob(job, ptr->vportid );
+// if ( ptr->viewport == Qnil )
+ job.z = 200;
+// job.aux[0] = 1;
+ queueRenderJob(job, ptr->vportid );
 #else
  if(ptr->map_data == Qnil) return;
 
@@ -519,6 +511,7 @@ static VALUE tilemap_alloc(VALUE klass)
   ptr->autotiles = rb_bitmaparray_new();
 #endif
   ptr->rendid = NEWregisterRenderable( cminindex, 1 );
+  ptr->vportid = 255;
   tmapspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )
@@ -541,21 +534,26 @@ static VALUE tilemap_alloc(VALUE klass)
  *
  * Creates new tilemap object, possibly with viewport.
  */
-static VALUE rb_tilemap_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
-  switch(argc) {
-    case 0:
-      break;
-    case 1:
-      if(argv[0] != Qnil) rb_viewport_data(argv[0]);
-      ptr->viewport = argv[0];
-      break;
-    default:
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0..1)", argc);
-      break;
-  }
-  return Qnil;
+static VALUE rb_tilemap_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
+
+ if ( argc == 1 )
+{
+// rb_viewport_data(argv[0]);
+  if ( argv[0] != Qnil )
+{
+   ptr->vportid = rb_viewport_data(argv[0])->ownid;
+   ptr->viewport = argv[0];
+}
+
+}
+ else
+{
+  if ( argc != 0 ) rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1)", argc);
+}
+
+ return Qnil;
 }
 
 static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
@@ -573,6 +571,7 @@ static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->map_data = orig_ptr->map_data;
   ptr->flash_data = orig_ptr->flash_data;
   ptr->viewport = orig_ptr->viewport;
+  ptr->vportid = orig_ptr->vportid;
   ptr->visible = orig_ptr->visible;
   ptr->ox = orig_ptr->ox;
   ptr->oy = orig_ptr->oy;
@@ -726,6 +725,7 @@ static VALUE rb_tilemap_m_set_viewport(VALUE self, VALUE newval)
  if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
 {
 // rb_viewport_data(newval);
+  ptr->vportid = rb_viewport_data(newval)->ownid;
   ptr->viewport = newval;
 }
 

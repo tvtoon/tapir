@@ -1,6 +1,6 @@
 PROJECT = tapir
 MAJVER = 0.2
-MINVER = 5
+MINVER = 6
 LIBS = ${PROJECT}
 PROGS = tapir-x
 

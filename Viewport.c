@@ -103,6 +103,7 @@ static VALUE viewport_alloc(VALUE klass)
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
 //  ptr->rendid = NEWregisterRenderable( cminindex, 3 );
+  ptr->ownid = cminindex;
   vportspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 64; cminindex++ )
@@ -321,6 +322,19 @@ const struct Viewport *rb_viewport_data(VALUE obj) {
   struct Viewport *ret;
   Data_Get_Struct(obj, struct Viewport, ret);
   return ret;
+}
+
+struct Viewport *rb_getvports( const unsigned short id )
+{
+/*
+ vports->ox = vportspa[id][0].ox;
+ vports->oy = vportspa[id][0].oy;
+ vports->z = vportspa[id][0].z;
+ vports->visible = vportspa[id][0].visible;
+// vports-> = vportspa[id][0].ownid;
+ vports->rendid = vportspa[id][0].rendid;
+*/
+ return( vportspa[id] );
 }
 
 void Init_Viewport(void) {

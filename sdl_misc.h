@@ -6,15 +6,11 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-/*
-struct RenderViewport {
-  int width, height;
-  int ox, oy;
-};
-*/
+
 struct RenderJob {
  int z, y, t, aux[3];
- int ox, oy;
+ int *ox, *oy;
+ int *recx, *recy, *recw, *rech;
  unsigned short reg;
  unsigned short rindex;
 };
@@ -33,7 +29,8 @@ void event_loop(void);
 void freeze_screen(void);
 void ini_transition( void );
 void load_transition_image( const char *filename, const size_t filenso, const int vagueness );
-void queueRenderJob(struct RenderJob job);
+//void queueRenderJob(struct RenderJob job);
+void queueRenderJob( struct RenderJob job, const unsigned short vportid );
 void renderSDL(void);
 void disposeAll(void);
 unsigned short NEWregisterRenderable( const unsigned short index, const unsigned char type );

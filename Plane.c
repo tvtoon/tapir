@@ -34,6 +34,7 @@ struct Plane
  int z, ox, oy, opacity, blend_type;
  double zoom_x, zoom_y;
  unsigned short rendid;
+ unsigned short vportid;
 };
 
 static struct Plane *planspa[8] = { 0,0,0,0,0,0,0,0 };
@@ -74,7 +75,6 @@ static struct Plane *rb_plane_data_mut(VALUE obj) {
 
 void prepareRenderPlane( const unsigned short index, const unsigned short rindex )
 {
- const struct Viewport *vppw = 0;
  struct Plane *ptr = planspa[index];
  struct RenderJob job;
 
@@ -88,27 +88,23 @@ void prepareRenderPlane( const unsigned short index, const unsigned short rindex
 }
 
  if ( !ptr->visible ) return;
-
+/*
  if ( ptr->viewport != Qnil )
 {
-  vppw = rb_viewport_data(ptr->viewport);
-//  printf( "Plane %u vport %i:%i:%i.\n", index, vppw->ox, vppw->oy, vppw->z );
   job.z = vppw->z;
-  job.ox = vppw->ox;
-  job.oy = vppw->oy;
 }
  else
 {
   job.z = ptr->z;
-  job.ox = 0;
-  job.oy = 0;
 }
+*/
 
+ job.z = ptr->z;
  job.y = 0;
  job.t = rindex;
  job.reg = 0;
  job.rindex = index;
- queueRenderJob(job);
+ queueRenderJob(job, ptr->vportid);
 }
 
 void renderPlane( const unsigned short index, const int vportox, const int vportoy )
@@ -237,6 +233,7 @@ static VALUE plane_alloc(VALUE klass)
   ptr->color = rb_color_new2();
   ptr->tone = rb_tone_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 0 );
+  ptr->vportid = 255;
   planspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )
@@ -259,22 +256,26 @@ static VALUE plane_alloc(VALUE klass)
  *
  * Creates new plane object, possibly with viewport.
  */
-static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Plane *ptr = rb_plane_data_mut(self);
+static VALUE rb_plane_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ struct Plane *ptr = rb_plane_data_mut(self);
 
-  switch(argc) {
-    case 0:
-      break;
-    case 1:
-      if(argv[0] != Qnil) rb_viewport_data(argv[0]);
-      ptr->viewport = argv[0];
-      break;
-    default:
-      rb_raise(rb_eArgError,
-          "wrong number of arguments (%d for 0..1)", argc);
-      break;
-  }
-  return Qnil;
+ if ( argc == 1 )
+{
+// rb_viewport_data(argv[0]);
+  if ( argv[0] != Qnil )
+{
+   ptr->vportid = rb_viewport_data(argv[0])->ownid;
+   ptr->viewport = argv[0];
+}
+
+}
+ else
+{
+  if ( argc != 0 ) rb_raise(rb_eArgError, "wrong number of arguments (%d for 0..1)", argc);
+}
+
+ return Qnil;
 }
 
 static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
@@ -285,6 +286,7 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
 #endif
   ptr->bitmap = orig_ptr->bitmap;
   ptr->viewport = orig_ptr->viewport;
+  ptr->vportid = orig_ptr->vportid;
   ptr->visible = orig_ptr->visible;
   ptr->z = orig_ptr->z;
   ptr->ox = orig_ptr->ox;
@@ -359,6 +361,7 @@ static VALUE rb_plane_m_set_viewport(VALUE self, VALUE newval)
  if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
 {
 //  rb_viewport_data(newval);
+  ptr->vportid = rb_viewport_data(newval)->ownid;
   ptr->viewport = newval;
 }
 

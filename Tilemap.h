@@ -24,6 +24,7 @@ struct Tilemap
  int autotile_tick;
  unsigned short rendid;
  int jobz;
+ unsigned short vportid;
 };
 
 /*
