@@ -156,8 +156,8 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 {
   ptr->jobz = 0;
   job.z = 0;
-  job.ox = ptr->ox;
-  job.oy = ptr->oy;
+  job.ox = 0;
+  job.oy = 0;
 }
 
  job.y = 0;

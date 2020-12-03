@@ -134,8 +134,8 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
  else
 {
   job.z = ptr->z;
-  job.ox = ptr->ox;
-  job.oy = ptr->oy;
+  job.ox = 0;
+  job.oy = 0;
 }
 
  job.y = ptr->y;
