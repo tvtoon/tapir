@@ -14,7 +14,7 @@ include make/zlib.mk
 #-lcrypt $(SDL_LIBS) $(GL_LIBS) $(FONTCONFIG_LIBS) $(LIBCONFIG_LIBS)
 ELIBFLAGS += -lruby181 `pkg-config --libs --static sdl2 SDL2_image SDL2_mixer SDL2_ttf fontconfig gl libconfig`
 CFLAGS = `pkg-config --cflags sdl2 SDL2_image SDL2_mixer SDL2_ttf fontconfig gl libconfig`
-CFLAGS += -DRGSS=1 -D_VERSION_=\"${VERSION}\" -O2 -Wall -Wextra -Wno-unused-parameter -g -o
+CFLAGS += -D__DEBUG__ -DRGSS=1 -D_VERSION_=\"${VERSION}\" -O2 -Wall -Wextra -Wno-unused-parameter -g -o
 DOCS = 
 INFOS =
 INCLUDES = 

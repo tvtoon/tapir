@@ -14,68 +14,89 @@
 #include "Table.h"
 #include "misc.h"
 
-#define SQRT_UINT32_MAX ((uint32_t)1<<16)
-
 static VALUE rb_cTable;
 static unsigned int tabc = 0;
 unsigned int maxtabc = 0;
 
-static int32_t multiply_size(
-    uint32_t xsize, uint32_t ysize, uint32_t zsize) {
-  // Note: original RGSS doesn't check overflow.
-  if((xsize >= SQRT_UINT32_MAX || ysize >= SQRT_UINT32_MAX) &&
-      xsize > 0 && UINT32_MAX / xsize < ysize) {
-    goto fail;
-  }
-  uint32_t xysize = xsize * ysize;
-  if((xysize >= SQRT_UINT32_MAX || zsize >= SQRT_UINT32_MAX) &&
-      xysize > 0 && UINT32_MAX / xysize < zsize) {
-    goto fail;
-  }
-  uint32_t size = xysize * zsize;
-  if(size > (INT32_MAX - 20) / 2) {
-    goto fail;
-  }
-  return xsize * ysize * zsize;
-fail:
+/*
+ Note: original RGSS doesn't check overflow.
+ Note 2: the original checking made no sense, this one does.
+*/
+static int multiply_size( int xsize, int ysize, int zsize)
+{
+
+ if ( ( xsize > 16384 ) || ( ysize > 16384 ) || ( zsize > 4 ) )
+{
   rb_raise(rb_eArgError, "Multiplied table size is too large.");
+  return(0);
+}
+ else
+{
+  return( xsize * ysize * zsize );
 }
 
-static void table_resize(
-    struct Table *ptr, int32_t new_dim, int32_t new_xsize,
-    int32_t new_ysize, int32_t new_zsize) {
-  if(new_xsize < 0) new_xsize = 0;
-  if(new_ysize < 0) new_ysize = 0;
-  if(new_zsize < 0) new_zsize = 0;
-  int32_t new_size = multiply_size(new_xsize, new_ysize, new_zsize);
-  int16_t *new_data = ALLOC_N(int16_t, new_size);
-  for(int32_t i = 0; i < new_size; ++i) {
-    new_data[i] = 0;
-  }
-  if(ptr->data) {
-    int32_t xsize_min = ptr->xsize < new_xsize ? ptr->xsize : new_xsize;
-    int32_t ysize_min = ptr->ysize < new_ysize ? ptr->ysize : new_ysize;
-    int32_t zsize_min = ptr->zsize < new_zsize ? ptr->zsize : new_zsize;
-    for(int32_t z = 0; z < zsize_min; ++z) {
-      for(int32_t y = 0; y < ysize_min; ++y) {
-        for(int32_t x = 0; x < xsize_min; ++x) {
-          new_data[(z*new_ysize+y)*new_xsize+x] =
-            ptr->data[(z*ptr->ysize+y)*ptr->xsize+x];
-        }
-      }
-    }
+}
+
+static void table_resize( struct Table *ptr, int new_dim, int new_xsize, int new_ysize, int new_zsize )
+{
+ int new_size = 0, x = 0, xsize_min = 0, y = 0, ysize_min = 0, z = 0, zsize_min = 0;
+ unsigned short *new_data = 0;
+
+ if ( ( new_xsize < 1 ) || ( new_ysize < 1 ) || ( new_zsize < 1 ) )
+{
+  new_dim = 0;
+  new_xsize = 0;
+  new_ysize = 0;
+  new_zsize = 0;
+}
+ else
+{
+  new_size = multiply_size(new_xsize, new_ysize, new_zsize);
+
+  if ( new_size != 0 )
+{
+   new_data = ALLOC_N(unsigned short, new_size);
+
+   if (ptr->data)
+{
+    for ( ; z < new_size; z++ ) new_data[z] = 0;
+
+    xsize_min = ptr->xsize < new_xsize ? ptr->xsize : new_xsize;
+    ysize_min = ptr->ysize < new_ysize ? ptr->ysize : new_ysize;
+    zsize_min = ptr->zsize < new_zsize ? ptr->zsize : new_zsize;
+
+    for ( z = 0; z < zsize_min; ++z )
+{
+
+     for ( y = 0; y < ysize_min; ++y )
+{
+
+      for ( x = 0; x < xsize_min; ++x )
+{
+       new_data[(z*new_ysize+y)*new_xsize+x] = ptr->data[(z*ptr->ysize+y)*ptr->xsize+x];
+}
+
+}
+
+}
+
     xfree(ptr->data);
-  }
-  ptr->dim = new_dim;
-  ptr->xsize = new_xsize;
-  ptr->ysize = new_ysize;
-  ptr->zsize = new_zsize;
-  ptr->size = new_size;
-  ptr->data = new_data;
+}
+
+}
+
+}
+
+ ptr->dim = new_dim;
+ ptr->xsize = new_xsize;
+ ptr->ysize = new_ysize;
+ ptr->zsize = new_zsize;
+ ptr->size = new_size;
+ ptr->data = new_data;
 }
 
 /*
- * A table is 1, 2, or 3-dimensional array of <tt>int16_t</tt> values.
+ * A table is 1, 2, or 3-dimensional array of <tt>unsigned short</tt> values.
  *
  * == Bugs
  *
@@ -124,43 +145,61 @@ static VALUE table_alloc(VALUE klass)
  * Creates a new table of 1, 2, or 3 dimension.
  *
  * <code>xsize</code>, <code>ysize</code>, and <code>zsize</code> are
- * interpreted as <tt>int32_t</tt> values.
+ * interpreted as <tt>int</tt> values.
  * Negative values are adjusted to zero.
  */
-static VALUE rb_table_m_initialize(int argc, VALUE *argv, VALUE self) {
-  struct Table *ptr = rb_table_data_mut(self);
-  if(ptr->data) {
-    xfree(ptr->data);
-    ptr->data = NULL;
-  }
+static VALUE rb_table_m_initialize(int argc, VALUE *argv, VALUE self)
+{
+ struct Table *ptr = rb_table_data_mut(self);
+ int newx = 1, newy = 1, newz = 1;
 
-  if(1 <= argc && argc <= 3) {
-    table_resize(
-        ptr, argc,
-        0 < argc ? NUM2INT(argv[0]) : 1,
-        1 < argc ? NUM2INT(argv[1]) : 1,
-        2 < argc ? NUM2INT(argv[2]) : 1);
-  } else {
-    // Note: original RGSS has wrong messages.
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for 1..3)", argc);
-  }
-  return Qnil;
+ if ( ptr->data )
+{
+  xfree(ptr->data);
+  ptr->data = NULL;
+}
+// if ( 1 <= argc && argc <= 3 )
+ if ( ( argc > 0 ) && ( argc < 4 ) )
+{
+  newx = NUM2INT(argv[0]);
+
+  if ( argc > 1 )
+{
+   newy = NUM2INT(argv[1]);
+
+   if ( argc > 2 ) newz = NUM2INT(argv[2]);
+}
+//  table_resize( ptr, argc, 0 < argc ? NUM2INT(argv[0]): 1, 1 < argc ? NUM2INT(argv[1]) : 1, 2 < argc ? NUM2INT(argv[2]) : 1);
+  table_resize( ptr, argc, newx, newy, newz );
+}
+ else
+{
+// Note: original RGSS has wrong messages.
+  rb_raise( rb_eArgError, "wrong number of arguments (%d for 1..3)", argc );
 }
 
-static VALUE rb_table_m_initialize_copy(VALUE self, VALUE orig) {
-  struct Table *ptr = rb_table_data_mut(self);
-  const struct Table *orig_ptr = rb_table_data(orig);
-  ptr->dim = orig_ptr->dim;
-  ptr->xsize = orig_ptr->xsize;
-  ptr->ysize = orig_ptr->ysize;
-  ptr->zsize = orig_ptr->zsize;
-  ptr->size = orig_ptr->size;
-  ptr->data = ALLOC_N(int16_t, ptr->size);
-  for(int32_t i = 0; i < ptr->size; ++i) {
-    ptr->data[i] = orig_ptr->data[i];
-  }
-  return Qnil;
+ return Qnil;
+}
+
+static VALUE rb_table_m_initialize_copy(VALUE self, VALUE orig)
+{
+ struct Table *ptr = rb_table_data_mut(self);
+ const struct Table *orig_ptr = rb_table_data(orig);
+ int i = 0;
+
+ ptr->dim = orig_ptr->dim;
+ ptr->xsize = orig_ptr->xsize;
+ ptr->ysize = orig_ptr->ysize;
+ ptr->zsize = orig_ptr->zsize;
+ ptr->size = orig_ptr->size;
+ ptr->data = ALLOC_N(unsigned short, ptr->size);
+
+ for ( ; i < ptr->size; i++ )
+{
+  ptr->data[i] = orig_ptr->data[i];
+}
+
+ return Qnil;
 }
 
 /*
@@ -172,7 +211,7 @@ static VALUE rb_table_m_initialize_copy(VALUE self, VALUE orig) {
  * Resizes the table to a specified size.
  *
  * <code>xsize</code>, <code>ysize</code>, and <code>zsize</code> are
- * interpreted as <tt>int32_t</tt> values.
+ * interpreted as <tt>int</tt> values.
  * Negative values are adjusted to zero.
  *
  * It preserves existing elements. When expanding, new areas are filled by 0.
@@ -186,7 +225,7 @@ static VALUE rb_table_m_initialize_copy(VALUE self, VALUE orig) {
 static VALUE rb_table_m_resize(int argc, VALUE *argv, VALUE self)
 {
  struct Table *ptr = rb_table_data_mut(self);
- int32_t new_dim = argc, new_xsize = 1, new_ysize = 1, new_zsize = 1;
+ int new_dim = argc, new_xsize = 1, new_ysize = 1, new_zsize = 1;
 
  if ( ( argc == 0 ) || ( argc > 3 ) )
 {
@@ -228,9 +267,10 @@ static VALUE rb_table_m_resize(int argc, VALUE *argv, VALUE self)
  *
  * Returns the first component of the size.
  */
-static VALUE rb_table_m_xsize(VALUE self) {
-  const struct Table *ptr = rb_table_data(self);
-  return INT2NUM(ptr->xsize);
+static VALUE rb_table_m_xsize(VALUE self)
+{
+ const struct Table *ptr = rb_table_data(self);
+ return INT2NUM(ptr->xsize);
 }
 
 /*
@@ -240,9 +280,10 @@ static VALUE rb_table_m_xsize(VALUE self) {
  * Returns the second component of the size.
  * If the dimension is 1, it returns 1.
  */
-static VALUE rb_table_m_ysize(VALUE self) {
-  const struct Table *ptr = rb_table_data(self);
-  return INT2NUM(ptr->ysize);
+static VALUE rb_table_m_ysize(VALUE self)
+{
+ const struct Table *ptr = rb_table_data(self);
+ return INT2NUM(ptr->ysize);
 }
 
 /*
@@ -252,9 +293,10 @@ static VALUE rb_table_m_ysize(VALUE self) {
  * Returns the third component of the size.
  * If the dimension is 1 or 2, it returns 1.
  */
-static VALUE rb_table_m_zsize(VALUE self) {
-  const struct Table *ptr = rb_table_data(self);
-  return INT2NUM(ptr->zsize);
+static VALUE rb_table_m_zsize(VALUE self)
+{
+ const struct Table *ptr = rb_table_data(self);
+ return INT2NUM(ptr->zsize);
 }
 
 /*
@@ -265,30 +307,47 @@ static VALUE rb_table_m_zsize(VALUE self) {
  *
  * Returns an element of the table.
  * <code>x</code>, <code>y</code> and <code>z</code> are
- * interpreted as <tt>int32_t</tt> values.
+ * interpreted as <tt>int</tt> values.
  *
  * The number of the arguments must match the dimension of the table.
  *
  * If the index is out of bounds, <code>nil</code> is returned.
  */
-static VALUE rb_table_m_aref(int argc, VALUE *argv, VALUE self) {
-  const struct Table *ptr = rb_table_data(self);
-  if(argc == ptr->dim) {
-    int32_t x = 0 < argc ? NUM2INT(argv[0]) : 0;
-    int32_t y = 1 < argc ? NUM2INT(argv[1]) : 0;
-    int32_t z = 2 < argc ? NUM2INT(argv[2]) : 0;
-    if(0 <= x && x < ptr->xsize && 0 <= y && y < ptr->ysize &&
-        0 <= z && z < ptr->zsize) {
-      return INT2NUM(ptr->data[((z * ptr->ysize) + y) * ptr->xsize + x]);
-    } else {
-      return Qnil;
-    }
-  } else {
-    // Note: original RGSS has wrong messages.
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for %d)", argc, ptr->dim);
-  }
-  return Qnil;
+static VALUE rb_table_m_aref(int argc, VALUE *argv, VALUE self)
+{
+ VALUE retv = Qnil;
+ const struct Table *ptr = rb_table_data(self);
+ int x = 0, y = 0, z = 0;
+
+ if ( argc == ptr->dim )
+{
+/*
+  int x = 0 < argc ? NUM2INT(argv[0]) : 0;
+  int y = 1 < argc ? NUM2INT(argv[1]) : 0;
+  int z = 2 < argc ? NUM2INT(argv[2]) : 0;
+*/
+  x = NUM2INT(argv[0]);
+
+  if ( argc > 1 )
+{
+   y = NUM2INT(argv[1]);
+
+   if ( argc > 2 ) z = NUM2INT(argv[2]);
+}
+
+  if ( 0 <= x && x < ptr->xsize && 0 <= y && y < ptr->ysize && 0 <= z && z < ptr->zsize )
+{
+   retv = INT2NUM(ptr->data[((z * ptr->ysize) + y) * ptr->xsize + x]);
+}
+
+}
+ else
+{
+// Note: original RGSS has wrong messages.
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)", argc, ptr->dim);
+}
+
+ return retv;
 }
 
 /*
@@ -300,10 +359,10 @@ static VALUE rb_table_m_aref(int argc, VALUE *argv, VALUE self) {
  *
  * Modifies an element of the table.
  * <code>x</code>, <code>y</code> and <code>z</code> are
- * interpreted as <tt>int32_t</tt> values.
+ * interpreted as <tt>int</tt> values.
  *
- * <code>newval</code> is first interpreted as an <tt>int32_t</tt> value,
- * and then casted to <tt>int16_t</tt> value by wrapping.
+ * <code>newval</code> is first interpreted as an <tt>int</tt> value,
+ * and then casted to <tt>unsigned short</tt> value by wrapping.
  *
  * Usually, the number of the arguments must be exactly one more than
  * the dimension of the table.
@@ -312,27 +371,52 @@ static VALUE rb_table_m_aref(int argc, VALUE *argv, VALUE self) {
  *
  * If the index is out of bounds, it does nothing.
  */
-static VALUE rb_table_m_aset(int argc, VALUE *argv, VALUE self) {
-  struct Table *ptr = rb_table_data_mut(self);
-  // Note: original RGSS wrongly accepts one less arguments.
-  if(argc == ptr->dim || argc == ptr->dim+1) {
-    int32_t x = 0 < argc-1 ? NUM2INT(argv[0]) : 0;
-    int32_t y = 1 < argc-1 ? NUM2INT(argv[1]) : 0;
-    int32_t z = 2 < argc-1 ? NUM2INT(argv[2]) : 0;
-    int16_t val = (uint16_t)NUM2INT(argv[argc-1]);
-    if(0 <= x && x < ptr->xsize && 0 <= y && y < ptr->ysize &&
-        0 <= z && z < ptr->zsize) {
-      ptr->data[((z * ptr->ysize) + y) * ptr->xsize + x] = val;
-      return INT2NUM(val);
-    } else {
-      return Qnil;
-    }
-  } else {
-    // Note: original RGSS has wrong messages.
-    rb_raise(rb_eArgError,
-        "wrong number of arguments (%d for %d)", argc, ptr->dim+1);
-  }
-  return Qnil;
+static VALUE rb_table_m_aset(int argc, VALUE *argv, VALUE self)
+{
+ VALUE retv = Qnil;
+ struct Table *ptr = rb_table_data_mut(self);
+ int x = 0, y = 0, z = 0;
+ unsigned short val = 0;
+
+// Note: original RGSS wrongly accepts one less arguments.
+// if ( argc == ptr->dim || argc == ptr->dim+1 )
+ if ( ( argc > 0 ) && ( argc < ( ptr->dim + 2 ) ) )
+{
+/*
+  int x = 0 < argc-1 ? NUM2INT(argv[0]) : 0;
+  int y = 1 < argc-1 ? NUM2INT(argv[1]) : 0;
+  int z = 2 < argc-1 ? NUM2INT(argv[2]) : 0;
+  unsigned short val = (unsigned short)NUM2INT(argv[argc-1]);
+*/
+  if ( argc > 1 )
+{
+   x = NUM2INT(argv[0]);
+
+   if ( argc > 2 )
+{
+    y = NUM2INT(argv[1]);
+
+    if ( argc > 3 ) z = NUM2INT(argv[2]);
+}
+
+}
+
+  val = (unsigned short)NUM2INT(argv[argc-1]);
+
+  if ( 0 <= x && x < ptr->xsize && 0 <= y && y < ptr->ysize && 0 <= z && z < ptr->zsize )
+{
+   ptr->data[((z * ptr->ysize) + y) * ptr->xsize + x] = val;
+   retv = INT2NUM(val);
+}
+
+}
+ else
+{
+// Note: original RGSS has wrong messages.
+  rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)", argc, ptr->dim+1);
+}
+
+ return retv;
 }
 
 /*
@@ -343,46 +427,74 @@ static VALUE rb_table_m_aset(int argc, VALUE *argv, VALUE self) {
  *
  * See Table#_dump for the format.
  */
-static VALUE rb_table_s_old_load(VALUE klass, VALUE str) {
-  (void) klass;
-  VALUE ret = table_alloc(rb_cTable);
-  struct Table *ptr = rb_table_data_mut(ret);
+static VALUE rb_table_s_old_load(VALUE klass, VALUE str)
+{
+ VALUE ret = table_alloc(rb_cTable);
+ const char *s = 0;
+ int i = 0;
+ long s_len = 0;
+ struct Table *ptr = rb_table_data_mut(ret);
 
-  StringValue(str);
-  // Note: original RGSS doesn't check types.
-  Check_Type(str, T_STRING);
-  const char *s = RSTRING_PTR(str);
-  // Note: original RGSS doesn't check length.
-  long s_len = RSTRING_LEN(str);
-  if(s_len < (long)(sizeof(int32_t)*5)) {
+ (void) klass;
+ StringValue(str);
+// Note: original RGSS doesn't check types.
+ Check_Type(str, T_STRING);
+ s = RSTRING_PTR(str);
+// Note: original RGSS doesn't check length.
+ s_len = RSTRING_LEN(str);
+
+ if ( s_len < (long)(sizeof(int) * 5 ) )
+{
+  rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
+}
+ else
+{
+  if (!s) s = "";
+
+  ptr->dim = read_int32(s+sizeof(int)*0);
+  ptr->xsize = read_int32(s+sizeof(int)*1);
+  ptr->ysize = read_int32(s+sizeof(int)*2);
+  ptr->zsize = read_int32(s+sizeof(int)*3);
+  ptr->size = read_int32(s+sizeof(int)*4);
+// Note: original RGSS doesn't check dimension or size.
+  if ( ptr->dim < 1 || ptr->dim > 3 || ptr->xsize < 0 || ptr->ysize < 0 || ptr->zsize < 0 )
+{
+   rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
+}
+  else
+{
+// Note: original RGSS doesn't check total size.
+   if ( ptr->size != multiply_size(ptr->xsize, ptr->ysize, ptr->zsize) )
+{
     rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
-  }
-  if(!s) s = "";
-  ptr->dim = read_int32(s+sizeof(int32_t)*0);
-  ptr->xsize = read_int32(s+sizeof(int32_t)*1);
-  ptr->ysize = read_int32(s+sizeof(int32_t)*2);
-  ptr->zsize = read_int32(s+sizeof(int32_t)*3);
-  ptr->size = read_int32(s+sizeof(int32_t)*4);
-  // Note: original RGSS doesn't check dimension or size.
-  if(ptr->dim < 1 || ptr->dim > 3 ||
-      ptr->xsize < 0 || ptr->ysize < 0 || ptr->zsize < 0) {
-    rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
-  }
-  // Note: original RGSS doesn't check total size.
-  if(ptr->size != multiply_size(ptr->xsize, ptr->ysize, ptr->zsize)) {
-    rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
-  }
-  // Note: original RGSS doesn't check length.
-  if(s_len - sizeof(int32_t)*5 != sizeof(int16_t)*ptr->size) {
-    rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
-  }
-  if(ptr->data) xfree(ptr->data);
-  ptr->data = ALLOC_N(int16_t, ptr->size);
-  for(int32_t i = 0; i < ptr->size; ++i) {
-    ptr->data[i] = read_int16(s+sizeof(int32_t)*5+sizeof(int16_t)*i);
-  }
+}
+   else
+{
+// Note: original RGSS doesn't check length.
+    if ( s_len - sizeof(int)*5 != sizeof(unsigned short)*ptr->size )
+{
+     rb_raise(rb_eArgError, "Corrupted marshal data for Table.");
+}
+    else
+{
+     if (ptr->data) xfree(ptr->data);
+
+     ptr->data = ALLOC_N(unsigned short, ptr->size);
+
+     for ( ; i < ptr->size; i++ )
+{
+      ptr->data[i] = read_int16(s+sizeof(int)*5+sizeof(unsigned short)*i);
+}
 
  printf( "%i*%i*%i=%i(%i) ", ptr->xsize, ptr->ysize, ptr->zsize, ptr->size, ptr->dim );
+}
+
+}
+
+}
+
+}
+
   return ret;
 }
 
@@ -399,22 +511,37 @@ static VALUE rb_table_s_old_load(VALUE klass, VALUE str) {
  * - <code>contents[x + xsize * y] = table[x, y]</code> (if dimension is 2)
  * - <code>contents[x] = table[x]</code> (if dimension is 1)
  */
-static VALUE rb_table_m_old_dump(VALUE self, VALUE limit) {
+static VALUE rb_table_m_old_dump(VALUE self, VALUE limit)
+{
+ VALUE ret = Qnil;
+ const struct Table *ptr = rb_table_data(self);
+ int i = 0;
+ size_t dumpsize = sizeof(int)*5+sizeof(unsigned short)*(ptr->size);
+ char *s = (char *)xmalloc(dumpsize);
+
+ if ( s != 0 )
+{
   (void) limit;
-  const struct Table *ptr = rb_table_data(self);
-  size_t dumpsize = sizeof(int32_t)*5+sizeof(int16_t)*(ptr->size);
-  char *s = (char *)xmalloc(dumpsize);
   write_int32(s, ptr->dim);
   write_int32(s+4, ptr->xsize);
   write_int32(s+8, ptr->ysize);
   write_int32(s+12, ptr->zsize);
   write_int32(s+16, ptr->size);
-  for(int32_t i = 0; i < ptr->size; ++i) {
-    write_int16(s+20+i*2, ptr->data[i]);
-  }
-  VALUE ret = rb_str_new(s, dumpsize);
+
+  for ( ; i < ptr->size; i++ )
+{
+   write_int16(s+20+i*2, ptr->data[i]);
+}
+
+  ret = rb_str_new(s, dumpsize);
   xfree(s);
-  return ret;
+}
+ else
+{
+  rb_raise(rb_eArgError, "No more memory for strings, dumping Table.");
+}
+
+ return ret;
 }
 
 /* static END */

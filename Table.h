@@ -6,15 +6,12 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-/*
-#include <stdbool.h>
-#include <stdint.h>
-#include <ruby.h>
-*/
 
 struct Table {
-  int32_t dim, xsize, ysize, zsize, size;
-  int16_t *data;
+// int32_t
+ int dim, xsize, ysize, zsize, size;
+// int16_t
+ unsigned short *data;
 };
 
 bool rb_table_data_p(VALUE obj);
