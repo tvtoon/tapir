@@ -345,12 +345,12 @@ static void renderScreen()
   else
 {
    qsort( job_queuea, mq_size, sizeof( struct RenderJob ), compare_jobs);
-
+#ifdef __DEBUG__
    for ( reg = 0, regc = 1; reg < mq_size; reg++, regc++ )
 {
     printf( "Arj %u: Z=%i, Y=%i, T=%i, R=%u, I=%u.\n", regc, job_queuea[reg].z, job_queuea[reg].y, job_queuea[reg].t, job_queuea[reg].reg, job_queuea[reg].rindex );
 }
-
+#endif
 }
 
   newreg = 0;
@@ -519,6 +519,7 @@ void disposeAll(void)
 
 void queueRenderJob( struct RenderJob job, const unsigned short vportid )
 {
+ const struct Rect *rectv = 0;
  struct Rect *recto = &nullrect;
  struct Viewport *vppw = 0;
 // ptr->vportid = rb_viewport_data(newval)->ownid;
@@ -534,9 +535,19 @@ void queueRenderJob( struct RenderJob job, const unsigned short vportid )
   if ( vportid != 255 )
 {
    vppw = rb_getvports( vportid );
+/*
+   if ( vppw->visible )
+{
+*/
    job.ox = &vppw->ox;
    job.oy = &vppw->oy;
    job.z = vppw->z;
+   rectv = rb_rect_data( vppw->rect );
+
+   if ( ( rectv->width > 0 ) || ( rectv->height > 0 ) )
+{
+    recto = rectv;
+}
 /*
   if ( ( recto != 0 ) || ( recto->width > 0 ) || ( recto->height > 0 ) )
 {

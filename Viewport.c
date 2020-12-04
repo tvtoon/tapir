@@ -239,6 +239,7 @@ static VALUE rb_viewport_m_visible(VALUE self) {
 static VALUE rb_viewport_m_set_visible(VALUE self, VALUE newval) {
   struct Viewport *ptr = rb_viewport_data_mut(self);
   ptr->visible = RTEST(newval);
+//printf( "New visible on Viewport %u: %i.\n", ptr->ownid, ptr->visible );
   return newval;
 }
 
@@ -250,6 +251,7 @@ static VALUE rb_viewport_m_z(VALUE self) {
 static VALUE rb_viewport_m_set_z(VALUE self, VALUE newval) {
   struct Viewport *ptr = rb_viewport_data_mut(self);
   ptr->z = NUM2INT(newval);
+//printf( "New Z on Viewport %u: %i.\n", ptr->ownid, ptr->z );
   return newval;
 }
 

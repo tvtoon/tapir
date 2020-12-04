@@ -782,6 +782,7 @@ static VALUE rb_window_m_z(VALUE self) {
 static VALUE rb_window_m_set_z(VALUE self, VALUE newval) {
   struct Window *ptr = rb_window_data_mut(self);
   ptr->z = NUM2INT(newval);
+//printf( "New Z on Window with Viewport %u: %i.\n", ptr->vportid, ptr->z );
   return newval;
 }
 
