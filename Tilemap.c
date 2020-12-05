@@ -165,7 +165,8 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 #else
  if(ptr->map_data == Qnil) return;
 
- const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+// const struct Table *map_data_ptr = rb_table_data(ptr->map_data);
+ const struct Table *map_data_ptr = rb_gettables(ptr->mapdataid);
 
  int xsize = map_data_ptr->xsize;
  int ysize = map_data_ptr->ysize;
@@ -173,7 +174,9 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 
  const struct Table *priorities_ptr = NULL;
 
- if(ptr->priorities != Qnil) rb_table_data(ptr->priorities);
+// if(ptr->priorities != Qnil) rb_table_data(ptr->priorities);
+ if(ptr->priorities != Qnil) ptr->priorities = rb_gettables(ptr->prioritid);
+
 // TODO respect Viewport width
  int x_start = ptr->ox >> 5;
  int x_end = (ptr->ox + window_width + 31) >> 5;
@@ -245,8 +248,11 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
     int autotile_x, autotile_y;
 
     const struct Table *flags_ptr = NULL;
-    if(ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
-    if(flags_ptr && tile_id < flags_ptr->size) {
+
+//   if(ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
+   if(ptr->flags != Qnil) flags_ptr = rb_gettables(ptr->flagsid);
+
+   if(flags_ptr && tile_id < flags_ptr->size) {
       is_counter = flags_ptr->data[tile_id] & 0x80;
     }
 
@@ -397,7 +403,8 @@ void renderTilemap( const unsigned short index, const int vportox, const int vpo
 
  if(ptr->map_data == Qnil) return;
 
- map_data_ptr = rb_table_data(ptr->map_data);
+// map_data_ptr = rb_table_data(ptr->map_data);
+ map_data_ptr = rb_gettables(ptr->mapdataid);
  xsize = map_data_ptr->xsize;
  ysize = map_data_ptr->ysize;
 #if RGSS > 1
@@ -405,7 +412,8 @@ void renderTilemap( const unsigned short index, const int vportox, const int vpo
 
  if ( zsize > 3 ) zsize = 3;
 
- if (ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
+// if (ptr->flags != Qnil) flags_ptr = rb_table_data(ptr->flags);
+ if (ptr->flags != Qnil) flags_ptr = rb_gettables(ptr->flagsid);
 
  for ( ; zi < zsize; ++zi )
 {
@@ -512,6 +520,10 @@ static VALUE tilemap_alloc(VALUE klass)
 #endif
   ptr->rendid = NEWregisterRenderable( cminindex, 1 );
   ptr->vportid = 255;
+  ptr->flagsid = 4096;
+  ptr->flashid = 4096;
+  ptr->mapdataid = 4096;
+  ptr->prioritid = 4096;
   tmapspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )
@@ -576,6 +588,10 @@ static VALUE rb_tilemap_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->ox = orig_ptr->ox;
   ptr->oy = orig_ptr->oy;
   ptr->autotile_tick = orig_ptr->autotile_tick;
+  ptr->flagsid = orig_ptr->flagsid;
+  ptr->flashid = orig_ptr->flashid;
+  ptr->mapdataid = orig_ptr->mapdataid;
+  ptr->prioritid = orig_ptr->prioritid;
   return Qnil;
 }
 
@@ -628,6 +644,7 @@ static VALUE rb_tilemap_m_set_map_data(VALUE self, VALUE newval) {
  if ( ( newval != ptr->map_data ) && ( newval != Qnil ) )
 {
   ptrt = rb_table_data(newval);
+  ptr->mapdataid = ptrt->ownid;
   ptr->map_data = newval;
   printf( "Tilemap map data %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
 }
@@ -647,6 +664,7 @@ static VALUE rb_tilemap_m_set_flash_data(VALUE self, VALUE newval) {
  if ( ( newval != ptr->flash_data ) && ( newval != Qnil ) )
 {
   ptrt = rb_table_data(newval);
+  ptr->flashid = ptrt->ownid;
   ptr->flash_data = newval;
   printf( "Tilemap flash data %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
 }
@@ -711,6 +729,7 @@ static VALUE rb_tilemap_m_set_flags(VALUE self, VALUE newval)
  if ( ( newval != ptr->flags ) && ( newval != Qnil ) )
 {
   ptrt = rb_table_data(newval);
+  ptr->flagsid = ptrt->ownid;
   ptr->flags = newval;
   printf( "Tilemap flags %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
 }
@@ -766,6 +785,7 @@ static VALUE rb_tilemap_m_set_priorities(VALUE self, VALUE newval) {
  if ( ( newval != ptr->priorities ) && ( newval != Qnil ) )
 {
   ptrt = rb_table_data(newval);
+  ptr->prioritid = ptrt->ownid;
   ptr->priorities = newval;
   printf( "Tilemap priorities %i*%i*%i=%i(%i).\n", ptrt->xsize, ptrt->ysize, ptrt->zsize, ptrt->size, ptrt->dim );
 }

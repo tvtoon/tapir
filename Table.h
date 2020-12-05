@@ -12,11 +12,15 @@ struct Table {
  int dim, xsize, ysize, zsize, size;
 // int16_t
  unsigned short *data;
+ unsigned short ownid;
 };
 
-bool rb_table_data_p(VALUE obj);
 const struct Table *rb_table_data(VALUE obj);
+struct Table *rb_gettables( const unsigned short id );
+/*
+bool rb_table_data_p(VALUE obj);
 struct Table *rb_table_data_mut(VALUE obj);
+*/
 void Init_Table(void);
 
 unsigned int maxtabc;

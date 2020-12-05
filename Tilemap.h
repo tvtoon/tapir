@@ -25,6 +25,10 @@ struct Tilemap
  unsigned short rendid;
  int jobz;
  unsigned short vportid;
+ unsigned short flagsid;
+ unsigned short flashid;
+ unsigned short mapdataid;
+ unsigned short prioritid;
 };
 
 /*
