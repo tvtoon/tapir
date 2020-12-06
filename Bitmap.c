@@ -30,7 +30,77 @@
 
 static VALUE rb_cBitmap;
 static unsigned int bitmapc = 0;
+static unsigned short cminindex = 0;
 unsigned int maxbitmapc = 0;
+
+static struct Bitmap *bitmapspa[1024] =
+{
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
 
 static void bitmap_mark(struct Bitmap *ptr)
 {
@@ -39,11 +109,21 @@ static void bitmap_mark(struct Bitmap *ptr)
 // rb_gc_mark(ptr->pixcol);
 }
 
-static void bitmap_free(struct Bitmap *ptr) {
-  if(ptr->surface)
+static void bitmap_free(struct Bitmap *ptr)
 {
+
+ if (ptr->surface)
+{
+  bitmapspa[ptr->ownid] = 0;
+
+  if ( cminindex > ptr->ownid )
+{
+   cminindex = ptr->ownid;
+}
+
+  ptr->ownid = 1024;
   bitmapc--;
-SDL_FreeSurface(ptr->surface);
+  SDL_FreeSurface(ptr->surface);
 }
 
  if (ptr->texture_id)
@@ -58,20 +138,39 @@ SDL_FreeSurface(ptr->surface);
 
 static VALUE bitmap_alloc(VALUE klass)
 {
- struct Bitmap *ptr = ALLOC(struct Bitmap);
+ struct Bitmap *ptr = 0;
  VALUE ret = Qnil;
 
- ptr->surface = NULL;
- ptr->texture_id = 0;
- ptr->texture_invalidated = true;
- ptr->font = Qnil;
- ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
- ptr->font = rb_font_new();
- ptr->rect = rb_rect_new(0, 0, 0, 0);
+ if ( cminindex == 1024 )
+{
+#ifdef __DEBUG__
+  fprintf( stderr, "Reached maximum bitmap count of 1024!\n" );
+#endif
+  rb_raise( rb_eRGSSError, "Reached maximum bitmap count of 1024!\n" );
+}
+ else
+{
+  ptr = ALLOC(struct Bitmap);
+  ptr->surface = NULL;
+  ptr->texture_id = 0;
+  ptr->texture_invalidated = true;
+  ptr->font = Qnil;
+  ret = Data_Wrap_Struct(klass, bitmap_mark, bitmap_free, ptr);
+  ptr->font = rb_font_new();
+  ptr->rect = rb_rect_new(0, 0, 0, 0);
 // ptr->pixcol = rb_color_new(0.0, 0.0, 0.0, 0.0);
- bitmapc++;
+  ptr->ownid = cminindex;
+  bitmapspa[cminindex] = ptr;
 
- if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
+  for ( cminindex++; cminindex < 1024; cminindex++ )
+{
+   if ( bitmapspa[cminindex] == 0 ) break;
+}
+
+  bitmapc++;
+
+  if ( bitmapc > maxbitmapc ) maxbitmapc = bitmapc;
+}
 
  return ret;
 }
@@ -219,6 +318,14 @@ static VALUE rb_bitmap_m_dispose(VALUE self)
  if ( ptr->surface )
 {
   SDL_FreeSurface(ptr->surface);
+  bitmapspa[ptr->ownid] = 0;
+
+  if ( cminindex > ptr->ownid )
+{
+   cminindex = ptr->ownid;
+}
+
+  ptr->ownid = 1024;
   ptr->surface = NULL;
   bitmapc--;
 }
@@ -697,8 +804,8 @@ static VALUE rb_bitmap_m_radial_blur(VALUE self, VALUE angle, VALUE division) {
   Uint32 *orig_pixels = orig->pixels;
   Uint32 *dest_pixels = dest->pixels;
 
-  double *sins = malloc(sizeof(*sins) * division);
-  double *coss = malloc(sizeof(*coss) * division);
+  double *sins = malloc(sizeof(*sins) * division_i);
+  double *coss = malloc(sizeof(*coss) * division_i);
   for(int i = 0; i < division_i; ++i) {
     double theta = angle_rad * ((double)i / (division_i - 1) - 0.5);
     sins[i] = sin(theta);
@@ -960,7 +1067,7 @@ static VALUE rb_bitmap_m_set_font(VALUE self, VALUE newval) {
 }
 
 /* static END */
-
+/*
 VALUE rb_bitmap_rect(VALUE self)
 {
  const struct Bitmap *ptr = rb_bitmap_data(self);
@@ -969,20 +1076,43 @@ VALUE rb_bitmap_rect(VALUE self)
  return(ptr->rect);
 }
 
-VALUE rb_bitmap_new(int width, int height) {
-  VALUE ret = bitmap_alloc(rb_cBitmap);
-  struct Bitmap *ptr = rb_bitmap_data_mut(ret);
-  ptr->surface = create_rgba_surface(width, height);
-  if(!ptr->surface) {
-    /* TODO: check error handling */
-    rb_raise(rb_eRGSSError, "Could not create surface: %s", SDL_GetError());
-  }
-  return ret;
-}
-
 bool rb_bitmap_data_p(VALUE obj) {
   if(TYPE(obj) != T_DATA) return false;
   return RDATA(obj)->dmark == (void(*)(void*))bitmap_mark;
+}
+*/
+
+VALUE rb_bitmap_new( struct Bitmap *ptr, const int width, const int height)
+{
+ const unsigned short tindex = cminindex;
+ VALUE ret = bitmap_alloc(rb_cBitmap);
+
+ if ( ret != Qnil )
+{
+//  ptr = rb_bitmap_data_mut(ret);
+  ptr = bitmapspa[tindex];
+  ptr->surface = create_rgba_surface(width, height);
+/* TODO: check error handling */
+  if (!ptr->surface)
+{
+   rb_raise(rb_eRGSSError, "Could not create surface: %s", SDL_GetError());
+}
+/*
+  else
+{
+   printf("DEM SURFACE %u:%u!\n", ptr->surface->w, ptr->surface->h );
+}
+*/
+}
+
+ return ret;
+}
+
+struct Bitmap *rb_bitmap_data_mut(VALUE obj)
+{
+// Note: original RGSS doesn't check frozen.
+ if(OBJ_FROZEN(obj)) rb_error_frozen("Bitmap");
+ return (struct Bitmap *)rb_bitmap_data(obj);
 }
 
 const struct Bitmap *rb_bitmap_data(VALUE obj) {
@@ -998,10 +1128,9 @@ const struct Bitmap *rb_bitmap_data(VALUE obj) {
   return ret;
 }
 
-struct Bitmap *rb_bitmap_data_mut(VALUE obj) {
-  // Note: original RGSS doesn't check frozen.
-  if(OBJ_FROZEN(obj)) rb_error_frozen("Bitmap");
-  return (struct Bitmap *)rb_bitmap_data(obj);
+struct Bitmap *rb_getbitmaps( const unsigned short id )
+{
+ return( bitmapspa[id] );
 }
 
 /*

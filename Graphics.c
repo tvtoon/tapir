@@ -193,12 +193,18 @@ static VALUE rb_graphics_s_fadein(VALUE klass, VALUE duration) {
   return Qnil;
 }
 
-static VALUE rb_graphics_s_snap_to_bitmap(VALUE klass) {
-  (void) klass;
-  VALUE bitmap = rb_bitmap_new(window_width, window_height);
-  struct Bitmap *bitmap_ptr = rb_bitmap_data_mut(bitmap);
-  capturedRenderSDL(bitmap_ptr->surface);
-  return bitmap;
+static VALUE rb_graphics_s_snap_to_bitmap(VALUE klass)
+{
+ VALUE bitmap = Qnil;
+ struct Bitmap *bitmap_ptr = 0;
+
+ (void) klass;
+ bitmap = rb_bitmap_new( bitmap_ptr, window_width, window_height );
+//  bitmap_ptr = rb_bitmap_data_mut(bitmap);
+// if ( bitmap != Qnil ) capturedRenderSDL(bitmap_ptr->surface);
+ if ( bitmap_ptr != 0 ) capturedRenderSDL(bitmap_ptr->surface);
+
+ return bitmap;
 }
 
 static VALUE rb_graphics_s_width(VALUE klass) {

@@ -24,6 +24,7 @@ struct Sprite
 //#endif
  unsigned short vportid;
  unsigned short rendid;
+ unsigned short bitmapid;
 };
 
 /*

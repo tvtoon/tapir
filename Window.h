@@ -27,6 +27,10 @@ struct Window
  int pause_tick;
  unsigned short rendid;
  unsigned short vportid;
+/*
+ unsigned short contid;
+ unsigned short wskinid;
+*/
 /* RGSS1 */
  unsigned char task;
  unsigned char stretch;

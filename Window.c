@@ -189,12 +189,16 @@ void renderWindow( const unsigned short index, const int vportox, const int vpor
 
   if ( ptr->windowskin != Qnil )
 {
-   skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
-   contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
 /*
  GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
 */
+   skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
+   contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
    skinsurf = skin_bitmap_ptr->surface;
+/*
+   skin_bitmap_ptr = rb_getbitmaps(ptr->wskinid);
+   contents_bitmap_ptr =  rb_getbitmaps(ptr->contid);
+*/
 }
 
   glEnable(GL_BLEND);
@@ -202,6 +206,7 @@ void renderWindow( const unsigned short index, const int vportox, const int vpor
   glBlendEquation(GL_FUNC_ADD);
 
   if ( skinsurf != 0 )
+//  if ( skin_bitmap_ptr->surface != 0 )
 {
    glActiveTexture(GL_TEXTURE0);
    bitmapBindTexture(skin_bitmap_ptr);
@@ -369,6 +374,7 @@ static void window_free(struct Window *ptr)
 static VALUE window_alloc(VALUE klass)
 {
  VALUE ret = Qnil;
+ struct Bitmap *bptr = 0;
  struct Window *ptr = 0;
 
  if ( cminindex == 256 )
@@ -424,10 +430,12 @@ static VALUE window_alloc(VALUE klass)
   ptr->pause_tick = 0;
   ptr->bdispose = Qfalse;
   ret = Data_Wrap_Struct(klass, window_mark, window_free, ptr);
-  ptr->contents = rb_bitmap_new(1, 1);
+  ptr->contents = rb_bitmap_new( bptr, 1, 1 );
   ptr->cursor_rect = rb_rect_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
   ptr->vportid = 255;
+//  ptr->wskinid = 1024;
+//  ptr->contid = bptr->ownid;
   ptr->task = 0;
   windowspa[cminindex] = ptr;
 
@@ -500,6 +508,8 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   const struct Window *orig_ptr = rb_window_data(orig);
   ptr->windowskin = orig_ptr->windowskin;
   ptr->contents = orig_ptr->contents;
+//  ptr->wskinid = orig_ptr->wskinid;
+//  ptr->contid = orig_ptr->contid;
   ptr->stretch = orig_ptr->stretch;
   rb_rect_set2(ptr->cursor_rect, orig_ptr->cursor_rect);
   ptr->viewport = orig_ptr->viewport;
@@ -606,7 +616,7 @@ static VALUE rb_window_m_set_windowskin(VALUE self, VALUE newval)
 
  if ( ( newval != ptr->windowskin ) && ( newval != Qnil ) )
 {
-// rb_bitmap_data(newval);
+//  ptr->wskinid = rb_bitmap_data(newval)->ownid;
   ptr->windowskin = newval;
 }
 
@@ -618,12 +628,13 @@ static VALUE rb_window_m_contents(VALUE self) {
   return ptr->contents;
 }
 
-static VALUE rb_window_m_set_contents(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
+static VALUE rb_window_m_set_contents(VALUE self, VALUE newval)
+{
+ struct Window *ptr = rb_window_data_mut(self);
 
  if ( ( newval != ptr->contents ) && ( newval != Qnil ) )
 {
-// rb_bitmap_data(newval);
+//  ptr->contid = rb_bitmap_data(newval)->ownid;
   ptr->contents = newval;
 }
 
@@ -1191,12 +1202,16 @@ void renderWindowRGSS1( const unsigned short index, const int vportox, const int
 
  if ( ptr->windowskin != Qnil )
 {
-  skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
-  contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
 /*
  GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
 */
+  skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
+  contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
   skinsurf = skin_bitmap_ptr->surface;
+/*
+  skin_bitmap_ptr = rb_getbitmaps(ptr->wskinid);
+  contents_bitmap_ptr =  rb_getbitmaps(ptr->contid);
+*/
 }
 
  glEnable(GL_BLEND);
@@ -1204,6 +1219,7 @@ void renderWindowRGSS1( const unsigned short index, const int vportox, const int
  glBlendEquation(GL_FUNC_ADD);
 
  if ( skinsurf != 0 )
+// if ( skin_bitmap_ptr->surface != 0 )
 {
 
   if ( ptr->task == 0 )

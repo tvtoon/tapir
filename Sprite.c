@@ -151,14 +151,17 @@ void renderSprite( const unsigned short index, const int vportox, const int vpor
 
  const struct Tone *tone_ptr = rb_tone_data(ptr->tone);
 
+#ifdef __DEBUG__
  if ( ( rgssver > 1 ) && ( ptr->wave_amp != 0 ) ) WARN_UNIMPLEMENTED("Sprite#wave_amp");
 
  if (ptr->bush_depth) WARN_UNIMPLEMENTED("Sprite#bush_depth");
+#endif
 
  if ( ptr->bitmap == Qnil ) return;
 
-  const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
-  SDL_Surface *surface = bitmap_ptr->surface;
+//  const struct Bitmap *bitmap_ptr = rb_bitmap_data(ptr->bitmap);
+ const struct Bitmap *bitmap_ptr = rb_getbitmaps(ptr->bitmapid);
+ SDL_Surface *surface = bitmap_ptr->surface;
 
   if(!surface) return;
 
@@ -331,6 +334,7 @@ static VALUE sprite_alloc(VALUE klass)
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
   ptr->vportid = 255;
+  ptr->bitmapid = 1024;
   ptr->rendid = NEWregisterRenderable( cminindex, 2 );
   spritespa[cminindex] = ptr;
 
@@ -383,6 +387,7 @@ static VALUE rb_sprite_m_initialize_copy(VALUE self, VALUE orig) {
   ptr->viewport = orig_ptr->viewport;
   ptr->vportid = orig_ptr->vportid;
   ptr->bitmap = orig_ptr->bitmap;
+  ptr->bitmapid = orig_ptr->bitmapid;
   rb_rect_set2(ptr->src_rect, orig_ptr->src_rect);
   rb_color_set2(ptr->color, orig_ptr->color);
   rb_tone_set2(ptr->tone, orig_ptr->tone);
@@ -488,10 +493,16 @@ static VALUE rb_sprite_m_set_bitmap(VALUE self, VALUE newval)
   if (ptr->bitmap != newval)
 {
    ptr->bitmap = newval;
+   ptr->bitmapid = bitmap_ptr->ownid;
 
    if ( bitmap_ptr->surface )
 {
-    rb_rect_set2(ptr->src_rect, rb_bitmap_rect(newval));
+//    rb_rect_set2(ptr->src_rect, rb_bitmap_rect(newval));
+    rb_rect_set2( ptr->src_rect, bitmap_ptr->rect );
+}
+   else
+{
+    rb_raise(rb_eRGSSError, "disposed bitmap");
 }
 
 }

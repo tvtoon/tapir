@@ -230,6 +230,7 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
   int src_x, src_y;
 #if RGSS > 1
   int bitmapid = -1;
+
   if(0 < tile_id && tile_id < 1024) {
     // Tileset B, C, D, E
     bitmapid = 5 + ((tile_id>>8)&3);
@@ -310,17 +311,19 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
   } else {
     return;
   }
-  const struct BitmapArray *bitmaparray_ptr =
-    rb_bitmaparray_data(ptr->bitmaps);
+
+  const struct BitmapArray *bitmaparray_ptr = rb_bitmaparray_data(ptr->bitmaps);
+
   tileset = bitmaparray_ptr->data[bitmapid];
 #else
   if(tile_id < 48) return;
+
   if(tile_id < 384) {
     int autotile_id = tile_id / 48 - 1;
     autotile_shape_id = tile_id % 48;
 
-    const struct BitmapArray *bitmaparray_ptr =
-      rb_bitmaparray_data(ptr->autotiles);
+    const struct BitmapArray *bitmaparray_ptr = rb_bitmaparray_data(ptr->autotiles);
+
     tileset = bitmaparray_ptr->data[autotile_id];
 
     // TODO: animation
@@ -334,8 +337,11 @@ static void renderTile( const struct Tilemap *ptr, int tile_id, int x, int y, co
 #endif
 
   if(tileset == Qnil) return;
+//  const struct Bitmap *tileset_ptr = rb_bitmap_data(tileset);
   const struct Bitmap *tileset_ptr = rb_bitmap_data(tileset);
+
   SDL_Surface *tileset_surface = tileset_ptr->surface;
+
   if(!tileset_surface) return;
 
   glEnable(GL_BLEND);
@@ -756,8 +762,9 @@ static VALUE rb_tilemap_m_tileset(VALUE self) {
   return ptr->tileset;
 }
 
-static VALUE rb_tilemap_m_set_tileset(VALUE self, VALUE newval) {
-  struct Tilemap *ptr = rb_tilemap_data_mut(self);
+static VALUE rb_tilemap_m_set_tileset(VALUE self, VALUE newval)
+{
+ struct Tilemap *ptr = rb_tilemap_data_mut(self);
 
  if ( ( newval != ptr->tileset ) && ( newval != Qnil ) )
 {

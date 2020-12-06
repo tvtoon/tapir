@@ -97,9 +97,14 @@ static VALUE rb_bitmaparray_m_aset(VALUE self, VALUE index, VALUE newval)
  struct BitmapArray *ptr = rb_bitmaparray_data_mut(self);
  int iindex = NUM2INT(index);
 
- if(iindex < 0 || bitmapalen <= iindex) return Qnil;
- if(newval != Qnil) rb_bitmap_data(newval);
- ptr->data[iindex] = newval;
+ if (iindex < 0 || bitmapalen <= iindex) return Qnil;
+
+ if (newval != Qnil)
+{
+  rb_bitmap_data(newval);
+  ptr->data[iindex] = newval;
+}
+
  return newval;
 }
 

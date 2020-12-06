@@ -13,8 +13,10 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdbool.h>
+//#include <string.h>
 /*#include <ruby.h>*/
 #include <unistd.h>
+#include <sys/resource.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -97,7 +99,7 @@ static void Init_RGSS(void) {
 int main(int argc, char **argv)
 {
 // VALUE excdata;
-  bool help = false;
+ bool help = false;
 /*
 char *ruby_argv_array[] = {
     (char*)"ruby",
@@ -109,6 +111,16 @@ char *ruby_argv_array[] = {
  int argpos = 1, i = 0/*, ruby_argc = 2*/, state = 0;
  struct ini *ini_data = 0;
  struct ini_section *game_section = 0;
+ struct rlimit rls;
+
+ rls.rlim_cur = 16777216;
+ rls.rlim_max = 1073741824;
+ i = setrlimit( RLIMIT_STACK, &rls );
+
+ if ( i != 0 )
+{
+  fprintf( stderr, "Error setting limit: %s\n", strerror(errno) );
+}
 
 /* Ruby does not answer well for this...
  atexit(tapir_atexit);

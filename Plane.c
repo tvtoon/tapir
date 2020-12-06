@@ -35,6 +35,7 @@ struct Plane
  double zoom_x, zoom_y;
  unsigned short rendid;
  unsigned short vportid;
+ unsigned short bitmapid;
 };
 
 static struct Plane *planspa[8] = { 0,0,0,0,0,0,0,0 };
@@ -117,7 +118,8 @@ void renderPlane( const unsigned short index, const int vportox, const int vport
 
  if ( ( ptr->opacity != 0 ) && ( ptr->bitmap != Qnil ) )
 {
-  bitmap_ptr = rb_bitmap_data(ptr->bitmap);
+//  bitmap_ptr = rb_bitmap_data(ptr->bitmap);
+  bitmap_ptr = rb_getbitmaps(ptr->bitmapid);
   surface = bitmap_ptr->surface;
 
   if ( surface != 0 )
@@ -234,6 +236,7 @@ static VALUE plane_alloc(VALUE klass)
   ptr->tone = rb_tone_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 0 );
   ptr->vportid = 255;
+  ptr->bitmapid = 1024;
   planspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )
@@ -285,6 +288,7 @@ static VALUE rb_plane_m_initialize_copy(VALUE self, VALUE orig) {
  printf( "Initializing plane %u by copy!\n", cminindex );
 #endif
   ptr->bitmap = orig_ptr->bitmap;
+  ptr->bitmapid = orig_ptr->bitmapid;
   ptr->viewport = orig_ptr->viewport;
   ptr->vportid = orig_ptr->vportid;
   ptr->visible = orig_ptr->visible;
@@ -337,11 +341,13 @@ static VALUE rb_plane_m_bitmap(VALUE self) {
 
 static VALUE rb_plane_m_set_bitmap(VALUE self, VALUE newval)
 {
+ const struct Bitmap *bptr = 0;
  struct Plane *ptr = rb_plane_data_mut(self);
 
  if ( ( newval != ptr->bitmap ) && ( newval != Qnil ) )
 {
-// rb_bitmap_data(newval);
+  bptr = rb_bitmap_data(newval);
+  ptr->bitmapid = bptr->ownid;
   ptr->bitmap = newval;
 }
 

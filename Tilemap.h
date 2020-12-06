@@ -29,6 +29,7 @@ struct Tilemap
  unsigned short flashid;
  unsigned short mapdataid;
  unsigned short prioritid;
+ unsigned short bitmapid;
 };
 
 /*
