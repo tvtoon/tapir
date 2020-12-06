@@ -7,26 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-struct Sprite
-{
- VALUE viewport, bitmap, src_rect, color, tone, flash_color;
- VALUE bdispose;
-// Rect src_rect;
- bool visible, mirror;
- int x, y, z, ox, oy;
- int bush_depth, opacity, blend_type;
- int flash_duration, flash_count;
- bool flash_is_nil;
- double zoom_x, zoom_y, angle;
-//#if RGSS > 1
- double wave_phase;
- int wave_amp, wave_length, wave_speed, bush_opacity;
-//#endif
- unsigned short vportid;
- unsigned short rendid;
- unsigned short bitmapid;
-};
-
 /*
 bool rb_sprite_data_p(VALUE obj);
 const struct Sprite *rb_sprite_data(VALUE obj);

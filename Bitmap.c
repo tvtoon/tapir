@@ -109,6 +109,13 @@ static void bitmap_mark(struct Bitmap *ptr)
 // rb_gc_mark(ptr->pixcol);
 }
 
+static struct Bitmap *rb_bitmap_data_mut(VALUE obj)
+{
+// Note: original RGSS doesn't check frozen.
+ if(OBJ_FROZEN(obj)) rb_error_frozen("Bitmap");
+ return (struct Bitmap *)rb_bitmap_data(obj);
+}
+
 static void bitmap_free(struct Bitmap *ptr)
 {
 
@@ -1106,13 +1113,6 @@ VALUE rb_bitmap_new( struct Bitmap *ptr, const int width, const int height)
 }
 
  return ret;
-}
-
-struct Bitmap *rb_bitmap_data_mut(VALUE obj)
-{
-// Note: original RGSS doesn't check frozen.
- if(OBJ_FROZEN(obj)) rb_error_frozen("Bitmap");
- return (struct Bitmap *)rb_bitmap_data(obj);
 }
 
 const struct Bitmap *rb_bitmap_data(VALUE obj) {

@@ -1,5 +1,11 @@
 # en.UTF-8
 
+0.2.7
+^Reworked Table code, plus made another relational stuff for it.
+^Some Bitmap fixes and yet another data base to avoid ruby calls.
+^Moved Plane, Sprite, Tilemap and Window structures from headers to source files, to signalize that they are "ending points" and not "freesbees" like Bitmap, Color, Font, Rect, and Tone.
+^Solved two bugs regarding Window, never use VALUE for checking again as it will invoke catastrophes.
+
 0.2.6
 ^Lots of testing later, Viewport seems correct now. It always changes values, the right way is by pointer, but to do it correctly we have to give up the ruby way.
 ^Rect and priorities are still way off, it will take some time to build every other class the way Viewport was done.

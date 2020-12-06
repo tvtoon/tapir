@@ -21,8 +21,8 @@ VALUE rb_bitmap_new( struct Bitmap *bitmap_ptr, const int width, const int heigh
 /*
 VALUE rb_bitmap_rect(VALUE self);
 bool rb_bitmap_data_p(VALUE obj);
-*/
 struct Bitmap *rb_bitmap_data_mut(VALUE obj);
+*/
 const struct Bitmap *rb_bitmap_data(VALUE obj);
 struct Bitmap *rb_getbitmaps( const unsigned short id );
 void bitmapBindTexture(struct Bitmap *ptr);

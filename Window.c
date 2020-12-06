@@ -26,6 +26,36 @@
 #include "gl_misc.h"
 #include "misc.h"
 
+struct Window
+{
+ VALUE viewport, windowskin, contents, cursor_rect;
+ VALUE bdispose;
+ bool visible, active, pause;
+ int x, y, z, width, height;
+ int ox, oy;
+ int opacity, back_opacity, contents_opacity;
+//#if RGSS == 3
+ VALUE tone;
+ bool arrows_visible;
+ int padding, padding_bottom;
+//#endif
+//#if RGSS > 1
+ int openness;
+//#endif
+ int cursor_tick;
+ int pause_tick;
+ unsigned short rendid;
+ unsigned short vportid;
+ unsigned short contid;
+ unsigned short wskinid;
+/* Save ruby from itself?
+ unsigned char pad;
+ */
+/* RGSS1 */
+ unsigned char task;
+ unsigned char stretch;
+};
+
 static GLuint shader1;
 static GLuint shader2;
 static GLuint shader3;
@@ -191,14 +221,13 @@ void renderWindow( const unsigned short index, const int vportox, const int vpor
 {
 /*
  GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
-*/
+
    skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
    contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
-   skinsurf = skin_bitmap_ptr->surface;
-/*
+*/
    skin_bitmap_ptr = rb_getbitmaps(ptr->wskinid);
    contents_bitmap_ptr =  rb_getbitmaps(ptr->contid);
-*/
+   skinsurf = skin_bitmap_ptr->surface;
 }
 
   glEnable(GL_BLEND);
@@ -434,8 +463,11 @@ static VALUE window_alloc(VALUE klass)
   ptr->cursor_rect = rb_rect_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
   ptr->vportid = 255;
-//  ptr->wskinid = 1024;
-//  ptr->contid = bptr->ownid;
+  ptr->wskinid = 1024;
+/* Seems silly, but is another case of rather strange bug, at allocation timing up there. */
+  if ( bptr != 0 ) ptr->contid = bptr->ownid;
+  else ptr->contid = 1024;
+
   ptr->task = 0;
   windowspa[cminindex] = ptr;
 
@@ -508,8 +540,8 @@ static VALUE rb_window_m_initialize_copy(VALUE self, VALUE orig) {
   const struct Window *orig_ptr = rb_window_data(orig);
   ptr->windowskin = orig_ptr->windowskin;
   ptr->contents = orig_ptr->contents;
-//  ptr->wskinid = orig_ptr->wskinid;
-//  ptr->contid = orig_ptr->contid;
+  ptr->wskinid = orig_ptr->wskinid;
+  ptr->contid = orig_ptr->contid;
   ptr->stretch = orig_ptr->stretch;
   rb_rect_set2(ptr->cursor_rect, orig_ptr->cursor_rect);
   ptr->viewport = orig_ptr->viewport;
@@ -616,9 +648,15 @@ static VALUE rb_window_m_set_windowskin(VALUE self, VALUE newval)
 
  if ( ( newval != ptr->windowskin ) && ( newval != Qnil ) )
 {
-//  ptr->wskinid = rb_bitmap_data(newval)->ownid;
+  ptr->wskinid = rb_bitmap_data(newval)->ownid;
   ptr->windowskin = newval;
 }
+/*
+ else
+{
+  ptr->wskinid = 1024;
+}
+*/
 
  return newval;
 }
@@ -634,10 +672,15 @@ static VALUE rb_window_m_set_contents(VALUE self, VALUE newval)
 
  if ( ( newval != ptr->contents ) && ( newval != Qnil ) )
 {
-//  ptr->contid = rb_bitmap_data(newval)->ownid;
+  ptr->contid = rb_bitmap_data(newval)->ownid;
   ptr->contents = newval;
 }
-
+/*
+ else
+{
+  ptr->contid = 1024;
+}
+*/
  return newval;
 }
 
@@ -677,15 +720,16 @@ static VALUE rb_window_m_viewport(VALUE self) {
 }
 
 //#if RGSS > 1
-static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval) {
-  struct Window *ptr = rb_window_data_mut(self);
-
- if ( ( newval != ptr->viewport ) && ( newval != Qnil ) )
+static VALUE rb_window_m_set_viewport(VALUE self, VALUE newval)
 {
-// rb_viewport_data(newval);
+ struct Window *ptr = rb_window_data_mut(self);
+
+ if ( ( newval != ptr->viewport) && ( newval != Qnil ) )
+{
   ptr->vportid = rb_viewport_data(newval)->ownid;
   ptr->viewport = newval;
 }
+//   ptr->vportid = 255;
 
  return newval;
 }
@@ -1204,14 +1248,14 @@ void renderWindowRGSS1( const unsigned short index, const int vportox, const int
 {
 /*
  GCC or ruby bug: the pointer is not initialized at the correct timing, it will segfault at the branching bellow if used directly.
-*/
+
   skin_bitmap_ptr = rb_bitmap_data_mut(ptr->windowskin);
   contents_bitmap_ptr = rb_bitmap_data_mut(ptr->contents);
-  skinsurf = skin_bitmap_ptr->surface;
-/*
+*/
+
   skin_bitmap_ptr = rb_getbitmaps(ptr->wskinid);
   contents_bitmap_ptr =  rb_getbitmaps(ptr->contid);
-*/
+  skinsurf = skin_bitmap_ptr->surface;
 }
 
  glEnable(GL_BLEND);

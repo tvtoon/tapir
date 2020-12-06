@@ -25,6 +25,28 @@
 #include "misc.h"
 #include "gl_misc.h"
 
+struct Tilemap
+{
+//#if RGSS > 1
+ VALUE bitmaps, flags;
+//#else
+ VALUE tileset, autotiles, priorities;
+//#endif
+ VALUE map_data, flash_data, viewport;
+ VALUE bdispose;
+ bool visible;
+ int ox, oy;
+ int autotile_tick;
+ unsigned short rendid;
+ int jobz;
+ unsigned short vportid;
+ unsigned short flagsid;
+ unsigned short flashid;
+ unsigned short mapdataid;
+ unsigned short prioritid;
+ unsigned short bitmapid;
+};
+
 static GLuint shader;
 
 VALUE rb_cTilemap;
