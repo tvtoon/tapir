@@ -683,9 +683,6 @@ static VALUE table_alloc(VALUE klass)
 
  if ( cminindex == MAXTBL )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum table count of %u!\n", MAXTBL );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum table count of %u!\n", MAXTBL );
 }
  else

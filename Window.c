@@ -143,9 +143,6 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
 
  if ( ptr == 0 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Window NULL pointer at index %u!\n", index );
-#endif
   rb_raise( rb_eRGSSError, "Window NULL pointer at index %u!\n", index );
   return;
 }
@@ -408,9 +405,6 @@ static VALUE window_alloc(VALUE klass)
 
  if ( cminindex == 256 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum window count of 256!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum window count of 256!\n" );
 }
  else
@@ -497,33 +491,33 @@ static VALUE window_alloc(VALUE klass)
 static VALUE rb_window_m_initialize(int argc, VALUE *argv, VALUE self)
 {
  struct Window *ptr = rb_window_data_mut(self);
-
- if ( ( argc == 0 ) || ( argc > 4 ) )
+/*( ( argc == 0 ) ||*/
+ if ( argc > 4 )
 {
   rb_raise(rb_eArgError, "wrong number of arguments (%d for 4)", argc);
 }
  else
 {
 /*
- This is done by allocation...
- ptr->x = argc > 0 ? NUM2INT(argv[0]) : 0;
- ptr->y = argc > 1 ? NUM2INT(argv[1]) : 0;
- ptr->width = argc > 2 ? NUM2INT(argv[2]) : 0;
- ptr->height = argc > 3 ? NUM2INT(argv[3]) : 0;
+ Zero call is done by allocation...
 */
-  ptr->x = NUM2INT(argv[0]);
-
-  if ( argc > 1 )
+  if ( argc > 0 )
 {
-   ptr->y = NUM2INT(argv[1]);
+   ptr->x = NUM2INT(argv[0]);
 
-   if ( argc > 2 )
+   if ( argc > 1 )
 {
-    ptr->width = NUM2INT(argv[2]);
+    ptr->y = NUM2INT(argv[1]);
 
-    if ( argc > 3 )
+    if ( argc > 2 )
 {
-     ptr->height = NUM2INT(argv[3]);
+     ptr->width = NUM2INT(argv[2]);
+
+     if ( argc > 3 )
+{
+      ptr->height = NUM2INT(argv[3]);
+}
+
 }
 
 }

@@ -77,9 +77,6 @@ static VALUE viewport_alloc(VALUE klass)
 
  if ( cminindex == 64 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum viewport count of 64!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum viewport count of 64!\n" );
 }
  else

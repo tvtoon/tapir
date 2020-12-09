@@ -92,7 +92,7 @@ static VALUE rb_rgss_main(VALUE self)
 
 VALUE main_rb(VALUE data)
 {
-// VALUE excdata;
+ VALUE excdata;
  const char *scriptn = RSTRING_PTR(data);
  const char *scriptends = scriptend3s;
  int retval = 0;
@@ -132,14 +132,22 @@ VALUE main_rb(VALUE data)
 
 // load_libs();
  rb_eval_string_protect( execscript, &retval );
-/*
+
  if ( retval != 0 )
 {
   excdata = rb_errinfo();
+
+  rb_eval_string(
+      "  $stderr.print(\"#{$!.class}: #{$!.message}\\n\")\n"
+      "  $!.backtrace.each do|frame|\n"
+      "    $stderr.print(\"\\tfrom #{frame}\\n\")\n"
+      "  end\n"
+  );
+
   rb_set_errinfo(Qnil);
   fprintf( stderr, "%s", RSTRING_PTR(excdata) );
 }
-*/
+
 
 /*
  while(retry)

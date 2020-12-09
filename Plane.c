@@ -81,9 +81,6 @@ void prepareRenderPlane( const unsigned short index, const unsigned short rindex
 
  if ( ptr == 0 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Plane null pointer at index %u!\n", index );
-#endif
   rb_raise( rb_eRGSSError, "Plane null pointer at index %u!\n", index );
   return;
 }
@@ -207,9 +204,6 @@ static VALUE plane_alloc(VALUE klass)
 
  if ( cminindex == 8 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum plane count of 8!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum plane count of 8!\n" );
 }
  else

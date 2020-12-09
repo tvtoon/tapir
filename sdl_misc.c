@@ -340,7 +340,6 @@ static void renderScreen()
 
   if ( regc != registry_size )
 {
-   fprintf( stderr, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
    rb_raise(rb_eRGSSError, "Limit reached and the registry count is wrong: %u from %u!\n", regc, registry_size );
    mq_size = 0;
 }
@@ -460,7 +459,6 @@ unsigned short NEWregisterRenderable( const unsigned short index, const unsigned
 
  if ( registry_size == registry_capacity )
 {
-  fprintf( stderr, "No more register available, maximum of %u!\n", registry_capacity );
   rb_raise(rb_eRGSSError, "No more register available, maximum of %u!\n", registry_capacity );
 }
  else
@@ -486,7 +484,6 @@ unsigned short NEWdisposeRenderable( const unsigned short index )
 
  if ( registry_size == 0 )
 {
-  fprintf( stderr, "Disposing without registers!\n" );
   rb_raise(rb_eRGSSError, "Disposing without registers!\n" );
 }
  else
@@ -528,7 +525,6 @@ void queueRenderJob( struct RenderJob job, const unsigned short vportid )
 
  if ( mq_size == mq_capacity )
 {
-  fprintf( stderr, "Hopeless queue %u!\n", mq_capacity );
   rb_raise(rb_eRGSSError, "Hopeless queue %u!\n", mq_capacity );
 }
  else

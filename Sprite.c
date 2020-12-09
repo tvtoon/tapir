@@ -133,9 +133,6 @@ void prepareRenderSprite( const unsigned short index, const unsigned short rinde
 
  if ( ptr == 0 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Sprite NULL pointer at index %u!\n", index );
-#endif
   rb_raise( rb_eRGSSError, "Sprite NULL pointer at index %u!\n", index );
   return;
 }
@@ -307,9 +304,6 @@ static VALUE sprite_alloc(VALUE klass)
 
  if ( cminindex == 512 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum sprite count of 512!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum sprite count of 512!\n" );
 }
  else

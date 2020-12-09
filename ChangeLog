@@ -2,6 +2,8 @@
 
 0.3.0
 ^Everything is ready to try newer ruby versions! Well, missing some "rubyfill.h" and fixing RGSS2...
+^Fixed RGSS2, the Window initialize can be invoked without arguments, slipped while building the code.
+^Took every stupid printf, made while the main_rb was fixed, now every error (exception) is printed by the old rescue_any code. However the ruby version must be greater than 1.8 so it seems like a goodbye.
 
 0.2.7
 ^Reworked Table code, plus made another relational stuff for it.

@@ -150,9 +150,6 @@ static VALUE bitmap_alloc(VALUE klass)
 
  if ( cminindex == 1024 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum bitmap count of 1024!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum bitmap count of 1024!\n" );
 }
  else
@@ -931,8 +928,11 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
  SDL_Surface *fg_rendered = TTF_RenderUTF8_Blended(sdl_font, cstr, fg_color);
 
  if(!fg_rendered) {
+/*
     fprintf(stderr, "Error rendering text: %s\n", SDL_GetError());
     fprintf(stderr, "cstr = %s\n", cstr);
+*/
+    rb_raise( rb_eRGSSError, "Error rendering text: %s\ncstr = %s\n", SDL_GetError(), cstr );
     return Qnil;
   }
 
@@ -970,7 +970,8 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
     SDL_Surface *out_rendered =
       TTF_RenderUTF8_Blended(sdl_font, cstr, out_color);
     if(!out_rendered) {
-      fprintf(stderr, "Error rendering text outline: %s\n", SDL_GetError());
+//      fprintf(stderr, "Error rendering text outline: %s\n", SDL_GetError());
+      rb_raise( rb_eRGSSError, "Error rendering text outline: %s\n", SDL_GetError() );
       SDL_FreeSurface(fg_rendered);
       return Qnil;
     }
@@ -1005,7 +1006,8 @@ static VALUE rb_bitmap_m_draw_text(int argc, VALUE *argv, VALUE self) {
     SDL_Surface *shadow_rendered =
       TTF_RenderUTF8_Blended(sdl_font, cstr, shadow_color);
     if(!shadow_rendered) {
-      fprintf(stderr, "Error rendering text shadow: %s\n", SDL_GetError());
+//      fprintf(stderr, "Error rendering text shadow: %s\n", SDL_GetError());
+      rb_raise( rb_eRGSSError, "Error rendering text shadow: %s\n", SDL_GetError() );
       SDL_FreeSurface(fg_rendered);
       return Qnil;
     }

@@ -63,7 +63,7 @@ static VALUE color_alloc(VALUE klass) {
   struct Color *ptr = ALLOC(struct Color);
 
 colorc++;
-printf( "Allocating Color %u.\n", colorc );
+//printf( "Allocating Color %u.\n", colorc );
 
   ptr->red = 0.0;
   ptr->green = 0.0;
@@ -341,7 +341,6 @@ static VALUE rb_color_s_old_load(VALUE klass, VALUE str) {
   // Note: original RGSS doesn't check length.
  if(RSTRING_LEN(str) != sizeof(double)*4)
 {
-  printf("Corrupted marshal data for Color.");
   rb_raise(rb_eArgError, "Corrupted marshal data for Color.");
 }
   if(!s) return ret;

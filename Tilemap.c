@@ -170,9 +170,6 @@ void prepareRenderTilemap( const unsigned short index, const unsigned short rind
 
  if ( ptr == 0 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Tilemap NULL pointer at index %u!\n", index );
-#endif
   rb_raise( rb_eRGSSError, "Tilemap NULL pointer at index %u!\n", index );
   return;
 }
@@ -213,9 +210,6 @@ void prepareRenderTilemapRGSS1( const unsigned short index, const unsigned short
 
  if ( ptr == 0 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Tilemap NULL pointer at index %u!\n", index );
-#endif
   rb_raise( rb_eRGSSError, "Tilemap NULL pointer at index %u!\n", index );
   return;
 }
@@ -661,9 +655,6 @@ static VALUE tilemap_alloc(VALUE klass)
 
  if ( cminindex == 8 )
 {
-#ifdef __DEBUG__
-  fprintf( stderr, "Reached maximum tilemap count of 8!\n" );
-#endif
   rb_raise( rb_eRGSSError, "Reached maximum tilemap count of 8!\n" );
 }
  else
