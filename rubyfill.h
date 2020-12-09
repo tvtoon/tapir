@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#if RGSS != 3
+#if RGSS == 1
 
 #include <ruby181/ruby.h>
 
@@ -25,5 +25,6 @@
 #else
 
 #include <ruby192/ruby.h>
+#include <ruby192/version.h>
 
 #endif

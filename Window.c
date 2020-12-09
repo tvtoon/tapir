@@ -956,8 +956,7 @@ static VALUE rb_window_m_set_tone(VALUE self, VALUE newval)
 
 int initWindowSDL()
 {
-
-  static const char *fsh1_source =
+ static const char *fsh1_source1 =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
     "#define texture2D texture\n"
@@ -969,11 +968,7 @@ int initWindowSDL()
     "uniform vec4 window_tone;\n"
     "\n"
     "void main(void) {\n"
-#if RGSS >= 2
-    "    vec4 color = texture2D(windowskin, vec2(gl_TexCoord[0].x * 0.5, gl_TexCoord[0].y * 0.5));\n"
-#else
     "    vec4 color = texture2D(windowskin, vec2(gl_TexCoord[0].x * (2.0 / 3.0), gl_TexCoord[0].y));\n"
-#endif
     "    /* Grayscale */\n"
     "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
     "    color.rgb *= 1.0 - window_tone.a;\n"
@@ -986,7 +981,32 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  static const char *fsh2_source =
+ static const char *fsh1_source23 =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform sampler2D windowskin;\n"
+    "uniform float opacity;\n"
+    "uniform vec4 window_tone;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec4 color = texture2D(windowskin, vec2(gl_TexCoord[0].x * 0.5, gl_TexCoord[0].y * 0.5));\n"
+    "    /* Grayscale */\n"
+    "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
+    "    color.rgb *= 1.0 - window_tone.a;\n"
+    "    color.rgb += vec3(gray, gray, gray) * window_tone.a;\n"
+    "    /* tone blending */\n"
+    "    color.rgb = min(max(color.rgb + window_tone.rgb, 0.0), 1.0);\n"
+    "    color.a *= opacity;\n"
+    "    gl_FragColor = color;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
+
+  static const char *fsh2_source1 =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
     "#define texture2D texture\n"
@@ -999,11 +1019,7 @@ int initWindowSDL()
     "\n"
     "void main(void) {\n"
     "    vec2 coord = mod(gl_TexCoord[0].xy, 1.0);\n"
-#if RGSS >= 2
-    "    vec4 color = texture2D(windowskin, vec2(coord.x * 0.5, coord.y * 0.5 + 0.5));\n"
-#else
     "    vec4 color = texture2D(windowskin, vec2(coord.x * (2.0 / 3.0), coord.y));\n"
-#endif
     "    /* Grayscale */\n"
     "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
     "    color.rgb *= 1.0 - window_tone.a;\n"
@@ -1016,7 +1032,33 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  static const char *fsh3_source =
+  static const char *fsh2_source23 =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform sampler2D windowskin;\n"
+    "uniform float opacity;\n"
+    "uniform vec4 window_tone;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec2 coord = mod(gl_TexCoord[0].xy, 1.0);\n"
+    "    vec4 color = texture2D(windowskin, vec2(coord.x * 0.5, coord.y * 0.5 + 0.5));\n"
+    "    /* Grayscale */\n"
+    "    float gray = color.r * 0.298912 + color.g * 0.586611 + color.b * 0.114478;\n"
+    "    color.rgb *= 1.0 - window_tone.a;\n"
+    "    color.rgb += vec3(gray, gray, gray) * window_tone.a;\n"
+    "    /* tone blending */\n"
+    "    color.rgb = min(max(color.rgb + window_tone.rgb, 0.0), 1.0);\n"
+    "    color.a *= opacity;\n"
+    "    gl_FragColor = color;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
+
+  static const char *fsh3_source1 =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
     "#define texture2D texture\n"
@@ -1050,13 +1092,54 @@ int initWindowSDL()
     "    } else {\n"
     "      src_coord.y = mod(coord.y - 16.0, 32.0) + 16.0;\n"
     "    }\n"
-#if RGSS >= 2
-    "    src_coord.x = (src_coord.x + 64.0) / 128.0;\n"
-    "    src_coord.y = src_coord.y / 128.0;\n"
-#else
     "    src_coord.x = (src_coord.x + 128.0) / 192.0;\n"
     "    src_coord.y = src_coord.y / 128.0;\n"
-#endif
+    "    if(draw) {\n"
+    "      gl_FragColor = texture2D(windowskin, src_coord);\n"
+    "    } else {\n"
+    "      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);\n"
+    "    }\n"
+    "    gl_FragColor.a *= opacity;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
+
+  static const char *fsh3_source23 =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform sampler2D windowskin;\n"
+    "uniform float opacity;\n"
+    "uniform vec2 bg_size;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec2 coord = gl_TexCoord[0].xy;\n"
+    "    vec2 reverse_coord = bg_size - coord;\n"
+    "    vec2 src_coord;\n"
+    "    bool draw = false;\n"
+    "    if(coord.x < 16.0) {\n"
+    "      src_coord.x = coord.x;\n"
+    "      draw = true;\n"
+    "    } else if(reverse_coord.x < 16.0) {\n"
+    "      src_coord.x = 64.0 - reverse_coord.x;\n"
+    "      draw = true;\n"
+    "    } else {\n"
+    "      src_coord.x = mod(coord.x - 16.0, 32.0) + 16.0;\n"
+    "    }\n"
+    "    if(coord.y < 16.0) {\n"
+    "      src_coord.y = coord.y;\n"
+    "      draw = true;\n"
+    "    } else if(reverse_coord.y < 16.0) {\n"
+    "      src_coord.y = 64.0 - reverse_coord.y;\n"
+    "      draw = true;\n"
+    "    } else {\n"
+    "      src_coord.y = mod(coord.y - 16.0, 32.0) + 16.0;\n"
+    "    }\n"
+    "    src_coord.x = (src_coord.x + 64.0) / 128.0;\n"
+    "    src_coord.y = src_coord.y / 128.0;\n"
     "    if(draw) {\n"
     "      gl_FragColor = texture2D(windowskin, src_coord);\n"
     "    } else {\n"
@@ -1085,7 +1168,7 @@ int initWindowSDL()
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  static const char *cursor_fsh_source =
+  static const char *cursor_fsh_source1 =
     "#version 120\n"
     "#if __VERSION__ >= 130\n"
     "#define texture2D texture\n"
@@ -1114,35 +1197,77 @@ int initWindowSDL()
     "    } else {\n"
     "      src_coord.y = (coord.y - 2.0) / (cursor_size.y - 4.0) * 28.0 + 2.0;\n"
     "    }\n"
-#if RGSS >= 2
-    "    src_coord.x = (src_coord.x + 64.0) / 128.0;\n"
-    "    src_coord.y = (src_coord.y + 64.0) / 128.0;\n"
-#else
     "    src_coord.x = (src_coord.x + 128.0) / 192.0;\n"
     "    src_coord.y = (src_coord.y + 64.0) / 128.0;\n"
-#endif
     "    gl_FragColor = texture2D(windowskin, src_coord);\n"
     "    gl_FragColor.a *= opacity;\n"
     "    /* premultiplication */\n"
     "    gl_FragColor.rgb *= gl_FragColor.a;\n"
     "}\n";
 
-  shader1 = compileShaders( fsh1_source);
-  if ( shader1 == 0 ) return(1);
+  static const char *cursor_fsh_source23 =
+    "#version 120\n"
+    "#if __VERSION__ >= 130\n"
+    "#define texture2D texture\n"
+    "#define texture2DProj textureProj\n"
+    "#endif\n"
+    "\n"
+    "uniform sampler2D windowskin;\n"
+    "uniform float opacity;\n"
+    "uniform vec2 cursor_size;\n"
+    "\n"
+    "void main(void) {\n"
+    "    vec2 coord = gl_TexCoord[0].xy;\n"
+    "    vec2 reverse_coord = cursor_size - coord;\n"
+    "    vec2 src_coord;\n"
+    "    if(coord.x < 2.0) {\n"
+    "      src_coord.x = coord.x;\n"
+    "    } else if(reverse_coord.x < 2.0) {\n"
+    "      src_coord.x = 32.0 - reverse_coord.x;\n"
+    "    } else {\n"
+    "      src_coord.x = (coord.x - 2.0) / (cursor_size.x - 4.0) * 28.0 + 2.0;\n"
+    "    }\n"
+    "    if(coord.y < 2.0) {\n"
+    "      src_coord.y = coord.y;\n"
+    "    } else if(reverse_coord.y < 2.0) {\n"
+    "      src_coord.y = 32.0 - reverse_coord.y;\n"
+    "    } else {\n"
+    "      src_coord.y = (coord.y - 2.0) / (cursor_size.y - 4.0) * 28.0 + 2.0;\n"
+    "    }\n"
+    "    src_coord.x = (src_coord.x + 64.0) / 128.0;\n"
+    "    src_coord.y = (src_coord.y + 64.0) / 128.0;\n"
+    "    gl_FragColor = texture2D(windowskin, src_coord);\n"
+    "    gl_FragColor.a *= opacity;\n"
+    "    /* premultiplication */\n"
+    "    gl_FragColor.rgb *= gl_FragColor.a;\n"
+    "}\n";
 
-  shader2 = compileShaders( fsh2_source);
-  if ( shader2 == 0 ) return(1);
+ const char *cursor_fsh_source = cursor_fsh_source23, *fsh1_source = fsh1_source23, *fsh2_source = fsh2_source23, *fsh3_source = fsh3_source23;
 
-  shader3 = compileShaders( fsh3_source);
-  if ( shader3 == 0 ) return(1);
+ if ( rgssver == 1 )
+{
+  fsh1_source = fsh1_source1;
+  fsh2_source = fsh2_source1;
+  fsh3_source = fsh3_source1;
+  cursor_fsh_source = cursor_fsh_source1;
+}
 
-  shader4 = compileShaders( fsh4_source);
-  if ( shader4 == 0 ) return(1);
+ shader1 = compileShaders( fsh1_source);
+ if ( shader1 == 0 ) return(1);
 
-  cursor_shader = compileShaders(cursor_fsh_source);
-  if ( cursor_shader == 0 ) return(1);
+ shader2 = compileShaders( fsh2_source);
+ if ( shader2 == 0 ) return(1);
 
-  return(0);
+ shader3 = compileShaders( fsh3_source);
+ if ( shader3 == 0 ) return(1);
+
+ shader4 = compileShaders( fsh4_source);
+ if ( shader4 == 0 ) return(1);
+
+ cursor_shader = compileShaders(cursor_fsh_source);
+ if ( cursor_shader == 0 ) return(1);
+
+ return(0);
 }
 
 void Init_Window(void) {

@@ -15,7 +15,7 @@
 #include "misc.h"
 
 static VALUE rb_cColor;
-//static unsigned int colorc = 0;
+static unsigned int colorc = 0;
 unsigned int maxcolorc = 0;
 
 /*
@@ -61,6 +61,10 @@ static bool rb_color_data_p(VALUE obj)
 
 static VALUE color_alloc(VALUE klass) {
   struct Color *ptr = ALLOC(struct Color);
+
+colorc++;
+printf( "Allocating Color %u.\n", colorc );
+
   ptr->red = 0.0;
   ptr->green = 0.0;
   ptr->blue = 0.0;
@@ -328,7 +332,6 @@ static VALUE rb_color_m_to_s(VALUE self) {
  */
 static VALUE rb_color_s_old_load(VALUE klass, VALUE str) {
   (void) klass;
-
   VALUE ret = color_alloc(rb_cColor);
   struct Color *ptr = rb_color_data_mut(ret);
   StringValue(str);
@@ -336,9 +339,11 @@ static VALUE rb_color_s_old_load(VALUE klass, VALUE str) {
   Check_Type(str, T_STRING);
   const char *s = RSTRING_PTR(str);
   // Note: original RGSS doesn't check length.
-  if(RSTRING_LEN(str) != sizeof(double)*4) {
-    rb_raise(rb_eArgError, "Corrupted marshal data for Color.");
-  }
+ if(RSTRING_LEN(str) != sizeof(double)*4)
+{
+  printf("Corrupted marshal data for Color.");
+  rb_raise(rb_eArgError, "Corrupted marshal data for Color.");
+}
   if(!s) return ret;
   // Note: values should be clamped, but not in the original RGSS.
   ptr->red = read_double(s+sizeof(double)*0);

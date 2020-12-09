@@ -1,5 +1,8 @@
 # en.UTF-8
 
+0.3.0
+^Everything is ready to try newer ruby versions! Well, missing some "rubyfill.h" and fixing RGSS2...
+
 0.2.7
 ^Reworked Table code, plus made another relational stuff for it.
 ^Some Bitmap fixes and yet another data base to avoid ruby calls.

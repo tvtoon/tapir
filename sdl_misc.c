@@ -121,8 +121,10 @@ int initSDL(const char *window_title)
 
  if ( rgssver == 1 )
 {
-  nullrect.width = window_width = 640;
-  nullrect.height = window_height = 480;
+  window_width = 640;
+  window_height = 480;
+  preparefuna[1] = prepareRenderTilemapRGSS1;
+  renderfuna[1] = renderTilemapRGSS1;
   renderfuna[3] = renderWindowRGSS1;
 }
 

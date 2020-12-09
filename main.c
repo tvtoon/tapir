@@ -56,11 +56,15 @@ static bool is_console_mode = false;
 unsigned char rgssver = 3;
 
 void Init_zlib(void);
-#if RGSS == 3
+
+/* API is 2.x */
+#if ( ( RUBY_API_VERSION_MAJOR > 1 ) || ( RUBY_VERSION_MAJOR > 1 ) || ( RUBY_VERSION_MINOR > 8 ) )
+//#if RGSS == 3
 void Init_single_byte(void);
 void Init_utf_16_32(void);
 void Init_japanese_sjis(void);
-#elif RGSS == 2
+#else
+//#elif RGSS == 2
 void Init_nkf(void);
 #endif
 
@@ -68,32 +72,52 @@ void Init_nkf(void);
 RUBY_GLOBAL_SETUP
 #endif
 
-static void Init_RGSS(void) {
-#if RGSS >= 2
-  rb_gv_set("$TEST", is_test_mode ? Qtrue : Qfalse);
-#else
-  rb_gv_set("$DEBUG", is_test_mode ? Qtrue : Qfalse);
-#endif
-  rb_gv_set("$BTEST", is_btest_mode ? Qtrue : Qfalse);
-  Init_RGSSError();
-  Init_RGSSReset();
-  Init_Rect();
-  Init_Color();
-  Init_Tone();
-  Init_Table();
-  Init_Font();
-  Init_Bitmap();
-  Init_Viewport();
-  Init_Sprite();
-  Init_Window();
-  Init_Tilemap();
-  Init_BitmapArray();
-  Init_Plane();
-  Init_Graphics();
-  Init_Input();
-  Init_Audio();
-  Init_Win32APIFake();
-  rb_define_global_function("load_data", rb_load_data, 1);
+/*
+ We must search for the basename ourselves because: this is Windows path, not Unix, the RGSS3 does not come with a letter, before the extension.
+*/
+static size_t basepos( const char *name, const size_t names )
+{
+ size_t ui = names;
+
+ for ( ; ui > 0; ui-- )
+{
+
+  if ( name[ui] == '\\' )
+{
+   ui++;
+   break;
+}
+
+}
+
+ return(ui);
+}
+
+static void Init_RGSS(void)
+{
+ if ( rgssver > 1 ) rb_gv_set("$TEST", is_test_mode ? Qtrue : Qfalse);
+ else rb_gv_set("$DEBUG", is_test_mode ? Qtrue : Qfalse);
+
+ rb_gv_set("$BTEST", is_btest_mode ? Qtrue : Qfalse);
+ Init_RGSSError();
+ Init_RGSSReset();
+ Init_Rect();
+ Init_Color();
+ Init_Tone();
+ Init_Table();
+ Init_Font();
+ Init_Bitmap();
+ Init_Viewport();
+ Init_Sprite();
+ Init_Window();
+ Init_Tilemap();
+ Init_BitmapArray();
+ Init_Plane();
+ Init_Graphics();
+ Init_Input();
+ Init_Audio();
+ Init_Win32APIFake();
+ rb_define_global_function("load_data", rb_load_data, 1);
 }
 
 int main(int argc, char **argv)
@@ -107,11 +131,12 @@ char *ruby_argv_array[] = {
   };
   char **ruby_argv = ruby_argv_array;
 */
- const char *game_title = 0, *game_script = 0;
+ const char *game_lib = 0, *game_title = 0, *game_script = 0;
  int argpos = 1, i = 0/*, ruby_argc = 2*/, state = 0;
  struct ini *ini_data = 0;
  struct ini_section *game_section = 0;
  struct rlimit rls;
+ size_t testl = 0;
 
  rls.rlim_cur = 16777216;
  rls.rlim_max = 1073741824;
@@ -122,12 +147,16 @@ char *ruby_argv_array[] = {
   fprintf( stderr, "Error setting limit: %s\n", strerror(errno) );
 }
 
+/*
+#if RGSS == 2
+ rgssver = 2;
+#endif
+*/
+
 /* Ruby does not answer well for this...
  atexit(tapir_atexit);
 */
- init_tapir_config();
-
- while(argpos < argc)
+ while ( argpos < argc )
 {
 
   if(!strcmp(argv[argpos], "btest"))
@@ -145,12 +174,12 @@ char *ruby_argv_array[] = {
 #endif
 */
    is_test_mode = true;
-#if RGSS == 3
+//#if RGSS == 3
 }
   else if(!strcmp(argv[argpos], "console"))
 {
    is_console_mode = true;
-#endif
+//#endif
 }
   else if(!strcmp(argv[argpos], "-d") && argpos+1 < argc)
 {
@@ -177,24 +206,7 @@ char *ruby_argv_array[] = {
 
  if (help)
 {
-  fprintf(stderr,
-#if RGSS == 3
-   "Tapir-accordion: RGSS3 (RPG Maker VX Ace) compatible game engine\n"
-#elif RGSS == 2
-   "Tapir-violin: RGSS2 (RPG Maker VX) compatible game engine\n"
-#else
-   "Tapir-xylophone: RGSS (RPG Maker XP) compatible game engine\n"
-#endif
-   "\n"
-   "Usage: ./tapir [-h] [-d DIR] [test] [btest] [console]\n"
-   "    -h      show this help\n"
-   "    -d DIR  move to DIR before running the game\n"
-   "    test    enable test mode\n"
-   "    btest   enable battle test mode\n"
-#if RGSS == 3
-   "    console show console (not yet implemented)\n"
-#endif
-);
+  fprintf( stderr, "Tapir, the RPG Maker (XP or RGSS1, VX or RGSS2, VX Ace or RGSS3) compatible game engine\n\n Usage: ./tapir [-h] [-d DIR] [test] [btest] [console]\n  -h      show this help\n  -d DIR  move to DIR before running the game\n  test    enable test mode\n  btest   enable battle test mode\n  console show console (not yet implemented)\n" );
 
   return 0;
 }
@@ -221,6 +233,32 @@ char *ruby_argv_array[] = {
   return(1);
 }
 
+ game_lib = find_ini_entry(game_section, "Library");
+
+ if ( game_lib == 0 )
+{
+  fprintf( stderr, "\"Library\" key not inside INI!\n" );
+  return(1);
+}
+
+ printf( "Game library: \"%s\".\n", game_lib );
+ testl = strlen(game_lib);
+
+ if ( testl < 10 )
+{
+  fprintf( stderr, "Invalid \"Library\" key size of %lu!\n", testl );
+  return(1);
+}
+
+ testl = basepos( game_lib, testl ) + 4;
+ rgssver = game_lib[testl] - 0x30;
+
+ if ( rgssver == 0 || rgssver > 3 )
+{
+  fprintf( stderr, "Invalid RGSS version of 0x%X (%c)!\n", rgssver, game_lib[testl] );
+  return(1);
+}
+
  game_script = find_ini_entry(game_section, "Scripts");
 
  if ( game_script == 0 )
@@ -233,6 +271,7 @@ char *ruby_argv_array[] = {
 
  if (game_title == 0) game_title = "tapir";
 
+ init_tapir_config();
  i = configure_rtp_path(game_section);
 
  if ( i != 0 )
@@ -271,14 +310,18 @@ char *ruby_argv_array[] = {
 #endif
  ruby_init();
  Init_zlib();
-#if RGSS == 3
- Init_single_byte();
- Init_utf_16_32();
- Init_japanese_sjis();
-#endif
+
+ if ( rgssver == 3 )
+{
+  Init_single_byte();
+  Init_utf_16_32();
+  Init_japanese_sjis();
+}
+/*
 #if RGSS == 2
  Init_nkf();
 #endif
+*/
  Init_RGSS();
 
 #ifndef RUBY_INIT_STACK
@@ -298,10 +341,9 @@ char *ruby_argv_array[] = {
  uninitFontLookup();
  cleanupSDL();
  deinit_tapir_config();
-  if(ini_data) free_ini(ini_data);
-// ruby_stop(0);
-// ruby_cleanup(0);
-// ruby_finalize();
+
+ if(ini_data) free_ini(ini_data);
+
  printf( "Max Plane: %u.\nMax Sprite: %u.\nMax Tilemap: %u.\nMax Viewport: %u.\nMax Window: %u.\n", maxplanec, maxspritec, maxtmapc, maxvportqc, maxwindowc );
  printf( "Max Bitmap: %u.\nMax Color: %u.\nMax Font: %u.\nMax Rect: %u.\nMax Tone: %u.\n", maxbitmapc, maxcolorc, maxfontc, maxrectc, maxtonec );
  printf( "Max Table: %u.\n", maxtabc );

@@ -19,8 +19,9 @@ int initTilemapSDL(void);
 void Init_Tilemap(void);
 void deinitTilemapSDL(void);
 //void renderTilemaps(int z_min, int z_max);
-
 void prepareRenderTilemap( const unsigned short index, const unsigned short rindex );
+void prepareRenderTilemapRGSS1( const unsigned short index, const unsigned short rindex );
 void renderTilemap( const unsigned short index, const int vportox, const int vportoy );
+void renderTilemapRGSS1( const unsigned short index, const int vportox, const int vportoy );
 
 unsigned short maxtmapc;
