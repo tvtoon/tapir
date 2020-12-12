@@ -457,10 +457,10 @@ static VALUE window_alloc(VALUE klass)
   ptr->cursor_rect = rb_rect_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 3 );
   ptr->vportid = 255;
-  ptr->wskinid = 1024;
+  ptr->wskinid = MAXBMAP;
 /* Seems silly, but is another case of rather strange bug, at allocation timing up there. */
   if ( bptr != 0 ) ptr->contid = bptr->ownid;
-  else ptr->contid = 1024;
+  else ptr->contid = MAXBMAP;
 
   ptr->task = 0;
   windowspa[cminindex] = ptr;
@@ -648,7 +648,7 @@ static VALUE rb_window_m_set_windowskin(VALUE self, VALUE newval)
 /*
  else
 {
-  ptr->wskinid = 1024;
+  ptr->wskinid = MAXBMAP;
 }
 */
 
@@ -672,7 +672,7 @@ static VALUE rb_window_m_set_contents(VALUE self, VALUE newval)
 /*
  else
 {
-  ptr->contid = 1024;
+  ptr->contid = MAXBMAP;
 }
 */
  return newval;

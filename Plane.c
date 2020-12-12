@@ -230,7 +230,7 @@ static VALUE plane_alloc(VALUE klass)
   ptr->tone = rb_tone_new2();
   ptr->rendid = NEWregisterRenderable( cminindex, 0 );
   ptr->vportid = 255;
-  ptr->bitmapid = 1024;
+  ptr->bitmapid = MAXBMAP;
   planspa[cminindex] = ptr;
 
   for ( cminindex++; cminindex < 8; cminindex++ )

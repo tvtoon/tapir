@@ -348,7 +348,7 @@ static VALUE sprite_alloc(VALUE klass)
   ptr->tone = rb_tone_new2();
   ptr->flash_color = rb_color_new2();
   ptr->vportid = 255;
-  ptr->bitmapid = 1024;
+  ptr->bitmapid = MAXBMAP;
   ptr->rendid = NEWregisterRenderable( cminindex, 2 );
   spritespa[cminindex] = ptr;
 

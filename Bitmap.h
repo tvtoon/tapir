@@ -6,6 +6,8 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
+#define MAXBMAP 2048
+
 struct Bitmap
 {
  SDL_Surface *surface;
@@ -20,8 +22,6 @@ struct Bitmap
 VALUE rb_bitmap_new( struct Bitmap *bitmap_ptr, const int width, const int height );
 /*
 VALUE rb_bitmap_rect(VALUE self);
-bool rb_bitmap_data_p(VALUE obj);
-struct Bitmap *rb_bitmap_data_mut(VALUE obj);
 */
 const struct Bitmap *rb_bitmap_data(VALUE obj);
 struct Bitmap *rb_getbitmaps( const unsigned short id );
