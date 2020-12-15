@@ -121,16 +121,21 @@ static VALUE rb_graphics_s_transition(int argc, VALUE *argv, VALUE klass)
 
   if ( argc > 1 )
 {
-   testu = strlen( StringValueCStr(argv[1]) );
-
+   filename = StringValueCStr(argv[1]);
+   testu = strlen(filename);
+/*
    if ( testu == 0 )
 {
     rb_raise( rb_eRGSSError, "Null filename for transition!\n" );
     return(Qnil);
+
 }
    else
 {
-    filename = StringValueCStr(argv[1]);
+*/
+   if ( testu == 0 )
+{
+    filename = 0;
 }
 
    if ( argc > 2 )
