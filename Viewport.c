@@ -50,21 +50,25 @@ static struct Viewport *rb_viewport_data_mut(VALUE obj)
 
 static void viewport_free(struct Viewport *ptr)
 {
- unsigned short cindex = 0;
-// deinitRenderQueue(&ptr->viewport_queue);
+ const unsigned short theind = ptr->ownid;
 
  if ( ptr->bdispose == Qfalse )
+// if ( vportspa[theind] != 0 )
 {
+#ifdef __DEBUG__
+  printf( "Freeing viewport %u!\n", theind );
+#endif
 //  cindex = NEWdisposeRenderable( ptr->rendid );
-  ptr->bdispose = Qtrue;
-  vportspa[cindex] = 0;
+  vportspa[theind][0].bdispose = Qtrue;
+  vportspa[theind][0].ownid = 64;
   vportqc--;
 
-  if ( cminindex > cindex )
+  if ( cminindex > theind )
 {
-   cminindex = cindex;
+   cminindex = theind;
 }
 
+  vportspa[theind] = 0;
 }
 
  xfree(ptr);
@@ -169,23 +173,27 @@ static VALUE rb_viewport_m_initialize_copy(VALUE self, VALUE orig) {
 
 static VALUE rb_viewport_m_dispose(VALUE self)
 {
- struct Viewport *ptr = rb_viewport_data_mut(self);
- unsigned short cindex = 0;
+// struct Viewport *ptr = rb_viewport_data_mut(self);
+ const struct Viewport *ptr = rb_viewport_data(self);
+ const unsigned short theind = ptr->ownid;
 
  if ( ptr->bdispose == Qfalse )
+// if ( vportspa[theind] != 0 )
 {
+#ifdef __DEBUG__
+  printf( "Freeing viewport %u!\n", theind );
+#endif
 //  cindex = NEWdisposeRenderable( ptr->rendid );
-  ptr->bdispose = Qtrue;
-  vportspa[cindex] = 0;
+  vportspa[theind][0].bdispose = Qtrue;
+  vportspa[theind][0].ownid = 64;
   vportqc--;
 
-  if ( cminindex > cindex )
+  if ( cminindex > theind )
 {
-   cminindex = cindex;
+   cminindex = theind;
 }
-#ifdef __DEBUG__
-  printf( "Disposing viewport %u!\n", cindex );
-#endif
+
+  vportspa[theind] = 0;
 }
 
  return Qnil;

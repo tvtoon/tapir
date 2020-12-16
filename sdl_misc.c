@@ -539,7 +539,9 @@ void queueRenderJob( struct RenderJob job, const unsigned short vportid )
 */
    job.ox = &vppw->ox;
    job.oy = &vppw->oy;
-   job.z = vppw->z;
+
+   if ( job.reg != 1 ) job.z = vppw->z;
+
    rectv = rb_rect_data( vppw->rect );
 
    if ( ( rectv->width > 0 ) || ( rectv->height > 0 ) )

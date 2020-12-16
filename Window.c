@@ -160,7 +160,8 @@ void prepareRenderWindow( const unsigned short index, const unsigned short rinde
 */
 
  job.z = ptr->z;
- job.y = ptr->y;
+// job.y = ptr->y;
+ job.y = 0;
  job.t = rindex;
  job.reg = 3;
  job.rindex = index;
